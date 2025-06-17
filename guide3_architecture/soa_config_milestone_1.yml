@@ -1,0 +1,17 @@
+common_parameters:
+  temperature_C: '40'
+  active_length_um: '440'
+  wavelengths_nm: 1290; 1320
+operation_mode:
+  nominal: true
+  3_sigma: true
+plots_to_generate:
+  wpe_vs_length: false
+  gain_vs_length: false
+  pin_vs_length: false
+nominal_conditions:
+  target_pout_dbm: '8'
+  current_density_ka_cm2: '3'
+3_sigma_conditions:
+  target_pout_dbm: '12.5'
+  current_density_ka_cm2: '6'
