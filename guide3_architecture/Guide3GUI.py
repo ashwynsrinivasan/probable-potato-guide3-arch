@@ -937,7 +937,7 @@ class Guide3GUI(tk.Tk):
                 soa_penalty=soa_penalty,
                 soa_penalty_3sigma=soa_penalty_3sigma
             )
-            
+                    
             # Get comprehensive analysis
             total_loss = guide3a.get_total_loss()
             loss_breakdown = guide3a.get_loss_breakdown()
@@ -1886,6 +1886,32 @@ Performance Parameters:
             messagebox.showerror("Input Error", "Please ensure all values are valid numbers.")
         except Exception as e:
             messagebox.showerror("Calculation Error", f"An error occurred during calculation: {e}")
+
+    def reset_guide3a(self):
+        """Reset all Guide3A inputs to default values"""
+        self.fiber_input_type_var.set("pm")
+        self.guide3a_architecture_var.set("psrless")
+        self.num_fibers_var.set("40")
+        
+        # Reset performance parameters (matching EuropaSOA defaults)
+        self.guide3a_wavelength_var.set("1310")
+        self.guide3a_temp_var.set("40")
+        
+        # Reset loss components
+        self.guide3a_io_in_loss_var.set("1.5")
+        self.guide3a_io_out_loss_var.set("1.5")
+        self.guide3a_psr_loss_var.set("0.5")
+        self.guide3a_phase_shifter_loss_var.set("0.5")
+        self.guide3a_coupler_loss_var.set("0.2")
+        
+        # Reset link requirements
+        self.guide3a_target_pout_var.set("-2.75")
+        self.guide3a_target_pout_3sigma_var.set("1.75")
+        self.guide3a_soa_penalty_var.set("2")
+        self.guide3a_soa_penalty_3sigma_var.set("2")
+        
+        self.guide3a_median_results_text.delete(1.0, tk.END)
+        self.guide3a_sigma_results_text.delete(1.0, tk.END)
 
     def on_fiber_type_change(self, event):
         """Callback function to update PIC architecture when fiber input type changes"""
