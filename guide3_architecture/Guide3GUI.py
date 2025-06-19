@@ -98,21 +98,25 @@ class Guide3GUI(tk.Tk):
         wavelength_config_frame = ttk.LabelFrame(main_frame, text="Wavelength Configuration", padding="10")
         wavelength_config_frame.pack(fill=tk.X, pady=(0, 10))
         
-        # Number of wavelengths (left side)
-        ttk.Label(wavelength_config_frame, text="Number of Wavelengths:").pack(side=tk.LEFT, padx=(0, 5))
+        # Number of wavelengths (top row)
+        wavelength_control_frame = ttk.Frame(wavelength_config_frame)
+        wavelength_control_frame.pack(fill=tk.X, pady=(0, 10))
+        
+        ttk.Label(wavelength_control_frame, text="Number of Wavelengths:").pack(side=tk.LEFT, padx=(0, 5))
         self.num_wavelengths_var = tk.StringVar(value="8")
-        self.num_wavelengths_entry = ttk.Entry(wavelength_config_frame, textvariable=self.num_wavelengths_var, width=10)
+        self.num_wavelengths_entry = ttk.Entry(wavelength_control_frame, textvariable=self.num_wavelengths_var, width=10)
         self.num_wavelengths_entry.pack(side=tk.LEFT, padx=(0, 10))
         
-        ttk.Button(wavelength_config_frame, text="Update Wavelengths", command=self.update_wavelength_inputs).pack(side=tk.LEFT, padx=(0, 10))
+        ttk.Button(wavelength_control_frame, text="Update Wavelengths", command=self.update_wavelength_inputs).pack(side=tk.LEFT, padx=(0, 10))
+        ttk.Button(wavelength_control_frame, text="Save Wavelength Set", command=self.save_wavelength_set).pack(side=tk.LEFT, padx=(10, 0))
         
-        # Individual wavelength inputs (grid layout: 4 rows x 8 columns)
+        # Individual wavelength inputs (grid layout: 4 rows x 8 columns) - below the controls
         self.wavelength_vars = []
         self.wavelength_entries = []
         
         # Create a frame for the wavelength grid
         wavelength_grid_frame = ttk.Frame(wavelength_config_frame)
-        wavelength_grid_frame.pack(side=tk.LEFT, padx=(10, 0))
+        wavelength_grid_frame.pack(fill=tk.X)
         
         for row in range(4):
             for col in range(8):
@@ -124,9 +128,6 @@ class Guide3GUI(tk.Tk):
                 
                 self.wavelength_vars.append(wavelength_var)
                 self.wavelength_entries.append(wavelength_entry)
-        
-        # Save wavelength set button
-        ttk.Button(wavelength_config_frame, text="Save Wavelength Set", command=self.save_wavelength_set).pack(side=tk.LEFT, padx=(10, 0))
 
         # Notebook for tabs (model-specific content)
         notebook = ttk.Notebook(main_frame)
@@ -1637,10 +1638,7 @@ Note: Results are based on Guide3A SOA output requirements.
             self.guide3a_sigma_results_text.delete(1.0, tk.END)
             
             # Create common header information
-            common_header = f"""Guide3A Enhanced Analysis Results
-{'='*50}
-
-Module Configuration:
+            common_header = f"""Module Configuration:
 - Fiber Input Type: {module_config['fiber_input_type'].upper()}
 - PIC Architecture: {module_config['pic_architecture'].upper()}
 - Effective Architecture: {module_config['effective_architecture'].upper()}
