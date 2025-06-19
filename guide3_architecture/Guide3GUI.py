@@ -41,11 +41,20 @@ class Guide3GUI(tk.Tk):
             },
             'pic_parameters': {
                 'pic_architecture': 'psr',
+                'operating_wavelength': 1310,
+                'temperature': 25,
+                'bandwidth': 10,
+                'waveguide_length': 2.0,
+                'waveguide_loss': 0.1,
                 'io_in_loss': 1.5,
                 'io_out_loss': 1.5,
                 'psr_loss': 0.5,
                 'phase_shifter_loss': 0.5,
-                'coupler_loss': 0.2
+                'coupler_loss': 0.2,
+                'mux_loss': 0.3,
+                'demux_loss': 0.3,
+                'modulator_loss': 0.8,
+                'detector_loss': 0.4
             }
         }
         
@@ -310,8 +319,42 @@ class Guide3GUI(tk.Tk):
         ttk.Label(pic_input_frame, text="PIC Architecture:").pack(pady=(5, 2), anchor='w')
         self.pic_architecture_var = tk.StringVar(value="psr")
         self.pic_architecture_combo = ttk.Combobox(pic_input_frame, textvariable=self.pic_architecture_var,
-                                                  values=["psr", "pol_control"], width=20, state="readonly")
+                                                  values=["psr", "pol_control", "mux_demux", "modulator", "detector"], 
+                                                  width=20, state="readonly")
         self.pic_architecture_combo.pack(anchor='w', padx=5, pady=(0, 10))
+        
+        # Performance Parameters Frame
+        performance_frame = ttk.LabelFrame(pic_input_frame, text="Performance Parameters", padding="10")
+        performance_frame.pack(fill=tk.X, pady=10)
+        
+        # Operating Wavelength
+        ttk.Label(performance_frame, text="Operating Wavelength (nm) [1260-1360]:").pack(pady=(5, 2), anchor='w')
+        self.operating_wavelength_var = tk.StringVar(value="1310")
+        self.operating_wavelength_entry = ttk.Entry(performance_frame, textvariable=self.operating_wavelength_var, width=15)
+        self.operating_wavelength_entry.pack(anchor='w', padx=5)
+        
+        # Temperature
+        ttk.Label(performance_frame, text="Temperature (°C) [-40-85]:").pack(pady=(5, 2), anchor='w')
+        self.pic_temp_var = tk.StringVar(value="25")
+        self.pic_temp_entry = ttk.Entry(performance_frame, textvariable=self.pic_temp_var, width=15)
+        self.pic_temp_entry.pack(anchor='w', padx=5)
+        
+        # Bandwidth
+        ttk.Label(performance_frame, text="Bandwidth (GHz):").pack(pady=(5, 2), anchor='w')
+        self.bandwidth_var = tk.StringVar(value="10")
+        self.bandwidth_entry = ttk.Entry(performance_frame, textvariable=self.bandwidth_var, width=15)
+        self.bandwidth_entry.pack(anchor='w', padx=5)
+        
+        # Waveguide Parameters
+        ttk.Label(performance_frame, text="Waveguide Length (cm):").pack(pady=(5, 2), anchor='w')
+        self.waveguide_length_var = tk.StringVar(value="2.0")
+        self.waveguide_length_entry = ttk.Entry(performance_frame, textvariable=self.waveguide_length_var, width=15)
+        self.waveguide_length_entry.pack(anchor='w', padx=5)
+        
+        ttk.Label(performance_frame, text="Waveguide Loss (dB/cm):").pack(pady=(5, 2), anchor='w')
+        self.waveguide_loss_var = tk.StringVar(value="0.1")
+        self.waveguide_loss_entry = ttk.Entry(performance_frame, textvariable=self.waveguide_loss_var, width=15)
+        self.waveguide_loss_entry.pack(anchor='w', padx=5)
         
         # Loss Components Frame
         loss_components_frame = ttk.LabelFrame(pic_input_frame, text="Loss Components (dB)", padding="10")
@@ -345,6 +388,27 @@ class Guide3GUI(tk.Tk):
         self.coupler_loss_var = tk.StringVar(value="0.2")
         self.coupler_loss_entry = ttk.Entry(loss_components_frame, textvariable=self.coupler_loss_var, width=15)
         self.coupler_loss_entry.pack(anchor='w', padx=5)
+        
+        # Additional Loss Components for New Architectures
+        ttk.Label(loss_components_frame, text="MUX Loss:").pack(pady=(5, 2), anchor='w')
+        self.mux_loss_var = tk.StringVar(value="0.3")
+        self.mux_loss_entry = ttk.Entry(loss_components_frame, textvariable=self.mux_loss_var, width=15)
+        self.mux_loss_entry.pack(anchor='w', padx=5)
+        
+        ttk.Label(loss_components_frame, text="DEMUX Loss:").pack(pady=(5, 2), anchor='w')
+        self.demux_loss_var = tk.StringVar(value="0.3")
+        self.demux_loss_entry = ttk.Entry(loss_components_frame, textvariable=self.demux_loss_var, width=15)
+        self.demux_loss_entry.pack(anchor='w', padx=5)
+        
+        ttk.Label(loss_components_frame, text="Modulator Loss:").pack(pady=(5, 2), anchor='w')
+        self.modulator_loss_var = tk.StringVar(value="0.8")
+        self.modulator_loss_entry = ttk.Entry(loss_components_frame, textvariable=self.modulator_loss_var, width=15)
+        self.modulator_loss_entry.pack(anchor='w', padx=5)
+        
+        ttk.Label(loss_components_frame, text="Detector Loss:").pack(pady=(5, 2), anchor='w')
+        self.detector_loss_var = tk.StringVar(value="0.4")
+        self.detector_loss_entry = ttk.Entry(loss_components_frame, textvariable=self.detector_loss_var, width=15)
+        self.detector_loss_entry.pack(anchor='w', padx=5)
         
         # Action buttons
         action_frame = ttk.Frame(pic_input_frame)
@@ -404,11 +468,20 @@ class Guide3GUI(tk.Tk):
             # Load PIC parameters
             if 'pic_parameters' in self.default_config:
                 self.pic_architecture_var.set(self.default_config['pic_parameters']['pic_architecture'])
+                self.operating_wavelength_var.set(str(self.default_config['pic_parameters']['operating_wavelength']))
+                self.pic_temp_var.set(str(self.default_config['pic_parameters']['temperature']))
+                self.bandwidth_var.set(str(self.default_config['pic_parameters']['bandwidth']))
+                self.waveguide_length_var.set(str(self.default_config['pic_parameters']['waveguide_length']))
+                self.waveguide_loss_var.set(str(self.default_config['pic_parameters']['waveguide_loss']))
                 self.io_in_loss_var.set(str(self.default_config['pic_parameters']['io_in_loss']))
                 self.io_out_loss_var.set(str(self.default_config['pic_parameters']['io_out_loss']))
                 self.psr_loss_var.set(str(self.default_config['pic_parameters']['psr_loss']))
                 self.phase_shifter_loss_var.set(str(self.default_config['pic_parameters']['phase_shifter_loss']))
                 self.coupler_loss_var.set(str(self.default_config['pic_parameters']['coupler_loss']))
+                self.mux_loss_var.set(str(self.default_config['pic_parameters']['mux_loss']))
+                self.demux_loss_var.set(str(self.default_config['pic_parameters']['demux_loss']))
+                self.modulator_loss_var.set(str(self.default_config['pic_parameters']['modulator_loss']))
+                self.detector_loss_var.set(str(self.default_config['pic_parameters']['detector_loss']))
             
             messagebox.showinfo("Defaults Loaded", "Default configuration has been loaded successfully.")
             
@@ -445,11 +518,20 @@ class Guide3GUI(tk.Tk):
             # Update PIC parameters
             if 'pic_parameters' in self.default_config:
                 self.default_config['pic_parameters']['pic_architecture'] = self.pic_architecture_var.get()
+                self.default_config['pic_parameters']['operating_wavelength'] = float(self.operating_wavelength_var.get())
+                self.default_config['pic_parameters']['temperature'] = float(self.pic_temp_var.get())
+                self.default_config['pic_parameters']['bandwidth'] = float(self.bandwidth_var.get())
+                self.default_config['pic_parameters']['waveguide_length'] = float(self.waveguide_length_var.get())
+                self.default_config['pic_parameters']['waveguide_loss'] = float(self.waveguide_loss_var.get())
                 self.default_config['pic_parameters']['io_in_loss'] = float(self.io_in_loss_var.get())
                 self.default_config['pic_parameters']['io_out_loss'] = float(self.io_out_loss_var.get())
                 self.default_config['pic_parameters']['psr_loss'] = float(self.psr_loss_var.get())
                 self.default_config['pic_parameters']['phase_shifter_loss'] = float(self.phase_shifter_loss_var.get())
                 self.default_config['pic_parameters']['coupler_loss'] = float(self.coupler_loss_var.get())
+                self.default_config['pic_parameters']['mux_loss'] = float(self.mux_loss_var.get())
+                self.default_config['pic_parameters']['demux_loss'] = float(self.demux_loss_var.get())
+                self.default_config['pic_parameters']['modulator_loss'] = float(self.modulator_loss_var.get())
+                self.default_config['pic_parameters']['detector_loss'] = float(self.detector_loss_var.get())
             
             messagebox.showinfo("Defaults Updated", "Default configuration has been updated with current values.")
             
@@ -499,11 +581,20 @@ class Guide3GUI(tk.Tk):
                 # Load PIC parameters
                 if 'pic_parameters' in config:
                     self.pic_architecture_var.set(config['pic_parameters'].get('pic_architecture', 'psr'))
+                    self.operating_wavelength_var.set(str(config['pic_parameters'].get('operating_wavelength', 1310)))
+                    self.pic_temp_var.set(str(config['pic_parameters'].get('temperature', 25)))
+                    self.bandwidth_var.set(str(config['pic_parameters'].get('bandwidth', 10)))
+                    self.waveguide_length_var.set(str(config['pic_parameters'].get('waveguide_length', 2.0)))
+                    self.waveguide_loss_var.set(str(config['pic_parameters'].get('waveguide_loss', 0.1)))
                     self.io_in_loss_var.set(str(config['pic_parameters'].get('io_in_loss', 1.5)))
                     self.io_out_loss_var.set(str(config['pic_parameters'].get('io_out_loss', 1.5)))
                     self.psr_loss_var.set(str(config['pic_parameters'].get('psr_loss', 0.5)))
                     self.phase_shifter_loss_var.set(str(config['pic_parameters'].get('phase_shifter_loss', 0.5)))
                     self.coupler_loss_var.set(str(config['pic_parameters'].get('coupler_loss', 0.2)))
+                    self.mux_loss_var.set(str(config['pic_parameters'].get('mux_loss', 0.3)))
+                    self.demux_loss_var.set(str(config['pic_parameters'].get('demux_loss', 0.3)))
+                    self.modulator_loss_var.set(str(config['pic_parameters'].get('modulator_loss', 0.8)))
+                    self.detector_loss_var.set(str(config['pic_parameters'].get('detector_loss', 0.4)))
                 
                 messagebox.showinfo("Config Loaded", f"Configuration loaded from {filename}")
                 
@@ -542,11 +633,20 @@ class Guide3GUI(tk.Tk):
                     },
                     'pic_parameters': {
                         'pic_architecture': self.pic_architecture_var.get(),
+                        'operating_wavelength': float(self.operating_wavelength_var.get()),
+                        'temperature': float(self.pic_temp_var.get()),
+                        'bandwidth': float(self.bandwidth_var.get()),
+                        'waveguide_length': float(self.waveguide_length_var.get()),
+                        'waveguide_loss': float(self.waveguide_loss_var.get()),
                         'io_in_loss': float(self.io_in_loss_var.get()),
                         'io_out_loss': float(self.io_out_loss_var.get()),
                         'psr_loss': float(self.psr_loss_var.get()),
                         'phase_shifter_loss': float(self.phase_shifter_loss_var.get()),
-                        'coupler_loss': float(self.coupler_loss_var.get())
+                        'coupler_loss': float(self.coupler_loss_var.get()),
+                        'mux_loss': float(self.mux_loss_var.get()),
+                        'demux_loss': float(self.demux_loss_var.get()),
+                        'modulator_loss': float(self.modulator_loss_var.get()),
+                        'detector_loss': float(self.detector_loss_var.get())
                     }
                 }
                 
@@ -1302,56 +1402,125 @@ Operation Parameters:
         fig.update_yaxes(title_text="Saturation Power (dBm)", row=row, col=col)
 
     def calculate_pic(self):
-        """Calculate PIC parameters based on input values using EuropaPIC class"""
+        """Calculate PIC parameters based on input values using enhanced EuropaPIC class"""
         try:
             # Get input values
             pic_architecture = self.pic_architecture_var.get()
+            
+            # Performance parameters
+            operating_wavelength = float(self.operating_wavelength_var.get())
+            temperature = float(self.pic_temp_var.get())
+            bandwidth = float(self.bandwidth_var.get())
+            waveguide_length = float(self.waveguide_length_var.get())
+            waveguide_loss = float(self.waveguide_loss_var.get())
+            
+            # Loss components
             io_in_loss = float(self.io_in_loss_var.get())
             io_out_loss = float(self.io_out_loss_var.get())
             psr_loss = float(self.psr_loss_var.get())
             phase_shifter_loss = float(self.phase_shifter_loss_var.get())
             coupler_loss = float(self.coupler_loss_var.get())
+            mux_loss = float(self.mux_loss_var.get())
+            demux_loss = float(self.demux_loss_var.get())
+            modulator_loss = float(self.modulator_loss_var.get())
+            detector_loss = float(self.detector_loss_var.get())
             
             # Validate inputs
-            if pic_architecture not in ["psr", "pol_control"]:
-                messagebox.showerror("Invalid Input", "PIC Architecture must be 'psr' or 'pol_control'")
+            if pic_architecture not in ["psr", "pol_control", "mux_demux", "modulator", "detector"]:
+                messagebox.showerror("Invalid Input", "PIC Architecture must be one of the supported types")
                 return
             
-            if any(loss < 0 for loss in [io_in_loss, io_out_loss, psr_loss, phase_shifter_loss, coupler_loss]):
+            if not (1260 <= operating_wavelength <= 1360):
+                messagebox.showerror("Invalid Input", "Operating wavelength must be between 1260 and 1360 nm")
+                return
+            
+            if not (-40 <= temperature <= 85):
+                messagebox.showerror("Invalid Input", "Temperature must be between -40 and 85°C")
+                return
+            
+            if any(loss < 0 for loss in [io_in_loss, io_out_loss, psr_loss, phase_shifter_loss, 
+                                       coupler_loss, mux_loss, demux_loss, modulator_loss, 
+                                       detector_loss, waveguide_loss, waveguide_length]):
                 messagebox.showerror("Invalid Input", "All loss values must be non-negative")
                 return
             
-            # Import EuropaPIC class
+            # Import enhanced EuropaPIC class
             from EuropaPIC import EuropaPIC
             
-            # Create EuropaPIC instance with custom loss values
-            pic = EuropaPIC(pic_architecture)
-            pic.io_in_loss = io_in_loss
-            pic.io_out_loss = io_out_loss
-            pic.psr_loss = psr_loss
-            pic.phase_shifter_loss = phase_shifter_loss
-            pic.coupler_loss = coupler_loss
+            # Create EuropaPIC instance with all parameters
+            pic = EuropaPIC(
+                pic_architecture=pic_architecture,
+                operating_wavelength_nm=operating_wavelength,
+                temperature_c=temperature,
+                bandwidth_ghz=bandwidth,
+                waveguide_length_cm=waveguide_length,
+                waveguide_loss=waveguide_loss,
+                io_in_loss=io_in_loss,
+                io_out_loss=io_out_loss,
+                psr_loss=psr_loss,
+                phase_shifter_loss=phase_shifter_loss,
+                coupler_loss=coupler_loss,
+                mux_loss=mux_loss,
+                demux_loss=demux_loss,
+                modulator_loss=modulator_loss,
+                detector_loss=detector_loss
+            )
             
-            # Calculate total loss
+            # Get comprehensive analysis
             total_loss = pic.get_total_loss()
+            loss_breakdown = pic.get_loss_breakdown()
+            performance_metrics = pic.get_performance_metrics()
+            component_count = pic.get_component_count()
+            architecture_description = pic.get_architecture_description()
             
             # Clear results
             self.pic_results_text.delete(1.0, tk.END)
             
-            # Display results
-            results = f"""EuropaPIC Analysis Results:
-{'='*50}
+            # Display comprehensive results
+            results = f"""EuropaPIC Enhanced Analysis Results
+{'='*60}
 
-PIC Architecture: {pic_architecture.upper()}
+Architecture: {pic_architecture.upper()}
+Description: {architecture_description}
 
-Loss Components Breakdown:
-- I/O Input Loss: {io_in_loss:.1f} dB
-- I/O Output Loss: {io_out_loss:.1f} dB
-- PSR Loss: {psr_loss:.1f} dB
-- Phase Shifter Loss: {phase_shifter_loss:.1f} dB
-- Coupler Loss: {coupler_loss:.1f} dB
+Performance Parameters:
+- Operating Wavelength: {operating_wavelength:.0f} nm
+- Temperature: {temperature:.0f} °C
+- Bandwidth: {bandwidth:.0f} GHz
+- Waveguide Length: {waveguide_length:.1f} cm
+- Waveguide Loss: {waveguide_loss:.1f} dB/cm
 
-Architecture-Specific Components:
+Component Count:
+"""
+            
+            for component, count in component_count.items():
+                results += f"- {component.replace('_', ' ').title()}: {count}\n"
+            
+            results += f"""
+Loss Breakdown:
+- I/O Input Loss: {loss_breakdown['io_losses']['io_in_loss']:.1f} dB
+- I/O Output Loss: {loss_breakdown['io_losses']['io_out_loss']:.1f} dB
+- Total I/O Loss: {loss_breakdown['io_losses']['total_io_loss']:.1f} dB
+- Waveguide Loss: {loss_breakdown['waveguide_loss']['total_waveguide_loss']:.1f} dB
+"""
+            
+            # Add architecture-specific losses
+            arch_losses = loss_breakdown['architecture_specific']
+            for loss_type, value in arch_losses.items():
+                if 'total' in loss_type:
+                    results += f"- {loss_type.replace('_', ' ').title()}: {value:.1f} dB\n"
+            
+            results += f"""
+Performance Metrics:
+- Total Loss: {loss_breakdown['total_loss']:.1f} dB
+- Power Penalty: {performance_metrics['power_budget']['power_penalty_db']:.1f} dB
+- Link Margin: {performance_metrics['power_budget']['link_margin_db']:.1f} dB
+- Required TX Power: {performance_metrics['power_budget']['required_tx_power_db']:.1f} dBm
+- Optical Efficiency: {performance_metrics['efficiency_metrics']['optical_efficiency_percent']:.1f}%
+- Insertion Loss: {performance_metrics['efficiency_metrics']['insertion_loss_db']:.1f} dB
+- Return Loss: {performance_metrics['efficiency_metrics']['return_loss_db']:.1f} dB
+
+Architecture-Specific Analysis:
 """
             
             if pic_architecture == 'psr':
@@ -1360,31 +1529,56 @@ Architecture-Specific Components:
                 results += f"- PSR Components: 2 × {psr_loss:.1f} dB = {2*psr_loss:.1f} dB (PSR in/out)\n"
                 results += f"- Phase Shifter Components: 2 × {phase_shifter_loss:.1f} dB = {2*phase_shifter_loss:.1f} dB (Phase shifter in/out)\n"
                 results += f"- Coupler Components: 2 × {coupler_loss:.1f} dB = {2*coupler_loss:.1f} dB (Coupler in/out)\n"
+            elif pic_architecture == 'mux_demux':
+                results += f"- MUX Loss: {mux_loss:.1f} dB\n"
+                results += f"- DEMUX Loss: {demux_loss:.1f} dB\n"
+                results += f"- Total MUX/DEMUX Loss: {mux_loss + demux_loss:.1f} dB\n"
+            elif pic_architecture == 'modulator':
+                results += f"- Modulator Loss: {modulator_loss:.1f} dB\n"
+                results += f"- Phase Shifter Loss: {phase_shifter_loss:.1f} dB\n"
+                results += f"- Total Modulator Loss: {modulator_loss + phase_shifter_loss:.1f} dB\n"
+            elif pic_architecture == 'detector':
+                results += f"- Detector Loss: {detector_loss:.1f} dB\n"
+                results += f"- Coupler Loss: {coupler_loss:.1f} dB\n"
+                results += f"- Total Detector Loss: {detector_loss + coupler_loss:.1f} dB\n"
             
             results += f"""
-Total PIC Loss: {total_loss:.1f} dB
-
-Component Summary:
-- Base I/O Loss: {io_in_loss + io_out_loss:.1f} dB
-- Architecture-Specific Loss: {total_loss - (io_in_loss + io_out_loss):.1f} dB
-- Total System Loss: {total_loss:.1f} dB
+Summary:
+- Base I/O Loss: {loss_breakdown['io_losses']['total_io_loss']:.1f} dB
+- Waveguide Loss: {loss_breakdown['waveguide_loss']['total_waveguide_loss']:.1f} dB
+- Architecture-Specific Loss: {loss_breakdown['total_loss'] - loss_breakdown['io_losses']['total_io_loss'] - loss_breakdown['waveguide_loss']['total_waveguide_loss']:.1f} dB
+- Total System Loss: {loss_breakdown['total_loss']:.1f} dB
 """
             
             self.pic_results_text.insert(1.0, results)
             
         except ValueError:
-            messagebox.showerror("Input Error", "Please ensure all loss values are valid numbers.")
+            messagebox.showerror("Input Error", "Please ensure all values are valid numbers.")
         except Exception as e:
             messagebox.showerror("Calculation Error", f"An error occurred during calculation: {e}")
 
     def reset_pic(self):
         """Reset all EuropaPIC inputs to default values"""
         self.pic_architecture_var.set("psr")
+        
+        # Reset performance parameters
+        self.operating_wavelength_var.set("1310")
+        self.pic_temp_var.set("25")
+        self.bandwidth_var.set("10")
+        self.waveguide_length_var.set("2.0")
+        self.waveguide_loss_var.set("0.1")
+        
+        # Reset loss components
         self.io_in_loss_var.set("1.5")
         self.io_out_loss_var.set("1.5")
         self.psr_loss_var.set("0.5")
         self.phase_shifter_loss_var.set("0.5")
         self.coupler_loss_var.set("0.2")
+        self.mux_loss_var.set("0.3")
+        self.demux_loss_var.set("0.3")
+        self.modulator_loss_var.set("0.8")
+        self.detector_loss_var.set("0.4")
+        
         self.pic_results_text.delete(1.0, tk.END)
 
 if __name__ == "__main__":
