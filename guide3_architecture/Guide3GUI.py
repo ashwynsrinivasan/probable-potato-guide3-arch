@@ -133,222 +133,7 @@ class Guide3GUI(tk.Tk):
         notebook = ttk.Notebook(main_frame)
         notebook.pack(fill='both', expand=True)
 
-        # EuropaSOA Tab
-        self.soa_tab = ttk.Frame(notebook)
-        notebook.add(self.soa_tab, text='EuropaSOA')
-        
-        # Create main horizontal frame for inputs and results
-        soa_main_frame = ttk.Frame(self.soa_tab)
-        soa_main_frame.pack(fill='both', expand=True, padx=10, pady=10)
-        
-        # Left side - Input parameters with scrolling
-        input_container = ttk.Frame(soa_main_frame)
-        input_container.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
-        
-        # Create canvas with both scrollbars for input parameters
-        input_canvas = tk.Canvas(input_container, width=400, height=600)
-        input_v_scrollbar = ttk.Scrollbar(input_container, orient="vertical", command=input_canvas.yview)
-        input_h_scrollbar = ttk.Scrollbar(input_container, orient="horizontal", command=input_canvas.xview)
-        input_scrollable_frame = ttk.Frame(input_canvas)
-
-        input_scrollable_frame.bind(
-            "<Configure>",
-            lambda e: input_canvas.configure(scrollregion=input_canvas.bbox("all"))
-        )
-
-        input_canvas.create_window((0, 0), window=input_scrollable_frame, anchor="nw")
-        input_canvas.configure(yscrollcommand=input_v_scrollbar.set, xscrollcommand=input_h_scrollbar.set)
-
-        # Pack the canvas and scrollbars
-        input_canvas.pack(side="left", fill="both", expand=True)
-        input_v_scrollbar.pack(side="right", fill="y")
-        input_h_scrollbar.pack(side="bottom", fill="x")
-        
-        # Bind mouse wheel scrolling
-        input_canvas.bind_all("<MouseWheel>", lambda event: input_canvas.yview_scroll(int(-1*(event.delta/120)), "units"))
-        input_canvas.bind_all("<Shift-MouseWheel>", lambda event: input_canvas.xview_scroll(int(-1*(event.delta/120)), "units"))
-
-        # Create 4 quadrants
-        # Top-left quadrant
-        top_left_frame = ttk.Frame(input_scrollable_frame)
-        top_left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 5), pady=(0, 5))
-        
-        # Top-right quadrant
-        top_right_frame = ttk.Frame(input_scrollable_frame)
-        top_right_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(5, 0), pady=(0, 5))
-        
-        # Bottom-left quadrant
-        bottom_left_frame = ttk.Frame(input_scrollable_frame)
-        bottom_left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 5), pady=(5, 0))
-        
-        # Bottom-right quadrant
-        bottom_right_frame = ttk.Frame(input_scrollable_frame)
-        bottom_right_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(5, 0), pady=(5, 0))
-
-        # --- Device Parameters (Top-left) ---
-        device_frame = ttk.LabelFrame(top_left_frame, text="Device Parameters", padding="10")
-        device_frame.pack(fill=tk.X, pady=5)
-
-        ttk.Label(device_frame, text="Width (µm) [2.0-2.7]:").pack(pady=(5, 2), anchor='w')
-        self.w_um_var = tk.StringVar(value="2.0")
-        self.w_um_entry = ttk.Entry(device_frame, textvariable=self.w_um_var, width=15)
-        self.w_um_entry.pack(anchor='w', padx=5)
-
-        ttk.Label(device_frame, text="Active Length (µm) [40-880]:").pack(pady=(5, 2), anchor='w')
-        self.l_active_var = tk.StringVar(value="790")
-        self.l_active_entry = ttk.Entry(device_frame, textvariable=self.l_active_var, width=15)
-        self.l_active_entry.pack(anchor='w', padx=5)
-
-        # --- Operation Parameters (Top-left) ---
-        operation_frame = ttk.LabelFrame(top_left_frame, text="Operation Parameters", padding="10")
-        operation_frame.pack(fill=tk.X, pady=5)
-
-        # Target P_out for Median Loss
-        self.median_pout_frame = ttk.Frame(operation_frame)
-        self.median_pout_frame.pack(fill=tk.X, pady=5)
-        ttk.Label(self.median_pout_frame, text="Target P_out - Median (dBm) [0-20]:").pack(pady=(5, 2), anchor='w')
-        self.pout_median_var = tk.StringVar(value="9")
-        self.pout_median_entry = ttk.Entry(self.median_pout_frame, textvariable=self.pout_median_var, width=15)
-        self.pout_median_entry.pack(anchor='w', padx=5)
-
-        # Target P_out for 3-Sigma Loss
-        self.sigma_pout_frame = ttk.Frame(operation_frame)
-        self.sigma_pout_frame.pack(fill=tk.X, pady=5)
-        ttk.Label(self.sigma_pout_frame, text="Target P_out - 3σ (dBm) [0-20]:").pack(pady=(5, 2), anchor='w')
-        self.pout_sigma_var = tk.StringVar(value="13")
-        self.pout_sigma_entry = ttk.Entry(self.sigma_pout_frame, textvariable=self.pout_sigma_var, width=15)
-        self.pout_sigma_entry.pack(anchor='w', padx=5)
-
-        # Current Density for Median Loss
-        self.median_current_frame = ttk.Frame(operation_frame)
-        self.median_current_frame.pack(fill=tk.X, pady=5)
-        ttk.Label(self.median_current_frame, text="Current Density - Median (kA/cm²):").pack(pady=(5, 2), anchor='w')
-        self.j_density_median_var = tk.StringVar(value="4")
-        self.j_density_median_combo = ttk.Combobox(self.median_current_frame, textvariable=self.j_density_median_var,
-                                                   values=["3", "4", "5", "6", "7"], width=12)
-        self.j_density_median_combo.pack(anchor='w', padx=5)
-
-        # Current Density for 3-Sigma Loss
-        self.sigma_current_frame = ttk.Frame(operation_frame)
-        self.sigma_current_frame.pack(fill=tk.X, pady=5)
-        ttk.Label(self.sigma_current_frame, text="Current Density - 3σ (kA/cm²):").pack(pady=(5, 2), anchor='w')
-        self.j_density_sigma_var = tk.StringVar(value="7")
-        self.j_density_sigma_combo = ttk.Combobox(self.sigma_current_frame, textvariable=self.j_density_sigma_var,
-                                                  values=["3", "4", "5", "6", "7"], width=12)
-        self.j_density_sigma_combo.pack(anchor='w', padx=5)
-
-        ttk.Label(operation_frame, text="Temperature (°C) [25-80]:").pack(pady=(5, 2), anchor='w')
-        self.temp_var = tk.StringVar(value="40")
-        self.temp_entry = ttk.Entry(operation_frame, textvariable=self.temp_var, width=15)
-        self.temp_entry.pack(anchor='w', padx=5)
-
-        # Wavelength configuration moved to common section at top
-
-        # Right side - Results Display
-        results_frame = ttk.LabelFrame(soa_main_frame, text="Results", padding="10")
-        results_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
-        results_frame.pack_configure(expand=True, fill=tk.BOTH)
-        results_frame.place(relx=0.2, rely=0, relwidth=0.8, relheight=1.0)
-        
-        # Action buttons at the top of results section
-        action_frame = ttk.Frame(results_frame)
-        action_frame.pack(fill=tk.X, pady=(0, 10))
-        
-        ttk.Button(action_frame, text="Calculate", command=self.calculate_soa).pack(side=tk.LEFT, padx=(0, 5))
-        ttk.Button(action_frame, text="Reset", command=self.reset_soa).pack(side=tk.LEFT, padx=5)
-        
-        # Plot options frame
-        plot_options_frame = ttk.LabelFrame(results_frame, text="Plot Options", padding="10")
-        plot_options_frame.pack(fill=tk.X, pady=(0, 10))
-        
-        # Create checkboxes for different plot types
-        self.plot_vars = {
-            'wpe_vs_length': tk.BooleanVar(),
-            'gain_vs_length': tk.BooleanVar(),
-            'pin_vs_length': tk.BooleanVar(),
-            'wpe_vs_wavelength': tk.BooleanVar(),
-            'gain_vs_wavelength': tk.BooleanVar(),
-            'pin_vs_wavelength': tk.BooleanVar(),
-            'saturation_vs_wavelength': tk.BooleanVar()
-        }
-        
-        # Set defaults
-        for var in self.plot_vars.values():
-            var.set(True)
-        
-        # Create checkboxes in a grid
-        row = 0
-        col = 0
-        for plot_name, var in self.plot_vars.items():
-            display_name = plot_name.replace('_', ' ').replace('vs', 'vs').title()
-            ttk.Checkbutton(plot_options_frame, text=display_name, variable=var).grid(
-                row=row, column=col, sticky='w', padx=5, pady=2)
-            col += 1
-            if col > 3:  # 4 columns
-                col = 0
-                row += 1
-        
-        # Plot button - use grid instead of pack
-        ttk.Button(plot_options_frame, text="Generate Plots", command=self.generate_plots).grid(
-            row=row+1, column=0, columnspan=4, sticky='w', padx=5, pady=(10, 0))
-        
-        # Create horizontal split for median and 3σ cases
-        results_split_frame = ttk.Frame(results_frame)
-        results_split_frame.pack(fill=tk.BOTH, expand=True)
-        
-        # Left side - Median Results
-        median_results_frame = ttk.LabelFrame(results_split_frame, text="Median Loss Case", padding="5")
-        median_results_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 5))
-        
-        # Create canvas with scrollbars for median results
-        median_canvas = tk.Canvas(median_results_frame)
-        median_v_scrollbar = ttk.Scrollbar(median_results_frame, orient="vertical", command=median_canvas.yview)
-        
-        self.median_results_text = tk.Text(median_canvas, wrap=tk.WORD)
-        self.median_results_text.configure(yscrollcommand=median_v_scrollbar.set)
-        
-        median_canvas.create_window((0, 0), window=self.median_results_text, anchor="nw")
-        median_canvas.configure(yscrollcommand=median_v_scrollbar.set)
-        
-        # Pack the canvas and scrollbars
-        median_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        median_v_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        
-        # Bind mouse wheel scrolling for median results
-        median_canvas.bind_all("<MouseWheel>", lambda event: median_canvas.yview_scroll(int(-1*(event.delta/120)), "units"))
-        
-        # Right side - 3-Sigma Results
-        sigma_results_frame = ttk.LabelFrame(results_split_frame, text="3σ Loss Case", padding="5")
-        sigma_results_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=(5, 0))
-        
-        # Create canvas with scrollbars for sigma results
-        sigma_canvas = tk.Canvas(sigma_results_frame)
-        sigma_v_scrollbar = ttk.Scrollbar(sigma_results_frame, orient="vertical", command=sigma_canvas.yview)
-        
-        self.sigma_results_text = tk.Text(sigma_canvas, wrap=tk.WORD)
-        self.sigma_results_text.configure(yscrollcommand=sigma_v_scrollbar.set)
-        
-        sigma_canvas.create_window((0, 0), window=self.sigma_results_text, anchor="nw")
-        sigma_canvas.configure(yscrollcommand=sigma_v_scrollbar.set)
-        
-        # Pack the canvas and scrollbars
-        sigma_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        sigma_v_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        
-        # Bind mouse wheel scrolling for sigma results
-        sigma_canvas.bind_all("<MouseWheel>", lambda event: sigma_canvas.yview_scroll(int(-1*(event.delta/120)), "units"))
-        
-        # Configure scroll regions when text content changes
-        def configure_soa_median_scroll_region(event):
-            median_canvas.configure(scrollregion=median_canvas.bbox("all"))
-        
-        def configure_soa_sigma_scroll_region(event):
-            sigma_canvas.configure(scrollregion=sigma_canvas.bbox("all"))
-        
-        self.median_results_text.bind("<Configure>", configure_soa_median_scroll_region)
-        self.sigma_results_text.bind("<Configure>", configure_soa_sigma_scroll_region)
-
-        # Guide3A Tab (formerly EuropaPIC)
+        # Guide3A Tab (first tab)
         self.guide3a_tab = ttk.Frame(notebook)
         notebook.add(self.guide3a_tab, text='Guide3A')
         
@@ -509,6 +294,7 @@ class Guide3GUI(tk.Tk):
         action_frame.pack(fill=tk.X, pady=(0, 10))
         ttk.Button(action_frame, text="Calculate", command=self.calculate_guide3a).pack(side=tk.LEFT, padx=(0, 5))
         ttk.Button(action_frame, text="Reset", command=self.reset_guide3a).pack(side=tk.LEFT, padx=5)
+        ttk.Button(action_frame, text="Transfer to EuropaSOA", command=self.transfer_to_europasoa).pack(side=tk.LEFT, padx=5)
         
         # Create horizontal split for median and 3σ cases
         results_split_frame = ttk.Frame(guide3a_results_frame)
@@ -560,13 +346,229 @@ class Guide3GUI(tk.Tk):
         self.guide3a_median_results_text.bind("<Configure>", configure_guide3a_median_scroll_region)
         self.guide3a_sigma_results_text.bind("<Configure>", configure_guide3a_sigma_scroll_region)
 
+        # EuropaSOA Tab (second tab)
+        self.soa_tab = ttk.Frame(notebook)
+        notebook.add(self.soa_tab, text='EuropaSOA')
+        
+        # Create main horizontal frame for inputs and results
+        soa_main_frame = ttk.Frame(self.soa_tab)
+        soa_main_frame.pack(fill='both', expand=True, padx=10, pady=10)
+        
+        # Left side - Input parameters with scrolling
+        input_container = ttk.Frame(soa_main_frame)
+        input_container.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
+        
+        # Create canvas with both scrollbars for input parameters
+        input_canvas = tk.Canvas(input_container, width=400, height=600)
+        input_v_scrollbar = ttk.Scrollbar(input_container, orient="vertical", command=input_canvas.yview)
+        input_h_scrollbar = ttk.Scrollbar(input_container, orient="horizontal", command=input_canvas.xview)
+        input_scrollable_frame = ttk.Frame(input_canvas)
+
+        input_scrollable_frame.bind(
+            "<Configure>",
+            lambda e: input_canvas.configure(scrollregion=input_canvas.bbox("all"))
+        )
+
+        input_canvas.create_window((0, 0), window=input_scrollable_frame, anchor="nw")
+        input_canvas.configure(yscrollcommand=input_v_scrollbar.set, xscrollcommand=input_h_scrollbar.set)
+
+        # Pack the canvas and scrollbars
+        input_canvas.pack(side="left", fill="both", expand=True)
+        input_v_scrollbar.pack(side="right", fill="y")
+        input_h_scrollbar.pack(side="bottom", fill="x")
+        
+        # Bind mouse wheel scrolling
+        input_canvas.bind_all("<MouseWheel>", lambda event: input_canvas.yview_scroll(int(-1*(event.delta/120)), "units"))
+        input_canvas.bind_all("<Shift-MouseWheel>", lambda event: input_canvas.xview_scroll(int(-1*(event.delta/120)), "units"))
+
+        # Create 4 quadrants
+        # Top-left quadrant
+        top_left_frame = ttk.Frame(input_scrollable_frame)
+        top_left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 5), pady=(0, 5))
+        
+        # Top-right quadrant
+        top_right_frame = ttk.Frame(input_scrollable_frame)
+        top_right_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(5, 0), pady=(0, 5))
+        
+        # Bottom-left quadrant
+        bottom_left_frame = ttk.Frame(input_scrollable_frame)
+        bottom_left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 5), pady=(5, 0))
+        
+        # Bottom-right quadrant
+        bottom_right_frame = ttk.Frame(input_scrollable_frame)
+        bottom_right_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(5, 0), pady=(5, 0))
+
+        # --- Device Parameters (Top-left) ---
+        device_frame = ttk.LabelFrame(top_left_frame, text="Device Parameters", padding="10")
+        device_frame.pack(fill=tk.X, pady=5)
+
+        ttk.Label(device_frame, text="Width (µm) [2.0-2.7]:").pack(pady=(5, 2), anchor='w')
+        self.w_um_var = tk.StringVar(value="2.0")
+        self.w_um_entry = ttk.Entry(device_frame, textvariable=self.w_um_var, width=15)
+        self.w_um_entry.pack(anchor='w', padx=5)
+
+        ttk.Label(device_frame, text="Active Length (µm) [40-880]:").pack(pady=(5, 2), anchor='w')
+        self.l_active_var = tk.StringVar(value="790")
+        self.l_active_entry = ttk.Entry(device_frame, textvariable=self.l_active_var, width=15)
+        self.l_active_entry.pack(anchor='w', padx=5)
+
+        # --- Operation Parameters (Top-left) ---
+        operation_frame = ttk.LabelFrame(top_left_frame, text="Operation Parameters", padding="10")
+        operation_frame.pack(fill=tk.X, pady=5)
+
+        # Target P_out for Median Loss
+        self.median_pout_frame = ttk.Frame(operation_frame)
+        self.median_pout_frame.pack(fill=tk.X, pady=5)
+        ttk.Label(self.median_pout_frame, text="Target P_out - Median (dBm) [0-20]:").pack(pady=(5, 2), anchor='w')
+        self.pout_median_var = tk.StringVar(value="9")
+        self.pout_median_entry = ttk.Entry(self.median_pout_frame, textvariable=self.pout_median_var, width=15)
+        self.pout_median_entry.pack(anchor='w', padx=5)
+
+        # Target P_out for 3-Sigma Loss
+        self.sigma_pout_frame = ttk.Frame(operation_frame)
+        self.sigma_pout_frame.pack(fill=tk.X, pady=5)
+        ttk.Label(self.sigma_pout_frame, text="Target P_out - 3σ (dBm) [0-20]:").pack(pady=(5, 2), anchor='w')
+        self.pout_sigma_var = tk.StringVar(value="13")
+        self.pout_sigma_entry = ttk.Entry(self.sigma_pout_frame, textvariable=self.pout_sigma_var, width=15)
+        self.pout_sigma_entry.pack(anchor='w', padx=5)
+
+        # Current Density for Median Loss
+        self.median_current_frame = ttk.Frame(operation_frame)
+        self.median_current_frame.pack(fill=tk.X, pady=5)
+        ttk.Label(self.median_current_frame, text="Current Density - Median (kA/cm²):").pack(pady=(5, 2), anchor='w')
+        self.j_density_median_var = tk.StringVar(value="4")
+        self.j_density_median_combo = ttk.Combobox(self.median_current_frame, textvariable=self.j_density_median_var,
+                                                   values=["3", "4", "5", "6", "7"], width=12)
+        self.j_density_median_combo.pack(anchor='w', padx=5)
+
+        # Current Density for 3-Sigma Loss
+        self.sigma_current_frame = ttk.Frame(operation_frame)
+        self.sigma_current_frame.pack(fill=tk.X, pady=5)
+        ttk.Label(self.sigma_current_frame, text="Current Density - 3σ (kA/cm²):").pack(pady=(5, 2), anchor='w')
+        self.j_density_sigma_var = tk.StringVar(value="7")
+        self.j_density_sigma_combo = ttk.Combobox(self.sigma_current_frame, textvariable=self.j_density_sigma_var,
+                                                  values=["3", "4", "5", "6", "7"], width=12)
+        self.j_density_sigma_combo.pack(anchor='w', padx=5)
+
+        ttk.Label(operation_frame, text="Temperature (°C) [25-80]:").pack(pady=(5, 2), anchor='w')
+        self.temp_var = tk.StringVar(value="40")
+        self.temp_entry = ttk.Entry(operation_frame, textvariable=self.temp_var, width=15)
+        self.temp_entry.pack(anchor='w', padx=5)
+
+        # Wavelength configuration moved to common section at top
+
+        # Right side - Results Display
+        results_frame = ttk.LabelFrame(soa_main_frame, text="Results", padding="10")
+        results_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
+        results_frame.pack_configure(expand=True, fill=tk.BOTH)
+        results_frame.place(relx=0.2, rely=0, relwidth=0.8, relheight=1.0)
+        
+        # Action buttons at the top of results section
+        action_frame = ttk.Frame(results_frame)
+        action_frame.pack(fill=tk.X, pady=(0, 10))
+        
+        ttk.Button(action_frame, text="Calculate", command=self.calculate_soa).pack(side=tk.LEFT, padx=(0, 5))
+        ttk.Button(action_frame, text="Reset", command=self.reset_soa).pack(side=tk.LEFT, padx=5)
+        ttk.Button(action_frame, text="Use Guide3A Results", command=self.use_guide3a_results).pack(side=tk.LEFT, padx=5)
+        
+        # Plot options frame
+        plot_options_frame = ttk.LabelFrame(results_frame, text="Plot Options", padding="10")
+        plot_options_frame.pack(fill=tk.X, pady=(0, 10))
+        
+        # Create checkboxes for different plot types
+        self.plot_vars = {
+            'wpe_vs_length': tk.BooleanVar(),
+            'gain_vs_length': tk.BooleanVar(),
+            'pin_vs_length': tk.BooleanVar(),
+            'wpe_vs_wavelength': tk.BooleanVar(),
+            'gain_vs_wavelength': tk.BooleanVar(),
+            'pin_vs_wavelength': tk.BooleanVar(),
+            'saturation_vs_wavelength': tk.BooleanVar()
+        }
+        
+        # Set defaults
+        for var in self.plot_vars.values():
+            var.set(True)
+        
+        # Create checkboxes in a grid
+        row = 0
+        col = 0
+        for plot_name, var in self.plot_vars.items():
+            display_name = plot_name.replace('_', ' ').replace('vs', 'vs').title()
+            ttk.Checkbutton(plot_options_frame, text=display_name, variable=var).grid(
+                row=row, column=col, sticky='w', padx=5, pady=2)
+            col += 1
+            if col > 3:  # 4 columns
+                col = 0
+                row += 1
+        
+        # Plot button - use grid instead of pack
+        ttk.Button(plot_options_frame, text="Generate Plots", command=self.generate_plots).grid(
+            row=row+1, column=0, columnspan=4, sticky='w', padx=5, pady=(10, 0))
+        
+        # Create horizontal split for median and 3σ cases
+        results_split_frame = ttk.Frame(results_frame)
+        results_split_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Left side - Median Results
+        median_results_frame = ttk.LabelFrame(results_split_frame, text="Median Loss Case", padding="5")
+        median_results_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 5))
+        
+        # Create canvas with scrollbars for median results
+        median_canvas = tk.Canvas(median_results_frame)
+        median_v_scrollbar = ttk.Scrollbar(median_results_frame, orient="vertical", command=median_canvas.yview)
+        
+        self.median_results_text = tk.Text(median_canvas, wrap=tk.WORD)
+        self.median_results_text.configure(yscrollcommand=median_v_scrollbar.set)
+        
+        median_canvas.create_window((0, 0), window=self.median_results_text, anchor="nw")
+        median_canvas.configure(yscrollcommand=median_v_scrollbar.set)
+        
+        # Pack the canvas and scrollbars
+        median_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        median_v_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        # Bind mouse wheel scrolling for median results
+        median_canvas.bind_all("<MouseWheel>", lambda event: median_canvas.yview_scroll(int(-1*(event.delta/120)), "units"))
+        
+        # Right side - 3-Sigma Results
+        sigma_results_frame = ttk.LabelFrame(results_split_frame, text="3σ Loss Case", padding="5")
+        sigma_results_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=(5, 0))
+        
+        # Create canvas with scrollbars for sigma results
+        sigma_canvas = tk.Canvas(sigma_results_frame)
+        sigma_v_scrollbar = ttk.Scrollbar(sigma_results_frame, orient="vertical", command=sigma_canvas.yview)
+        
+        self.sigma_results_text = tk.Text(sigma_canvas, wrap=tk.WORD)
+        self.sigma_results_text.configure(yscrollcommand=sigma_v_scrollbar.set)
+        
+        sigma_canvas.create_window((0, 0), window=self.sigma_results_text, anchor="nw")
+        sigma_canvas.configure(yscrollcommand=sigma_v_scrollbar.set)
+        
+        # Pack the canvas and scrollbars
+        sigma_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        sigma_v_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        # Bind mouse wheel scrolling for sigma results
+        sigma_canvas.bind_all("<MouseWheel>", lambda event: sigma_canvas.yview_scroll(int(-1*(event.delta/120)), "units"))
+        
+        # Configure scroll regions when text content changes
+        def configure_soa_median_scroll_region(event):
+            median_canvas.configure(scrollregion=median_canvas.bbox("all"))
+        
+        def configure_soa_sigma_scroll_region(event):
+            sigma_canvas.configure(scrollregion=sigma_canvas.bbox("all"))
+        
+        self.median_results_text.bind("<Configure>", configure_soa_median_scroll_region)
+        self.sigma_results_text.bind("<Configure>", configure_soa_sigma_scroll_region)
+
     def auto_calculate_defaults(self):
         """Automatically calculate and display results for default inputs"""
-        # Calculate SOA results and display them
-        self.calculate_soa()
-        
-        # Calculate Guide3A results and display them
+        # Calculate Guide3A results and display them (first tab)
         self.calculate_guide3a()
+        
+        # Calculate SOA results and display them (second tab)
+        self.calculate_soa()
 
     def load_defaults(self):
         """Load the default configuration values"""
@@ -1633,6 +1635,22 @@ Note: Results are based on Guide3A SOA output requirements.
                 soa_penalty_3sigma=float(self.guide3a_soa_penalty_3sigma_var.get())
             )
             
+            # Calculate optimum SOA current density
+            wavelengths = []
+            for i in range(num_wavelengths):
+                try:
+                    wavelength = float(self.wavelength_vars[i].get())
+                    wavelengths.append(wavelength)
+                except ValueError:
+                    wavelengths.append(1310.0)  # Default if invalid
+            
+            optimum_current_calculation = guide3a.estimate_optimum_soa_current_density(
+                num_wavelengths=num_wavelengths,
+                target_pout_3sigma=float(self.guide3a_target_pout_3sigma_var.get()),
+                soa_penalty_3sigma=float(self.guide3a_soa_penalty_3sigma_var.get()),
+                wavelengths=wavelengths
+            )
+            
             # Clear results
             self.guide3a_median_results_text.delete(1.0, tk.END)
             self.guide3a_sigma_results_text.delete(1.0, tk.END)
@@ -1729,6 +1747,13 @@ SOA Requirements (Output Losses Only):
 - Loss Breakdown:
   * I/O Output Loss: {soa_output_calculation['median_case']['loss_breakdown']['io_out_loss']:.1f} dB
   * Architecture Output Loss: {soa_output_calculation['median_case']['loss_breakdown']['architecture_output_loss']:.1f} dB
+
+Optimum SOA Current Density Analysis:
+- Optimum Current Density: {optimum_current_calculation['median_case']['current_density_kA_cm2']:.2f} kA/cm²
+- Optimum Current: {optimum_current_calculation['median_case']['current_ma']:.1f} mA
+- Target Saturation Power: {optimum_current_calculation['median_case']['target_saturation_power_mw']:.2f} mW (2dB above target Pout)
+- Average Saturation Power: {optimum_current_calculation['median_case']['avg_saturation_power_mw']:.2f} mW ({optimum_current_calculation['median_case']['avg_saturation_power_db']:.2f} dBm)
+- Power Margin: {optimum_current_calculation['median_case']['margin_db']:.2f} dB
 """
             
             # Create 3σ case content
@@ -1758,9 +1783,21 @@ Performance Parameters:
 - Loss Breakdown:
   * I/O Output Loss: {soa_output_calculation['sigma_case']['loss_breakdown']['io_out_loss']:.1f} dB
   * Architecture Output Loss: {soa_output_calculation['sigma_case']['loss_breakdown']['architecture_output_loss']:.1f} dB
+
 """
             else:
-                sigma_content += "SOA Requirements: Not available"
+                sigma_content += "SOA Requirements: Not available\n\n"
+            
+            if optimum_current_calculation['sigma_case'] is not None:
+                sigma_content += f"""Optimum SOA Current Density Analysis:
+- Optimum Current Density: {optimum_current_calculation['sigma_case']['current_density_kA_cm2']:.2f} kA/cm²
+- Optimum Current: {optimum_current_calculation['sigma_case']['current_ma']:.1f} mA
+- Target Saturation Power: {optimum_current_calculation['sigma_case']['target_saturation_power_mw']:.2f} mW (2dB above target Pout)
+- Average Saturation Power: {optimum_current_calculation['sigma_case']['avg_saturation_power_mw']:.2f} mW ({optimum_current_calculation['sigma_case']['avg_saturation_power_db']:.2f} dBm)
+- Power Margin: {optimum_current_calculation['sigma_case']['margin_db']:.2f} dB
+"""
+            else:
+                sigma_content += "Optimum SOA Current Density Analysis: Not available"
             
             # Display results in respective text widgets
             self.guide3a_median_results_text.insert(1.0, median_content)
@@ -1796,6 +1833,110 @@ Performance Parameters:
         
         self.guide3a_median_results_text.delete(1.0, tk.END)
         self.guide3a_sigma_results_text.delete(1.0, tk.END)
+
+    def transfer_to_europasoa(self):
+        """Transfer calculated SOA output requirements from Guide3A to EuropaSOA tab"""
+        try:
+            # Get current Guide3A parameters
+            from Guide3A import Guide3A
+            
+            # Create Guide3A instance with current parameters
+            guide3a = Guide3A(
+                pic_architecture=self.guide3a_architecture_var.get(),
+                fiber_input_type=self.fiber_input_type_var.get(),
+                num_fibers=int(self.num_fibers_var.get()),
+                operating_wavelength_nm=float(self.guide3a_wavelength_var.get()),
+                temperature_c=float(self.guide3a_temp_var.get()),
+                io_in_loss=float(self.guide3a_io_in_loss_var.get()),
+                io_out_loss=float(self.guide3a_io_out_loss_var.get()),
+                psr_loss=float(self.guide3a_psr_loss_var.get()),
+                phase_shifter_loss=float(self.guide3a_phase_shifter_loss_var.get()),
+                coupler_loss=float(self.guide3a_coupler_loss_var.get()),
+                target_pout=float(self.guide3a_target_pout_var.get()),
+                soa_penalty=float(self.guide3a_soa_penalty_var.get()),
+                soa_penalty_3sigma=float(self.guide3a_soa_penalty_3sigma_var.get())
+            )
+            
+            # Calculate SOA output requirements
+            num_wavelengths = int(self.num_wavelengths_var.get())
+            soa_output_calculation = guide3a.calculate_target_pout_after_soa(
+                num_wavelengths=num_wavelengths,
+                target_pout_3sigma=float(self.guide3a_target_pout_3sigma_var.get()),
+                soa_penalty_3sigma=float(self.guide3a_soa_penalty_3sigma_var.get())
+            )
+            
+            # Transfer median case SOA output requirement to EuropaSOA target Pout
+            median_soa_output = soa_output_calculation['median_case']['soa_output_requirement_db']
+            self.pout_median_var.set(f"{median_soa_output:.2f}")
+            
+            # Transfer 3σ case SOA output requirement to EuropaSOA target Pout
+            if soa_output_calculation['sigma_case'] is not None:
+                sigma_soa_output = soa_output_calculation['sigma_case']['soa_output_requirement_db']
+                self.pout_sigma_var.set(f"{sigma_soa_output:.2f}")
+            
+            # Switch to EuropaSOA tab
+            for child in self.winfo_children():
+                if isinstance(child, ttk.Frame):
+                    for grandchild in child.winfo_children():
+                        if isinstance(grandchild, ttk.Notebook):
+                            grandchild.select(1)  # Switch to EuropaSOA tab (index 1)
+                            break
+                    break
+            
+            messagebox.showinfo("Transfer Complete", 
+                              f"SOA output requirements transferred to EuropaSOA tab:\n"
+                              f"Median: {median_soa_output:.2f} dBm\n"
+                              f"3σ: {sigma_soa_output:.2f} dBm (if available)")
+            
+        except Exception as e:
+            messagebox.showerror("Transfer Error", f"Failed to transfer results: {e}")
+
+    def use_guide3a_results(self):
+        """Use the calculated SOA output requirements from Guide3A as target Pout in EuropaSOA"""
+        try:
+            # Get current Guide3A parameters
+            from Guide3A import Guide3A
+            
+            # Create Guide3A instance with current parameters
+            guide3a = Guide3A(
+                pic_architecture=self.guide3a_architecture_var.get(),
+                fiber_input_type=self.fiber_input_type_var.get(),
+                num_fibers=int(self.num_fibers_var.get()),
+                operating_wavelength_nm=float(self.guide3a_wavelength_var.get()),
+                temperature_c=float(self.guide3a_temp_var.get()),
+                io_in_loss=float(self.guide3a_io_in_loss_var.get()),
+                io_out_loss=float(self.guide3a_io_out_loss_var.get()),
+                psr_loss=float(self.guide3a_psr_loss_var.get()),
+                phase_shifter_loss=float(self.guide3a_phase_shifter_loss_var.get()),
+                coupler_loss=float(self.guide3a_coupler_loss_var.get()),
+                target_pout=float(self.guide3a_target_pout_var.get()),
+                soa_penalty=float(self.guide3a_soa_penalty_var.get()),
+                soa_penalty_3sigma=float(self.guide3a_soa_penalty_3sigma_var.get())
+            )
+            
+            # Calculate SOA output requirements
+            num_wavelengths = int(self.num_wavelengths_var.get())
+            soa_output_calculation = guide3a.calculate_target_pout_after_soa(
+                num_wavelengths=num_wavelengths,
+                target_pout_3sigma=float(self.guide3a_target_pout_3sigma_var.get()),
+                soa_penalty_3sigma=float(self.guide3a_soa_penalty_3sigma_var.get())
+            )
+            
+            # Update EuropaSOA target Pout values
+            median_soa_output = soa_output_calculation['median_case']['soa_output_requirement_db']
+            self.pout_median_var.set(f"{median_soa_output:.2f}")
+            
+            if soa_output_calculation['sigma_case'] is not None:
+                sigma_soa_output = soa_output_calculation['sigma_case']['soa_output_requirement_db']
+                self.pout_sigma_var.set(f"{sigma_soa_output:.2f}")
+            
+            messagebox.showinfo("Updated", 
+                              f"EuropaSOA target Pout values updated:\n"
+                              f"Median: {median_soa_output:.2f} dBm\n"
+                              f"3σ: {sigma_soa_output:.2f} dBm (if available)")
+            
+        except Exception as e:
+            messagebox.showerror("Update Error", f"Failed to update EuropaSOA values: {e}")
 
     def on_fiber_type_change(self, event):
         """Callback function to update PIC architecture when fiber input type changes"""

@@ -500,3 +500,120 @@ Performance Metrics:
             }
         
         return result 
+
+    def estimate_optimum_soa_current_density(self, num_wavelengths: int, target_pout_3sigma: float | None = None, soa_penalty_3sigma: float | None = None, wavelengths: list[float] | None = None):
+        """
+        Estimate the optimum SOA current density and current such that the target Pout for the SOA 
+        is at least 2dB below the average saturation power when all wavelengths are considered.
+        
+        Args:
+            num_wavelengths (int): Number of wavelengths
+            target_pout_3sigma (float): Target Pout for 3σ case (optional)
+            soa_penalty_3sigma (float): SOA penalty for 3σ case (optional)
+            wavelengths (list[float]): List of wavelengths in nm (optional, defaults to 1310nm)
+            
+        Returns:
+            dict: Optimum current density and current for median and 3σ cases
+        """
+        if num_wavelengths <= 0:
+            raise ValueError("Number of wavelengths must be positive")
+        
+        # Default wavelengths if not provided
+        if wavelengths is None:
+            wavelengths = [1310.0] * num_wavelengths
+        elif len(wavelengths) != num_wavelengths:
+            raise ValueError(f"Number of wavelengths ({len(wavelengths)}) must match num_wavelengths ({num_wavelengths})")
+        
+        # Get SOA output requirements
+        soa_output_calculation = self.calculate_target_pout_after_soa(
+            num_wavelengths=num_wavelengths,
+            target_pout_3sigma=target_pout_3sigma,
+            soa_penalty_3sigma=soa_penalty_3sigma
+        )
+        
+        # Create SOA instance for calculations
+        soa = EuropaSOA(
+            L_active_um=self.soa_active_length_um,
+            W_um=self.soa_width_um,
+            verbose=False
+        )
+        
+        def find_optimum_current_density(target_pout_db: float, case_name: str):
+            """Find optimum current density for a given target Pout"""
+            # Target Pout in mW
+            target_pout_mw = 10**(target_pout_db / 10.0)
+            
+            # Target saturation power (2dB above target Pout)
+            target_saturation_power_mw = target_pout_mw * 10**(2.0 / 10.0)  # 2dB above target Pout
+            
+            # Binary search for optimum current density
+            j_min = 1.0  # kA/cm²
+            j_max = 15.0  # kA/cm² (increased from 10.0)
+            j_opt = None
+            
+            for _ in range(25):  # Max 25 iterations
+                j_test = (j_min + j_max) / 2
+                
+                # Calculate average saturation power across all wavelengths
+                saturation_powers = []
+                for wavelength in wavelengths:
+                    saturation_power_dbm = soa.get_output_saturation_power_dBm(
+                        wavelength, j_test, self.soa_temperature_c
+                    )
+                    saturation_power_mw = 10**(saturation_power_dbm / 10.0)
+                    saturation_powers.append(saturation_power_mw)
+                
+                avg_saturation_power_mw = sum(saturation_powers) / len(saturation_powers)
+                
+                if avg_saturation_power_mw >= target_saturation_power_mw:
+                    j_opt = j_test
+                    j_max = j_test
+                else:
+                    j_min = j_test
+                
+                if j_max - j_min < 0.005:  # Tighter convergence threshold
+                    break
+            
+            # If we didn't find a solution within the range, use the maximum
+            if j_opt is None:
+                j_opt = j_max
+                # Recalculate with maximum current density
+                saturation_powers = []
+                for wavelength in wavelengths:
+                    saturation_power_dbm = soa.get_output_saturation_power_dBm(
+                        wavelength, j_opt, self.soa_temperature_c
+                    )
+                    saturation_power_mw = 10**(saturation_power_dbm / 10.0)
+                    saturation_powers.append(saturation_power_mw)
+                avg_saturation_power_mw = sum(saturation_powers) / len(saturation_powers)
+            
+            # Calculate corresponding current
+            current_ma = soa.calculate_current_mA_from_J(j_opt)
+            
+            return {
+                'current_density_kA_cm2': j_opt,
+                'current_ma': current_ma,
+                'target_pout_db': target_pout_db,
+                'target_saturation_power_mw': target_saturation_power_mw,
+                'avg_saturation_power_mw': avg_saturation_power_mw,
+                'avg_saturation_power_db': 10 * math.log10(avg_saturation_power_mw),
+                'margin_db': 10 * math.log10(avg_saturation_power_mw / target_pout_mw)
+            }
+        
+        # Calculate for median case
+        median_target_pout = soa_output_calculation['median_case']['soa_output_requirement_db']
+        median_result = find_optimum_current_density(median_target_pout, "Median")
+        
+        result = {
+            'num_wavelengths': num_wavelengths,
+            'wavelengths_nm': wavelengths,
+            'median_case': median_result
+        }
+        
+        # Calculate for 3σ case if available
+        if soa_output_calculation['sigma_case'] is not None:
+            sigma_target_pout = soa_output_calculation['sigma_case']['soa_output_requirement_db']
+            sigma_result = find_optimum_current_density(sigma_target_pout, "3σ")
+            result['sigma_case'] = sigma_result
+        
+        return result 
