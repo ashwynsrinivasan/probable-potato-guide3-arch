@@ -453,11 +453,18 @@ class Guide3GUI(tk.Tk):
                 self.pic_architecture_var.set(self.default_config['pic_parameters']['pic_architecture'])
                 self.operating_wavelength_var.set(str(self.default_config['pic_parameters']['operating_wavelength']))
                 self.pic_temp_var.set(str(self.default_config['pic_parameters']['temperature']))
+                self.bandwidth_var.set(str(self.default_config['pic_parameters']['bandwidth']))
+                self.waveguide_length_var.set(str(self.default_config['pic_parameters']['waveguide_length']))
+                self.waveguide_loss_var.set(str(self.default_config['pic_parameters']['waveguide_loss']))
                 self.io_in_loss_var.set(str(self.default_config['pic_parameters']['io_in_loss']))
                 self.io_out_loss_var.set(str(self.default_config['pic_parameters']['io_out_loss']))
                 self.psr_loss_var.set(str(self.default_config['pic_parameters']['psr_loss']))
                 self.phase_shifter_loss_var.set(str(self.default_config['pic_parameters']['phase_shifter_loss']))
                 self.coupler_loss_var.set(str(self.default_config['pic_parameters']['coupler_loss']))
+                self.mux_loss_var.set(str(self.default_config['pic_parameters']['mux_loss']))
+                self.demux_loss_var.set(str(self.default_config['pic_parameters']['demux_loss']))
+                self.modulator_loss_var.set(str(self.default_config['pic_parameters']['modulator_loss']))
+                self.detector_loss_var.set(str(self.default_config['pic_parameters']['detector_loss']))
             
             messagebox.showinfo("Defaults Loaded", "Default configuration has been loaded successfully.")
             
@@ -496,6 +503,9 @@ class Guide3GUI(tk.Tk):
                 self.default_config['pic_parameters']['pic_architecture'] = self.pic_architecture_var.get()
                 self.default_config['pic_parameters']['operating_wavelength'] = float(self.operating_wavelength_var.get())
                 self.default_config['pic_parameters']['temperature'] = float(self.pic_temp_var.get())
+                self.default_config['pic_parameters']['bandwidth'] = float(self.bandwidth_var.get())
+                self.default_config['pic_parameters']['waveguide_length'] = float(self.waveguide_length_var.get())
+                self.default_config['pic_parameters']['waveguide_loss'] = float(self.waveguide_loss_var.get())
                 self.default_config['pic_parameters']['io_in_loss'] = float(self.io_in_loss_var.get())
                 self.default_config['pic_parameters']['io_out_loss'] = float(self.io_out_loss_var.get())
                 self.default_config['pic_parameters']['psr_loss'] = float(self.psr_loss_var.get())
@@ -556,11 +566,18 @@ class Guide3GUI(tk.Tk):
                     self.pic_architecture_var.set(config['pic_parameters'].get('pic_architecture', 'psr'))
                     self.operating_wavelength_var.set(str(config['pic_parameters'].get('operating_wavelength', 1310)))
                     self.pic_temp_var.set(str(config['pic_parameters'].get('temperature', 25)))
+                    self.bandwidth_var.set(str(config['pic_parameters'].get('bandwidth', 10)))
+                    self.waveguide_length_var.set(str(config['pic_parameters'].get('waveguide_length', 2.0)))
+                    self.waveguide_loss_var.set(str(config['pic_parameters'].get('waveguide_loss', 0.1)))
                     self.io_in_loss_var.set(str(config['pic_parameters'].get('io_in_loss', 1.5)))
                     self.io_out_loss_var.set(str(config['pic_parameters'].get('io_out_loss', 1.5)))
                     self.psr_loss_var.set(str(config['pic_parameters'].get('psr_loss', 0.5)))
                     self.phase_shifter_loss_var.set(str(config['pic_parameters'].get('phase_shifter_loss', 0.5)))
                     self.coupler_loss_var.set(str(config['pic_parameters'].get('coupler_loss', 0.2)))
+                    self.mux_loss_var.set(str(config['pic_parameters'].get('mux_loss', 0.3)))
+                    self.demux_loss_var.set(str(config['pic_parameters'].get('demux_loss', 0.3)))
+                    self.modulator_loss_var.set(str(config['pic_parameters'].get('modulator_loss', 0.8)))
+                    self.detector_loss_var.set(str(config['pic_parameters'].get('detector_loss', 0.4)))
                 
                 messagebox.showinfo("Config Loaded", f"Configuration loaded from {filename}")
                 
@@ -601,11 +618,18 @@ class Guide3GUI(tk.Tk):
                         'pic_architecture': self.pic_architecture_var.get(),
                         'operating_wavelength': float(self.operating_wavelength_var.get()),
                         'temperature': float(self.pic_temp_var.get()),
+                        'bandwidth': float(self.bandwidth_var.get()),
+                        'waveguide_length': float(self.waveguide_length_var.get()),
+                        'waveguide_loss': float(self.waveguide_loss_var.get()),
                         'io_in_loss': float(self.io_in_loss_var.get()),
                         'io_out_loss': float(self.io_out_loss_var.get()),
                         'psr_loss': float(self.psr_loss_var.get()),
                         'phase_shifter_loss': float(self.phase_shifter_loss_var.get()),
-                        'coupler_loss': float(self.coupler_loss_var.get())
+                        'coupler_loss': float(self.coupler_loss_var.get()),
+                        'mux_loss': float(self.mux_loss_var.get()),
+                        'demux_loss': float(self.demux_loss_var.get()),
+                        'modulator_loss': float(self.modulator_loss_var.get()),
+                        'detector_loss': float(self.detector_loss_var.get())
                     }
                 }
                 
@@ -1494,6 +1518,9 @@ Summary:
         # Reset performance parameters
         self.operating_wavelength_var.set("1310")
         self.pic_temp_var.set("25")
+        self.bandwidth_var.set("10")
+        self.waveguide_length_var.set("2.0")
+        self.waveguide_loss_var.set("0.1")
         
         # Reset loss components
         self.io_in_loss_var.set("1.5")
@@ -1501,6 +1528,10 @@ Summary:
         self.psr_loss_var.set("0.5")
         self.phase_shifter_loss_var.set("0.5")
         self.coupler_loss_var.set("0.2")
+        self.mux_loss_var.set("0.3")
+        self.demux_loss_var.set("0.3")
+        self.modulator_loss_var.set("0.8")
+        self.detector_loss_var.set("0.4")
         
         self.pic_results_text.delete(1.0, tk.END)
 

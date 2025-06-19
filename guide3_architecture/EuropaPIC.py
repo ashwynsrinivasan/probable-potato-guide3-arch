@@ -7,7 +7,7 @@ class EuropaPIC:
     """
     
     # Supported architectures
-    SUPPORTED_ARCHITECTURES = ['psr', 'pol_control', 'mux_demux', 'modulator', 'detector']
+    SUPPORTED_ARCHITECTURES = ['psr', 'pol_control', 'psrless']
     
     def __init__(self, pic_architecture: str, **kwargs):
         """
@@ -29,17 +29,10 @@ class EuropaPIC:
         self.psr_loss = kwargs.get('psr_loss', 0.5)
         self.phase_shifter_loss = kwargs.get('phase_shifter_loss', 0.5)
         self.coupler_loss = kwargs.get('coupler_loss', 0.2)
-        self.mux_loss = kwargs.get('mux_loss', 0.3)
-        self.demux_loss = kwargs.get('demux_loss', 0.3)
-        self.modulator_loss = kwargs.get('modulator_loss', 0.8)
-        self.detector_loss = kwargs.get('detector_loss', 0.4)
-        self.waveguide_loss = kwargs.get('waveguide_loss', 0.1)  # per cm
-        self.waveguide_length_cm = kwargs.get('waveguide_length_cm', 2.0)
         
         # Performance parameters
         self.operating_wavelength_nm = kwargs.get('operating_wavelength_nm', 1310)
         self.temperature_c = kwargs.get('temperature_c', 25)
-        self.bandwidth_ghz = kwargs.get('bandwidth_ghz', 10)
         
         # Validate inputs
         self._validate_parameters()
@@ -49,9 +42,7 @@ class EuropaPIC:
         # Check for negative loss values
         loss_params = [
             self.io_in_loss, self.io_out_loss, self.psr_loss, 
-            self.phase_shifter_loss, self.coupler_loss, self.mux_loss,
-            self.demux_loss, self.modulator_loss, self.detector_loss,
-            self.waveguide_loss, self.waveguide_length_cm
+            self.phase_shifter_loss, self.coupler_loss
         ]
         
         for param in loss_params:
@@ -75,10 +66,6 @@ class EuropaPIC:
         """
         total_loss = self.io_in_loss + self.io_out_loss
         
-        # Add waveguide loss
-        waveguide_total_loss = self.waveguide_loss * self.waveguide_length_cm
-        total_loss += waveguide_total_loss
-        
         # Add architecture-specific losses
         if self.pic_architecture == 'psr':
             total_loss += 2 * self.psr_loss  # psr_in and psr_out
@@ -88,17 +75,9 @@ class EuropaPIC:
             total_loss += 2 * self.phase_shifter_loss  # phase_shifter_in_1, phase_shifter_in_2
             total_loss += 2 * self.coupler_loss  # coupler_in_1, coupler_in_2
             
-        elif self.pic_architecture == 'mux_demux':
-            total_loss += self.mux_loss  # multiplexer
-            total_loss += self.demux_loss  # demultiplexer
-            
-        elif self.pic_architecture == 'modulator':
-            total_loss += self.modulator_loss  # modulator
-            total_loss += self.phase_shifter_loss  # phase shifter for modulation
-            
-        elif self.pic_architecture == 'detector':
-            total_loss += self.detector_loss  # detector
-            total_loss += self.coupler_loss  # coupling to detector
+        elif self.pic_architecture == 'psrless':
+            # PSRless architecture has no PSR components
+            pass
         
         return total_loss
     
@@ -114,11 +93,6 @@ class EuropaPIC:
                 'io_in_loss': self.io_in_loss,
                 'io_out_loss': self.io_out_loss,
                 'total_io_loss': self.io_in_loss + self.io_out_loss
-            },
-            'waveguide_loss': {
-                'loss_per_cm': self.waveguide_loss,
-                'length_cm': self.waveguide_length_cm,
-                'total_waveguide_loss': self.waveguide_loss * self.waveguide_length_cm
             },
             'architecture_specific': {}
         }
@@ -140,25 +114,9 @@ class EuropaPIC:
                 'total_coupler_loss': 2 * self.coupler_loss
             }
             
-        elif self.pic_architecture == 'mux_demux':
+        elif self.pic_architecture == 'psrless':
             breakdown['architecture_specific'] = {
-                'mux_loss': self.mux_loss,
-                'demux_loss': self.demux_loss,
-                'total_mux_demux_loss': self.mux_loss + self.demux_loss
-            }
-            
-        elif self.pic_architecture == 'modulator':
-            breakdown['architecture_specific'] = {
-                'modulator_loss': self.modulator_loss,
-                'phase_shifter_loss': self.phase_shifter_loss,
-                'total_modulator_loss': self.modulator_loss + self.phase_shifter_loss
-            }
-            
-        elif self.pic_architecture == 'detector':
-            breakdown['architecture_specific'] = {
-                'detector_loss': self.detector_loss,
-                'coupler_loss': self.coupler_loss,
-                'total_detector_loss': self.detector_loss + self.coupler_loss
+                'note': 'No PSR components in PSRless architecture'
             }
         
         breakdown['total_loss'] = self.get_total_loss()
@@ -183,7 +141,6 @@ class EuropaPIC:
         
         # Calculate bandwidth considerations
         bandwidth_metrics = {
-            'bandwidth_ghz': self.bandwidth_ghz,
             'wavelength_nm': self.operating_wavelength_nm,
             'temperature_c': self.temperature_c
         }
@@ -211,9 +168,7 @@ class EuropaPIC:
         descriptions = {
             'psr': "Polarization Splitter and Rotator (PSR) - Handles polarization diversity",
             'pol_control': "Polarization Control - Advanced polarization management with phase shifters",
-            'mux_demux': "Multiplexer/Demultiplexer - Wavelength division multiplexing",
-            'modulator': "Optical Modulator - High-speed optical modulation",
-            'detector': "Optical Detector - Photodetection and signal recovery"
+            'psrless': "PSRless - Simplified architecture without PSR components"
         }
         return descriptions.get(self.pic_architecture, "Unknown architecture")
     
@@ -225,16 +180,13 @@ class EuropaPIC:
             dict: Component counts
         """
         base_components = {
-            'io_ports': 2,
-            'waveguides': 1
+            'io_ports': 2
         }
         
         architecture_components = {
             'psr': {'psr_devices': 2},
             'pol_control': {'psr_devices': 2, 'phase_shifters': 2, 'couplers': 2},
-            'mux_demux': {'multiplexer': 1, 'demultiplexer': 1},
-            'modulator': {'modulator': 1, 'phase_shifter': 1},
-            'detector': {'detector': 1, 'coupler': 1}
+            'psrless': {}
         }
         
         components = base_components.copy()
@@ -284,7 +236,6 @@ Loss Breakdown:
   - I/O Input Loss: {breakdown['io_losses']['io_in_loss']:.1f} dB
   - I/O Output Loss: {breakdown['io_losses']['io_out_loss']:.1f} dB
   - Total I/O Loss: {breakdown['io_losses']['total_io_loss']:.1f} dB
-  - Waveguide Loss: {breakdown['waveguide_loss']['total_waveguide_loss']:.1f} dB
 """
         
         # Add architecture-specific losses
@@ -292,6 +243,8 @@ Loss Breakdown:
         for loss_type, value in arch_losses.items():
             if 'total' in loss_type:
                 report += f"  - {loss_type.replace('_', ' ').title()}: {value:.1f} dB\n"
+            elif loss_type == 'note':
+                report += f"  - {value}\n"
         
         report += f"""
 Performance Metrics:
@@ -301,7 +254,6 @@ Performance Metrics:
   - Optical Efficiency: {metrics['efficiency_metrics']['optical_efficiency_percent']:.1f}%
   - Operating Wavelength: {self.operating_wavelength_nm} nm
   - Temperature: {self.temperature_c}°C
-  - Bandwidth: {self.bandwidth_ghz} GHz
 """
         
         return report 
