@@ -433,6 +433,7 @@ Performance Metrics:
         """
         Calculate the target Pout required from each SOA based on losses.
         Works backwards from the final target Pout to determine SOA output requirements.
+        Only includes output component losses (not input losses).
         
         Args:
             num_wavelengths (int): Number of wavelengths
@@ -452,36 +453,49 @@ Performance Metrics:
         
         # Get loss breakdown
         loss_breakdown = self.get_loss_breakdown()
-        total_loss = loss_breakdown['total_loss']
+        
+        # Calculate output-only losses (exclude input losses)
+        output_losses = loss_breakdown['io_losses']['io_out_loss']
+        
+        # Add architecture-specific output losses
+        arch_losses = loss_breakdown['architecture_specific']
+        if self.effective_architecture == 'psr':
+            output_losses += arch_losses.get('total_psr_loss', 0) / 2  # Only output PSR
+            output_losses += arch_losses.get('total_tap_loss', 0) / 2  # Only output tap
+        elif self.effective_architecture == 'pol_control':
+            output_losses += arch_losses.get('total_psr_loss', 0) / 2  # Only output PSR
+            output_losses += arch_losses.get('total_phase_shifter_loss', 0) / 2  # Only output phase shifter
+            output_losses += arch_losses.get('total_coupler_loss', 0) / 2  # Only output coupler
+        elif self.effective_architecture == 'psrless':
+            # No additional output losses in PSRless architecture
+            pass
         
         # Calculate SOA output requirements
-        # SOA output = Final target + Total losses (working backwards)
-        median_soa_output = total_target_calc['median_case']['total_target_pout_db'] + total_loss
+        # SOA output = Final target + Output losses only (working backwards)
+        median_soa_output = total_target_calc['median_case']['total_target_pout_db'] + output_losses
         
         result = {
             'num_wavelengths': num_wavelengths,
-            'total_system_loss_db': total_loss,
+            'total_output_loss_db': output_losses,
             'median_case': {
                 'final_target_pout_db': total_target_calc['median_case']['total_target_pout_db'],
                 'soa_output_requirement_db': median_soa_output,
                 'loss_breakdown': {
-                    'io_in_loss': loss_breakdown['io_losses']['io_in_loss'],
                     'io_out_loss': loss_breakdown['io_losses']['io_out_loss'],
-                    'architecture_loss': total_loss - loss_breakdown['io_losses']['total_io_loss']
+                    'architecture_output_loss': output_losses - loss_breakdown['io_losses']['io_out_loss']
                 }
             }
         }
         
         # Add 3σ case if available
         if total_target_calc['sigma_case'] is not None:
-            sigma_soa_output = total_target_calc['sigma_case']['total_target_pout_db'] + total_loss
+            sigma_soa_output = total_target_calc['sigma_case']['total_target_pout_db'] + output_losses
             result['sigma_case'] = {
                 'final_target_pout_db': total_target_calc['sigma_case']['total_target_pout_db'],
                 'soa_output_requirement_db': sigma_soa_output,
                 'loss_breakdown': {
-                    'io_in_loss': loss_breakdown['io_losses']['io_in_loss'],
                     'io_out_loss': loss_breakdown['io_losses']['io_out_loss'],
-                    'architecture_loss': total_loss - loss_breakdown['io_losses']['total_io_loss']
+                    'architecture_output_loss': output_losses - loss_breakdown['io_losses']['io_out_loss']
                 }
             }
         

@@ -284,27 +284,67 @@ class Guide3GUI(tk.Tk):
         ttk.Button(plot_options_frame, text="Generate Plots", command=self.generate_plots).grid(
             row=row+1, column=0, columnspan=4, sticky='w', padx=5, pady=(10, 0))
         
-        # Top section - Median Results
-        median_results_frame = ttk.LabelFrame(results_frame, text="Median Loss Case", padding="5")
-        median_results_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 5))
+        # Create horizontal split for median and 3σ cases
+        results_split_frame = ttk.Frame(results_frame)
+        results_split_frame.pack(fill=tk.BOTH, expand=True)
         
-        self.median_results_text = tk.Text(median_results_frame, height=10, width=50)
-        median_results_scrollbar = ttk.Scrollbar(median_results_frame, orient="vertical", command=self.median_results_text.yview)
-        self.median_results_text.configure(yscrollcommand=median_results_scrollbar.set)
+        # Left side - Median Results
+        median_results_frame = ttk.LabelFrame(results_split_frame, text="Median Loss Case", padding="5")
+        median_results_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 5))
         
-        self.median_results_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        median_results_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        # Create canvas with scrollbars for median results
+        median_canvas = tk.Canvas(median_results_frame)
+        median_v_scrollbar = ttk.Scrollbar(median_results_frame, orient="vertical", command=median_canvas.yview)
+        median_h_scrollbar = ttk.Scrollbar(median_results_frame, orient="horizontal", command=median_canvas.xview)
         
-        # Bottom section - 3-Sigma Results
-        sigma_results_frame = ttk.LabelFrame(results_frame, text="3σ Loss Case", padding="5")
-        sigma_results_frame.pack(fill=tk.BOTH, expand=True, pady=(5, 0))
+        self.median_results_text = tk.Text(median_canvas, wrap=tk.NONE)
+        self.median_results_text.configure(yscrollcommand=median_v_scrollbar.set, xscrollcommand=median_h_scrollbar.set)
         
-        self.sigma_results_text = tk.Text(sigma_results_frame, height=10, width=50)
-        sigma_results_scrollbar = ttk.Scrollbar(sigma_results_frame, orient="vertical", command=self.sigma_results_text.yview)
-        self.sigma_results_text.configure(yscrollcommand=sigma_results_scrollbar.set)
+        median_canvas.create_window((0, 0), window=self.median_results_text, anchor="nw")
+        median_canvas.configure(yscrollcommand=median_v_scrollbar.set, xscrollcommand=median_h_scrollbar.set)
         
-        self.sigma_results_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        sigma_results_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        # Pack the canvas and scrollbars
+        median_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        median_v_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        median_h_scrollbar.pack(side=tk.BOTTOM, fill=tk.X)
+        
+        # Bind mouse wheel scrolling for median results
+        median_canvas.bind_all("<MouseWheel>", lambda event: median_canvas.yview_scroll(int(-1*(event.delta/120)), "units"))
+        median_canvas.bind_all("<Shift-MouseWheel>", lambda event: median_canvas.xview_scroll(int(-1*(event.delta/120)), "units"))
+        
+        # Right side - 3-Sigma Results
+        sigma_results_frame = ttk.LabelFrame(results_split_frame, text="3σ Loss Case", padding="5")
+        sigma_results_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=(5, 0))
+        
+        # Create canvas with scrollbars for sigma results
+        sigma_canvas = tk.Canvas(sigma_results_frame)
+        sigma_v_scrollbar = ttk.Scrollbar(sigma_results_frame, orient="vertical", command=sigma_canvas.yview)
+        sigma_h_scrollbar = ttk.Scrollbar(sigma_results_frame, orient="horizontal", command=sigma_canvas.xview)
+        
+        self.sigma_results_text = tk.Text(sigma_canvas, wrap=tk.NONE)
+        self.sigma_results_text.configure(yscrollcommand=sigma_v_scrollbar.set, xscrollcommand=sigma_h_scrollbar.set)
+        
+        sigma_canvas.create_window((0, 0), window=self.sigma_results_text, anchor="nw")
+        sigma_canvas.configure(yscrollcommand=sigma_v_scrollbar.set, xscrollcommand=sigma_h_scrollbar.set)
+        
+        # Pack the canvas and scrollbars
+        sigma_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        sigma_v_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        sigma_h_scrollbar.pack(side=tk.BOTTOM, fill=tk.X)
+        
+        # Bind mouse wheel scrolling for sigma results
+        sigma_canvas.bind_all("<MouseWheel>", lambda event: sigma_canvas.yview_scroll(int(-1*(event.delta/120)), "units"))
+        sigma_canvas.bind_all("<Shift-MouseWheel>", lambda event: sigma_canvas.xview_scroll(int(-1*(event.delta/120)), "units"))
+        
+        # Configure scroll regions when text content changes
+        def configure_soa_median_scroll_region(event):
+            median_canvas.configure(scrollregion=median_canvas.bbox("all"))
+        
+        def configure_soa_sigma_scroll_region(event):
+            sigma_canvas.configure(scrollregion=sigma_canvas.bbox("all"))
+        
+        self.median_results_text.bind("<Configure>", configure_soa_median_scroll_region)
+        self.sigma_results_text.bind("<Configure>", configure_soa_sigma_scroll_region)
 
         # Guide3A Tab (formerly EuropaPIC)
         self.guide3a_tab = ttk.Frame(notebook)
@@ -468,12 +508,59 @@ class Guide3GUI(tk.Tk):
         ttk.Button(action_frame, text="Calculate", command=self.calculate_guide3a).pack(side=tk.LEFT, padx=(0, 5))
         ttk.Button(action_frame, text="Reset", command=self.reset_guide3a).pack(side=tk.LEFT, padx=5)
         
-        self.guide3a_results_text = tk.Text(guide3a_results_frame, height=20, width=50)
-        guide3a_results_scrollbar = ttk.Scrollbar(guide3a_results_frame, orient="vertical", command=self.guide3a_results_text.yview)
-        self.guide3a_results_text.configure(yscrollcommand=guide3a_results_scrollbar.set)
+        # Create horizontal split for median and 3σ cases
+        results_split_frame = ttk.Frame(guide3a_results_frame)
+        results_split_frame.pack(fill=tk.BOTH, expand=True)
         
-        self.guide3a_results_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        guide3a_results_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        # Left side - Median Case Results
+        median_results_frame = ttk.LabelFrame(results_split_frame, text="Median Loss Case", padding="5")
+        median_results_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 5))
+        
+        # Create canvas with scrollbars for median results
+        guide3a_median_canvas = tk.Canvas(median_results_frame)
+        guide3a_median_v_scrollbar = ttk.Scrollbar(median_results_frame, orient="vertical", command=guide3a_median_canvas.yview)
+        guide3a_median_h_scrollbar = ttk.Scrollbar(median_results_frame, orient="horizontal", command=guide3a_median_canvas.xview)
+        
+        self.guide3a_median_results_text = tk.Text(guide3a_median_canvas, wrap=tk.NONE)
+        self.guide3a_median_results_text.configure(yscrollcommand=guide3a_median_v_scrollbar.set, xscrollcommand=guide3a_median_h_scrollbar.set)
+        
+        guide3a_median_canvas.create_window((0, 0), window=self.guide3a_median_results_text, anchor="nw")
+        guide3a_median_canvas.configure(yscrollcommand=guide3a_median_v_scrollbar.set, xscrollcommand=guide3a_median_h_scrollbar.set)
+        
+        # Pack the canvas and scrollbars
+        guide3a_median_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        guide3a_median_v_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        guide3a_median_h_scrollbar.pack(side=tk.BOTTOM, fill=tk.X)
+        
+        # Right side - 3σ Case Results
+        sigma_results_frame = ttk.LabelFrame(results_split_frame, text="3σ Loss Case", padding="5")
+        sigma_results_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=(5, 0))
+        
+        # Create canvas with scrollbars for sigma results
+        guide3a_sigma_canvas = tk.Canvas(sigma_results_frame)
+        guide3a_sigma_v_scrollbar = ttk.Scrollbar(sigma_results_frame, orient="vertical", command=guide3a_sigma_canvas.yview)
+        guide3a_sigma_h_scrollbar = ttk.Scrollbar(sigma_results_frame, orient="horizontal", command=guide3a_sigma_canvas.xview)
+        
+        self.guide3a_sigma_results_text = tk.Text(guide3a_sigma_canvas, wrap=tk.NONE)
+        self.guide3a_sigma_results_text.configure(yscrollcommand=guide3a_sigma_v_scrollbar.set, xscrollcommand=guide3a_sigma_h_scrollbar.set)
+        
+        guide3a_sigma_canvas.create_window((0, 0), window=self.guide3a_sigma_results_text, anchor="nw")
+        guide3a_sigma_canvas.configure(yscrollcommand=guide3a_sigma_v_scrollbar.set, xscrollcommand=guide3a_sigma_h_scrollbar.set)
+        
+        # Pack the canvas and scrollbars
+        guide3a_sigma_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        guide3a_sigma_v_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        guide3a_sigma_h_scrollbar.pack(side=tk.BOTTOM, fill=tk.X)
+        
+        # Configure scroll regions when text content changes
+        def configure_guide3a_median_scroll_region(event):
+            guide3a_median_canvas.configure(scrollregion=guide3a_median_canvas.bbox("all"))
+        
+        def configure_guide3a_sigma_scroll_region(event):
+            guide3a_sigma_canvas.configure(scrollregion=guide3a_sigma_canvas.bbox("all"))
+        
+        self.guide3a_median_results_text.bind("<Configure>", configure_guide3a_median_scroll_region)
+        self.guide3a_sigma_results_text.bind("<Configure>", configure_guide3a_sigma_scroll_region)
 
     def auto_calculate_defaults(self):
         """Automatically calculate and display results for default inputs"""
@@ -761,169 +848,257 @@ class Guide3GUI(tk.Tk):
                 messagebox.showerror("Invalid Input", "Temperature must be between 25 and 80 °C")
                 return
             
-            # Create EuropaSOA instance
-            soa = EuropaSOA(L_active_um=l_active, W_um=w_um, verbose=False)
+            # Calculate Guide3A SOA output requirements to use as target Pout
+            from Guide3A import Guide3A
             
-            # Calculate basic parameters
-            device_area_cm2 = (w_um * l_active) / 10000  # Convert µm² to cm²
+            # Get Guide3A parameters from GUI
+            fiber_input_type = self.fiber_input_type_var.get()
+            pic_architecture = self.guide3a_architecture_var.get()
+            num_fibers = int(self.num_fibers_var.get())
             
-            # Clear both result sections
-            self.median_results_text.delete(1.0, tk.END)
-            self.sigma_results_text.delete(1.0, tk.END)
+            # Performance parameters (matching EuropaSOA)
+            operating_wavelength = float(self.guide3a_wavelength_var.get())
+            temperature = float(self.guide3a_temp_var.get())
             
-            # Display device and operation parameters in both sections
-            wavelengths_str = ", ".join([f"{w:.2f}" for w in wavelengths])
-            common_info = f"""Device Parameters:
-- Width: {w_um:.1f} µm
-- Active Length: {l_active:.0f} µm
-- Device Area: {device_area_cm2:.4f} cm²
-- Series Resistance: {soa.calculate_series_resistance_ohm():.3f} Ω
+            # Loss components
+            io_in_loss = float(self.guide3a_io_in_loss_var.get())
+            io_out_loss = float(self.guide3a_io_out_loss_var.get())
+            psr_loss = float(self.guide3a_psr_loss_var.get())
+            phase_shifter_loss = float(self.guide3a_phase_shifter_loss_var.get())
+            coupler_loss = float(self.guide3a_coupler_loss_var.get())
+            
+            # Link requirements
+            target_pout = float(self.guide3a_target_pout_var.get())
+            target_pout_3sigma = float(self.guide3a_target_pout_3sigma_var.get())
+            soa_penalty = float(self.guide3a_soa_penalty_var.get())
+            soa_penalty_3sigma = float(self.guide3a_soa_penalty_3sigma_var.get())
+            
+            # Validate inputs
+            if fiber_input_type not in ["pm", "sm"]:
+                messagebox.showerror("Invalid Input", "Fiber Input Type must be 'pm' or 'sm'")
+                return
+            
+            # For PM fiber, architecture must be psrless
+            if fiber_input_type == "pm":
+                pic_architecture = "psrless"
+            # For SM fiber, architecture must be psr or pol_control
+            elif fiber_input_type == "sm" and pic_architecture not in ["psr", "pol_control"]:
+                messagebox.showerror("Invalid Input", "For SM fiber, PIC Architecture must be 'psr' or 'pol_control'")
+                return
+            
+            if num_fibers % 20 != 0:
+                messagebox.showerror("Invalid Input", "Number of fibers must be a multiple of 20")
+                return
+            
+            if not (1290 <= operating_wavelength <= 1330):
+                messagebox.showerror("Invalid Input", "Operating wavelength must be between 1290 and 1330 nm")
+                return
+            
+            if not (25 <= temperature <= 80):
+                messagebox.showerror("Invalid Input", "Temperature must be between 25 and 80°C")
+                return
+            
+            if not (-10 <= target_pout <= 20):
+                messagebox.showerror("Invalid Input", "Target Pout - Median must be between -10 and 20 dBm")
+                return
+            
+            if not (-10 <= target_pout_3sigma <= 20):
+                messagebox.showerror("Invalid Input", "Target Pout - 3σ must be between -10 and 20 dBm")
+                return
+            
+            if soa_penalty < 0:
+                messagebox.showerror("Invalid Input", "SOA penalty - Median must be non-negative")
+                return
+            
+            if soa_penalty_3sigma < 0:
+                messagebox.showerror("Invalid Input", "SOA penalty - 3σ must be non-negative")
+                return
+            
+            if any(loss < 0 for loss in [io_in_loss, io_out_loss, psr_loss, phase_shifter_loss, coupler_loss]):
+                messagebox.showerror("Invalid Input", "All loss values must be non-negative")
+                return
+            
+            # Import Guide3A class
+            from Guide3A import Guide3A
+            
+            # Create Guide3A instance with all parameters
+            guide3a = Guide3A(
+                pic_architecture=pic_architecture,
+                fiber_input_type=fiber_input_type,
+                num_fibers=num_fibers,
+                operating_wavelength_nm=operating_wavelength,
+                temperature_c=temperature,
+                io_in_loss=io_in_loss,
+                io_out_loss=io_out_loss,
+                psr_loss=psr_loss,
+                phase_shifter_loss=phase_shifter_loss,
+                coupler_loss=coupler_loss,
+                target_pout=target_pout,
+                soa_penalty=soa_penalty,
+                soa_penalty_3sigma=soa_penalty_3sigma
+            )
+            
+            # Get comprehensive analysis
+            total_loss = guide3a.get_total_loss()
+            loss_breakdown = guide3a.get_loss_breakdown()
+            performance_metrics = guide3a.get_performance_metrics()
+            component_count = guide3a.get_component_count()
+            architecture_description = guide3a.get_architecture_description()
+            module_config = guide3a.get_module_configuration()
+            
+            # Calculate target Pout for all wavelengths
+            num_wavelengths = int(self.num_wavelengths_var.get())
+            target_pout_calculation = guide3a.calculate_target_pout_all_wavelengths(
+                num_wavelengths=num_wavelengths,
+                target_pout_3sigma=target_pout_3sigma,
+                soa_penalty_3sigma=soa_penalty_3sigma
+            )
+            
+            # Calculate SOA output requirements
+            soa_output_calculation = guide3a.calculate_target_pout_after_soa(
+                num_wavelengths=num_wavelengths,
+                target_pout_3sigma=target_pout_3sigma,
+                soa_penalty_3sigma=soa_penalty_3sigma
+            )
+            
+            # Clear results
+            self.guide3a_median_results_text.delete(1.0, tk.END)
+            self.guide3a_sigma_results_text.delete(1.0, tk.END)
+            
+            # Create common header information
+            common_header = f"""Guide3A Enhanced Analysis Results
+{'='*50}
 
-Operation Parameters:
-- Number of Wavelengths: {num_wavelengths}
-- Wavelengths: {wavelengths_str} nm
-- Temperature: {temp_c:.0f} °C
+Module Configuration:
+- Fiber Input Type: {module_config['fiber_input_type'].upper()}
+- PIC Architecture: {module_config['pic_architecture'].upper()}
+- Effective Architecture: {module_config['effective_architecture'].upper()}
+- Number of Fibers: {module_config['num_fibers']}
+- Number of SOAs: {module_config['num_soas']}
+- Number of PICs: {module_config['num_pics']}
+- Number of Unit Cells: {module_config['num_unit_cells']}
+
+Performance Parameters:
+- Operating Wavelength: {operating_wavelength:.0f} nm
+- Temperature: {temperature:.0f} °C
+
+Target Pout for All Wavelengths:
+- Number of Wavelengths: {target_pout_calculation['num_wavelengths']}
+- Wavelength Penalty: {target_pout_calculation['wavelength_penalty_db']:.2f} dB (10*log10({target_pout_calculation['num_wavelengths']}))
+
+SOA Output Requirements (After Output Losses Only):
+- Total Output Loss: {soa_output_calculation['total_output_loss_db']:.2f} dB
+
+Component Count:
+"""
+            
+            for component, count in component_count.items():
+                common_header += f"- {component.replace('_', ' ').title()}: {count}\n"
+            
+            common_header += f"""
+Loss Breakdown:
+- I/O Input Loss: {loss_breakdown['io_losses']['io_in_loss']:.1f} dB
+- I/O Output Loss: {loss_breakdown['io_losses']['io_out_loss']:.1f} dB
+- Total I/O Loss: {loss_breakdown['io_losses']['total_io_loss']:.1f} dB
+"""
+            
+            # Add architecture-specific losses
+            arch_losses = loss_breakdown['architecture_specific']
+            for loss_type, value in arch_losses.items():
+                if 'total' in loss_type:
+                    common_header += f"- {loss_type.replace('_', ' ').title()}: {value:.1f} dB\n"
+                elif loss_type == 'note':
+                    common_header += f"- {value}\n"
+            
+            common_header += f"""
+Performance Metrics:
+- Total Loss: {loss_breakdown['total_loss']:.1f} dB
+- Power Penalty: {performance_metrics['power_budget']['power_penalty_db']:.1f} dB
+- Link Margin: {performance_metrics['power_budget']['link_margin_db']:.1f} dB
+- Required TX Power: {performance_metrics['power_budget']['required_tx_power_db']:.1f} dBm
+- Optical Efficiency: {performance_metrics['efficiency_metrics']['optical_efficiency_percent']:.1f}%
+- Insertion Loss: {performance_metrics['efficiency_metrics']['insertion_loss_db']:.1f} dB
+- Return Loss: {performance_metrics['efficiency_metrics']['return_loss_db']:.1f} dB
+
+Architecture-Specific Analysis:
+"""
+            
+            effective_arch = module_config['effective_architecture']
+            if effective_arch == 'psr':
+                common_header += f"- PSR Components: 2 × {psr_loss:.1f} dB = {2*psr_loss:.1f} dB (PSR in/out)\n"
+            elif effective_arch == 'pol_control':
+                common_header += f"- PSR Components: 2 × {psr_loss:.1f} dB = {2*psr_loss:.1f} dB (PSR in/out)\n"
+                common_header += f"- Phase Shifter Components: 2 × {phase_shifter_loss:.1f} dB = {2*phase_shifter_loss:.1f} dB (Phase shifter in/out)\n"
+                common_header += f"- Coupler Components: 2 × {coupler_loss:.1f} dB = {2*coupler_loss:.1f} dB (Coupler in/out)\n"
+            elif effective_arch == 'psrless':
+                common_header += f"- No additional components beyond I/O in PSRless architecture\n"
+            
+            common_header += f"""
+Summary:
+- Base I/O Loss: {loss_breakdown['io_losses']['total_io_loss']:.1f} dB
+- Architecture-Specific Loss: {loss_breakdown['total_loss'] - loss_breakdown['io_losses']['total_io_loss']:.1f} dB
+- Total System Loss: {loss_breakdown['total_loss']:.1f} dB
 
 """
             
-            if median_selected:
-                pout_median = float(self.pout_median_var.get())
-                j_density_median = float(self.j_density_median_var.get())
-                
-                if not (0 <= pout_median <= 20):
-                    messagebox.showerror("Invalid Input", "Median Target P_out must be between 0 and 20 dBm")
-                    return
-                if j_density_median not in [3, 4, 5, 6, 7]:
-                    messagebox.showerror("Invalid Input", "Median Current Density must be 3, 4, 5, 6, or 7")
-                    return
-                
-                # Calculate using EuropaSOA
-                current_ma_median = soa.calculate_current_mA_from_J(j_density_median)
-                operating_voltage_median = soa.get_operating_voltage(current_ma_median)
-                electrical_power_median = current_ma_median * operating_voltage_median
-                
-                # Calculate for each wavelength
-                median_wavelength_results = []
-                for wavelength in wavelengths:
-                    # Get unsaturated gain
-                    unsaturated_gain_db = soa.get_unsaturated_gain(wavelength, temp_c, j_density_median)
-                    
-                    # Get saturation power
-                    saturation_power_dbm = soa.get_output_saturation_power_dBm(wavelength, j_density_median, temp_c)
-                    
-                    # Find required input power for target output
-                    target_pout_mw = 10**(pout_median / 10.0)
-                    required_pin_mw = soa.find_Pin_for_target_Pout(target_pout_mw, current_ma_median, wavelength, temp_c)
-                    
-                    if required_pin_mw is not None:
-                        # Calculate saturated gain and WPE
-                        saturated_gain_db = soa.get_saturated_gain(wavelength, temp_c, j_density_median, required_pin_mw)
-                        wpe_percent = soa.calculate_wpe(current_ma_median, wavelength, temp_c, required_pin_mw)
-                        
-                        median_wavelength_results.append({
-                            'unsaturated_gain': unsaturated_gain_db,
-                            'saturation_power': saturation_power_dbm,
-                            'required_pin': 10*math.log10(required_pin_mw),
-                            'saturated_gain': saturated_gain_db,
-                            'wpe': wpe_percent,
-                            'achievable': True
-                        })
-                    else:
-                        median_wavelength_results.append({
-                            'unsaturated_gain': unsaturated_gain_db,
-                            'saturation_power': saturation_power_dbm,
-                            'required_pin': None,
-                            'saturated_gain': None,
-                            'wpe': None,
-                            'achievable': False
-                        })
-                
-                median_summary = f"""Median Loss Case Results:
-- Target P_out: {pout_median:.1f} dBm
-- Current Density: {j_density_median:.1f} kA/cm²
-- Operating Current: {current_ma_median:.2f} mA
-- Operating Voltage: {operating_voltage_median:.3f} V
-- Electrical Power: {electrical_power_median:.2f} mW
+            # Create median case content
+            median_content = common_header + f"""MEDIAN LOSS CASE ANALYSIS
+{'='*30}
+
+Performance Parameters:
+- Target Pout - Median: {target_pout:.2f} dBm
+- SOA Penalty - Median: {soa_penalty:.1f} dB
+
+Target Pout Calculation:
+- Base Target Pout: {target_pout_calculation['median_case']['base_target_pout_db']:.2f} dBm
+- SOA Penalty: {target_pout_calculation['median_case']['soa_penalty_db']:.1f} dB
+- Total Target Pout: {target_pout_calculation['median_case']['total_target_pout_db']:.2f} dBm
+
+SOA Requirements (Output Losses Only):
+- Final Target Pout: {soa_output_calculation['median_case']['final_target_pout_db']:.2f} dBm
+- Required SOA Output: {soa_output_calculation['median_case']['soa_output_requirement_db']:.2f} dBm
+- Loss Breakdown:
+  * I/O Output Loss: {soa_output_calculation['median_case']['loss_breakdown']['io_out_loss']:.1f} dB
+  * Architecture Output Loss: {soa_output_calculation['median_case']['loss_breakdown']['architecture_output_loss']:.1f} dB
+"""
+            
+            # Create 3σ case content
+            sigma_content = common_header + f"""3σ LOSS CASE ANALYSIS
+{'='*30}
+
+Performance Parameters:
+- Target Pout - 3σ: {target_pout_3sigma:.2f} dBm
+- SOA Penalty - 3σ: {soa_penalty_3sigma:.1f} dB
 
 """
-                
-                median_table = self.create_wavelength_table(wavelengths, median_wavelength_results, "Median Loss Case")
-                median_results = common_info + median_summary + median_table
-                
-                self.median_results_text.insert(1.0, median_results)
+            
+            if target_pout_calculation['sigma_case'] is not None:
+                sigma_content += f"""Target Pout Calculation:
+- Base Target Pout: {target_pout_calculation['sigma_case']['base_target_pout_db']:.2f} dBm
+- SOA Penalty: {target_pout_calculation['sigma_case']['soa_penalty_db']:.1f} dB
+- Total Target Pout: {target_pout_calculation['sigma_case']['total_target_pout_db']:.2f} dBm
+
+"""
             else:
-                self.median_results_text.insert(1.0, "Median Loss Case: Not Selected")
+                sigma_content += "Target Pout Calculation: Not available\n\n"
             
-            if sigma_selected:
-                pout_sigma = float(self.pout_sigma_var.get())
-                j_density_sigma = float(self.j_density_sigma_var.get())
-                
-                if not (0 <= pout_sigma <= 20):
-                    messagebox.showerror("Invalid Input", "3σ Target P_out must be between 0 and 20 dBm")
-                    return
-                if j_density_sigma not in [3, 4, 5, 6, 7]:
-                    messagebox.showerror("Invalid Input", "3σ Current Density must be 3, 4, 5, 6, or 7")
-                    return
-                
-                # Calculate using EuropaSOA
-                current_ma_sigma = soa.calculate_current_mA_from_J(j_density_sigma)
-                operating_voltage_sigma = soa.get_operating_voltage(current_ma_sigma)
-                electrical_power_sigma = current_ma_sigma * operating_voltage_sigma
-                
-                # Calculate for each wavelength
-                sigma_wavelength_results = []
-                for wavelength in wavelengths:
-                    # Get unsaturated gain
-                    unsaturated_gain_db = soa.get_unsaturated_gain(wavelength, temp_c, j_density_sigma)
-                    
-                    # Get saturation power
-                    saturation_power_dbm = soa.get_output_saturation_power_dBm(wavelength, j_density_sigma, temp_c)
-                    
-                    # Find required input power for target output
-                    target_pout_mw = 10**(pout_sigma / 10.0)
-                    required_pin_mw = soa.find_Pin_for_target_Pout(target_pout_mw, current_ma_sigma, wavelength, temp_c)
-                    
-                    if required_pin_mw is not None:
-                        # Calculate saturated gain and WPE
-                        saturated_gain_db = soa.get_saturated_gain(wavelength, temp_c, j_density_sigma, required_pin_mw)
-                        wpe_percent = soa.calculate_wpe(current_ma_sigma, wavelength, temp_c, required_pin_mw)
-                        
-                        sigma_wavelength_results.append({
-                            'unsaturated_gain': unsaturated_gain_db,
-                            'saturation_power': saturation_power_dbm,
-                            'required_pin': 10*math.log10(required_pin_mw),
-                            'saturated_gain': saturated_gain_db,
-                            'wpe': wpe_percent,
-                            'achievable': True
-                        })
-                    else:
-                        sigma_wavelength_results.append({
-                            'unsaturated_gain': unsaturated_gain_db,
-                            'saturation_power': saturation_power_dbm,
-                            'required_pin': None,
-                            'saturated_gain': None,
-                            'wpe': None,
-                            'achievable': False
-                        })
-                
-                sigma_summary = f"""3σ Loss Case Results:
-- Target P_out: {pout_sigma:.1f} dBm
-- Current Density: {j_density_sigma:.1f} kA/cm²
-- Operating Current: {current_ma_sigma:.2f} mA
-- Operating Voltage: {operating_voltage_sigma:.3f} V
-- Electrical Power: {electrical_power_sigma:.2f} mW
-
+            if soa_output_calculation['sigma_case'] is not None:
+                sigma_content += f"""SOA Requirements (Output Losses Only):
+- Final Target Pout: {soa_output_calculation['sigma_case']['final_target_pout_db']:.2f} dBm
+- Required SOA Output: {soa_output_calculation['sigma_case']['soa_output_requirement_db']:.2f} dBm
+- Loss Breakdown:
+  * I/O Output Loss: {soa_output_calculation['sigma_case']['loss_breakdown']['io_out_loss']:.1f} dB
+  * Architecture Output Loss: {soa_output_calculation['sigma_case']['loss_breakdown']['architecture_output_loss']:.1f} dB
 """
-                
-                sigma_table = self.create_wavelength_table(wavelengths, sigma_wavelength_results, "3σ Loss Case")
-                sigma_results = common_info + sigma_summary + sigma_table
-                
-                self.sigma_results_text.insert(1.0, sigma_results)
             else:
-                self.sigma_results_text.insert(1.0, "3σ Loss Case: Not Selected")
+                sigma_content += "SOA Requirements: Not available"
+            
+            # Display results in respective text widgets
+            self.guide3a_median_results_text.insert(1.0, median_content)
+            self.guide3a_sigma_results_text.insert(1.0, sigma_content)
             
         except ValueError:
-            messagebox.showerror("Input Error", "Please ensure all inputs are valid numbers.")
+            messagebox.showerror("Input Error", "Please ensure all values are valid numbers.")
         except Exception as e:
             messagebox.showerror("Calculation Error", f"An error occurred during calculation: {e}")
 
@@ -1032,9 +1207,52 @@ Operation Parameters:
                 messagebox.showerror("Invalid Selection", "Please select at least one link loss mode.")
                 return
             
-            # Get operation parameters
-            pout_median = float(self.pout_median_var.get()) if median_selected else None
-            pout_sigma = float(self.pout_sigma_var.get()) if sigma_selected else None
+            # Calculate Guide3A SOA output requirements to use as target Pout
+            from Guide3A import Guide3A
+            
+            # Get Guide3A parameters from GUI
+            fiber_input_type = self.fiber_input_type_var.get()
+            pic_architecture = self.guide3a_architecture_var.get()
+            num_fibers = int(self.num_fibers_var.get())
+            operating_wavelength = float(self.guide3a_wavelength_var.get())
+            temperature = float(self.guide3a_temp_var.get())
+            io_in_loss = float(self.guide3a_io_in_loss_var.get())
+            io_out_loss = float(self.guide3a_io_out_loss_var.get())
+            psr_loss = float(self.guide3a_psr_loss_var.get())
+            phase_shifter_loss = float(self.guide3a_phase_shifter_loss_var.get())
+            coupler_loss = float(self.guide3a_coupler_loss_var.get())
+            target_pout = float(self.guide3a_target_pout_var.get())
+            target_pout_3sigma = float(self.guide3a_target_pout_3sigma_var.get())
+            soa_penalty = float(self.guide3a_soa_penalty_var.get())
+            soa_penalty_3sigma = float(self.guide3a_soa_penalty_3sigma_var.get())
+            
+            # Create Guide3A instance
+            guide3a = Guide3A(
+                pic_architecture=pic_architecture,
+                fiber_input_type=fiber_input_type,
+                num_fibers=num_fibers,
+                operating_wavelength_nm=operating_wavelength,
+                temperature_c=temperature,
+                io_in_loss=io_in_loss,
+                io_out_loss=io_out_loss,
+                psr_loss=psr_loss,
+                phase_shifter_loss=phase_shifter_loss,
+                coupler_loss=coupler_loss,
+                target_pout=target_pout,
+                soa_penalty=soa_penalty,
+                soa_penalty_3sigma=soa_penalty_3sigma
+            )
+            
+            # Get SOA output requirements
+            soa_output_calculation = guide3a.calculate_target_pout_after_soa(
+                num_wavelengths=num_wavelengths,
+                target_pout_3sigma=target_pout_3sigma,
+                soa_penalty_3sigma=soa_penalty_3sigma
+            )
+            
+            # Use SOA output requirements as target Pout for plots
+            pout_median = soa_output_calculation['median_case']['soa_output_requirement_db'] if median_selected else None
+            pout_sigma = soa_output_calculation['sigma_case']['soa_output_requirement_db'] if sigma_selected and soa_output_calculation['sigma_case'] is not None else None
             j_density_median = float(self.j_density_median_var.get()) if median_selected else None
             j_density_sigma = float(self.j_density_sigma_var.get()) if sigma_selected else None
             
@@ -1440,93 +1658,69 @@ Operation Parameters:
         fig.update_yaxes(title_text="Saturation Power (dBm)", row=row, col=col)
 
     def calculate_guide3a(self):
-        """Calculate Guide3A parameters based on input values using Guide3A class"""
+        """Calculate Guide3A parameters based on input values"""
         try:
             # Get input values
-            fiber_input_type = self.fiber_input_type_var.get()
-            pic_architecture = self.guide3a_architecture_var.get()
-            num_fibers = int(self.num_fibers_var.get())
+            w_um = float(self.w_um_var.get())
+            l_active = float(self.l_active_var.get())
+            temp_c = float(self.temp_var.get())
             
-            # Performance parameters (matching EuropaSOA)
-            operating_wavelength = float(self.guide3a_wavelength_var.get())
-            temperature = float(self.guide3a_temp_var.get())
+            # Get number of wavelengths and validate
+            num_wavelengths = int(self.num_wavelengths_var.get())
+            if num_wavelengths < 1 or num_wavelengths > 8:
+                messagebox.showerror("Invalid Input", "Number of wavelengths must be between 1 and 8")
+                return
             
-            # Loss components
-            io_in_loss = float(self.guide3a_io_in_loss_var.get())
-            io_out_loss = float(self.guide3a_io_out_loss_var.get())
-            psr_loss = float(self.guide3a_psr_loss_var.get())
-            phase_shifter_loss = float(self.guide3a_phase_shifter_loss_var.get())
-            coupler_loss = float(self.guide3a_coupler_loss_var.get())
+            # Get wavelength values
+            wavelengths = []
+            for i in range(num_wavelengths):
+                try:
+                    wavelength = float(self.wavelength_vars[i].get())
+                    if not (1290 <= wavelength <= 1330):
+                        messagebox.showerror("Invalid Input", f"Wavelength {i+1} must be between 1290 and 1330 nm")
+                        return
+                    wavelengths.append(wavelength)
+                except ValueError:
+                    messagebox.showerror("Invalid Input", f"Wavelength {i+1} must be a valid number")
+                    return
             
-            # Link requirements
-            target_pout = float(self.guide3a_target_pout_var.get())
-            target_pout_3sigma = float(self.guide3a_target_pout_3sigma_var.get())
-            soa_penalty = float(self.guide3a_soa_penalty_var.get())
-            soa_penalty_3sigma = float(self.guide3a_soa_penalty_3sigma_var.get())
+            # Check which link loss modes are selected
+            median_selected = self.link_loss_modes["median-loss"].get()
+            sigma_selected = self.link_loss_modes["3-sigma-loss"].get()
+            
+            if not median_selected and not sigma_selected:
+                messagebox.showerror("Invalid Selection", "Please select at least one link loss mode.")
+                return
             
             # Validate inputs
-            if fiber_input_type not in ["pm", "sm"]:
-                messagebox.showerror("Invalid Input", "Fiber Input Type must be 'pm' or 'sm'")
+            if not (2.0 <= w_um <= 2.7):
+                messagebox.showerror("Invalid Input", "Width must be between 2.0 and 2.7 µm")
+                return
+            if not (40 <= l_active <= 880):
+                messagebox.showerror("Invalid Input", "Active Length must be between 40 and 880 µm")
+                return
+            if not (25 <= temp_c <= 80):
+                messagebox.showerror("Invalid Input", "Temperature must be between 25 and 80 °C")
                 return
             
-            # For PM fiber, architecture must be psrless
-            if fiber_input_type == "pm":
-                pic_architecture = "psrless"
-            # For SM fiber, architecture must be psr or pol_control
-            elif fiber_input_type == "sm" and pic_architecture not in ["psr", "pol_control"]:
-                messagebox.showerror("Invalid Input", "For SM fiber, PIC Architecture must be 'psr' or 'pol_control'")
-                return
-            
-            if num_fibers % 20 != 0:
-                messagebox.showerror("Invalid Input", "Number of fibers must be a multiple of 20")
-                return
-            
-            if not (1290 <= operating_wavelength <= 1330):
-                messagebox.showerror("Invalid Input", "Operating wavelength must be between 1290 and 1330 nm")
-                return
-            
-            if not (25 <= temperature <= 80):
-                messagebox.showerror("Invalid Input", "Temperature must be between 25 and 80°C")
-                return
-            
-            if not (-10 <= target_pout <= 20):
-                messagebox.showerror("Invalid Input", "Target Pout - Median must be between -10 and 20 dBm")
-                return
-            
-            if not (-10 <= target_pout_3sigma <= 20):
-                messagebox.showerror("Invalid Input", "Target Pout - 3σ must be between -10 and 20 dBm")
-                return
-            
-            if soa_penalty < 0:
-                messagebox.showerror("Invalid Input", "SOA penalty - Median must be non-negative")
-                return
-            
-            if soa_penalty_3sigma < 0:
-                messagebox.showerror("Invalid Input", "SOA penalty - 3σ must be non-negative")
-                return
-            
-            if any(loss < 0 for loss in [io_in_loss, io_out_loss, psr_loss, phase_shifter_loss, coupler_loss]):
-                messagebox.showerror("Invalid Input", "All loss values must be non-negative")
-                return
-            
-            # Import Guide3A class
+            # Calculate Guide3A parameters
             from Guide3A import Guide3A
             
-            # Create Guide3A instance with all parameters
+            # Create Guide3A instance
             guide3a = Guide3A(
-                pic_architecture=pic_architecture,
-                fiber_input_type=fiber_input_type,
-                num_fibers=num_fibers,
-                operating_wavelength_nm=operating_wavelength,
-                temperature_c=temperature,
-                io_in_loss=io_in_loss,
-                io_out_loss=io_out_loss,
-                psr_loss=psr_loss,
-                phase_shifter_loss=phase_shifter_loss,
-                coupler_loss=coupler_loss,
-                target_pout=target_pout,
-                soa_penalty=soa_penalty,
-                soa_penalty_3sigma=soa_penalty_3sigma
+                pic_architecture=self.guide3a_architecture_var.get(),
+                fiber_input_type=self.fiber_input_type_var.get(),
+                num_fibers=int(self.num_fibers_var.get()),
+                operating_wavelength_nm=float(self.guide3a_wavelength_var.get()),
+                temperature_c=float(self.guide3a_temp_var.get()),
+                io_in_loss=float(self.guide3a_io_in_loss_var.get()),
+                io_out_loss=float(self.guide3a_io_out_loss_var.get()),
+                psr_loss=float(self.guide3a_psr_loss_var.get()),
+                phase_shifter_loss=float(self.guide3a_phase_shifter_loss_var.get()),
+                coupler_loss=float(self.guide3a_coupler_loss_var.get()),
+                target_pout=float(self.guide3a_target_pout_var.get()),
+                soa_penalty=float(self.guide3a_soa_penalty_var.get()),
+                soa_penalty_3sigma=float(self.guide3a_soa_penalty_3sigma_var.get())
             )
             
             # Get comprehensive analysis
@@ -1541,23 +1735,24 @@ Operation Parameters:
             num_wavelengths = int(self.num_wavelengths_var.get())
             target_pout_calculation = guide3a.calculate_target_pout_all_wavelengths(
                 num_wavelengths=num_wavelengths,
-                target_pout_3sigma=target_pout_3sigma,
-                soa_penalty_3sigma=soa_penalty_3sigma
+                target_pout_3sigma=float(self.guide3a_target_pout_3sigma_var.get()),
+                soa_penalty_3sigma=float(self.guide3a_soa_penalty_3sigma_var.get())
             )
             
             # Calculate SOA output requirements
             soa_output_calculation = guide3a.calculate_target_pout_after_soa(
                 num_wavelengths=num_wavelengths,
-                target_pout_3sigma=target_pout_3sigma,
-                soa_penalty_3sigma=soa_penalty_3sigma
+                target_pout_3sigma=float(self.guide3a_target_pout_3sigma_var.get()),
+                soa_penalty_3sigma=float(self.guide3a_soa_penalty_3sigma_var.get())
             )
             
             # Clear results
-            self.guide3a_results_text.delete(1.0, tk.END)
+            self.guide3a_median_results_text.delete(1.0, tk.END)
+            self.guide3a_sigma_results_text.delete(1.0, tk.END)
             
-            # Display comprehensive results
-            results = f"""Guide3A Enhanced Analysis Results
-{'='*60}
+            # Create common header information
+            common_header = f"""Guide3A Enhanced Analysis Results
+{'='*50}
 
 Module Configuration:
 - Fiber Input Type: {module_config['fiber_input_type'].upper()}
@@ -1568,68 +1763,24 @@ Module Configuration:
 - Number of PICs: {module_config['num_pics']}
 - Number of Unit Cells: {module_config['num_unit_cells']}
 
-Performance Parameters (Nominal):
-- Operating Wavelength: {operating_wavelength:.0f} nm
-- Temperature: {temperature:.0f} °C
-- Target Pout - Median: {target_pout:.2f} dBm
-- SOA Penalty - Median: {soa_penalty:.1f} dB
-
-Performance Parameters (3σ):
-- Target Pout - 3σ: {target_pout_3sigma:.2f} dBm
-- SOA Penalty -3σ: {soa_penalty_3sigma:.1f} dB
+Performance Parameters:
+- Operating Wavelength: {float(self.guide3a_wavelength_var.get()):.0f} nm
+- Temperature: {float(self.guide3a_temp_var.get()):.0f} °C
 
 Target Pout for All Wavelengths:
 - Number of Wavelengths: {target_pout_calculation['num_wavelengths']}
 - Wavelength Penalty: {target_pout_calculation['wavelength_penalty_db']:.2f} dB (10*log10({target_pout_calculation['num_wavelengths']}))
 
-Median Case:
-- Base Target Pout: {target_pout_calculation['median_case']['base_target_pout_db']:.2f} dBm
-- SOA Penalty: {target_pout_calculation['median_case']['soa_penalty_db']:.1f} dB
-- Total Target Pout: {target_pout_calculation['median_case']['total_target_pout_db']:.2f} dBm
+SOA Output Requirements (After Output Losses Only):
+- Total Output Loss: {soa_output_calculation['total_output_loss_db']:.2f} dB
 
-"""
-            
-            # Add 3σ case if available
-            if target_pout_calculation['sigma_case'] is not None:
-                results += f"""3σ Case:
-- Base Target Pout: {target_pout_calculation['sigma_case']['base_target_pout_db']:.2f} dBm
-- SOA Penalty: {target_pout_calculation['sigma_case']['soa_penalty_db']:.1f} dB
-- Total Target Pout: {target_pout_calculation['sigma_case']['total_target_pout_db']:.2f} dBm
-
-"""
-            
-            results += f"""SOA Output Requirements (After Losses):
-- Total System Loss: {soa_output_calculation['total_system_loss_db']:.2f} dB
-
-Median Case SOA Requirements:
-- Final Target Pout: {soa_output_calculation['median_case']['final_target_pout_db']:.2f} dBm
-- Required SOA Output: {soa_output_calculation['median_case']['soa_output_requirement_db']:.2f} dBm
-- Loss Breakdown:
-  * I/O Input Loss: {soa_output_calculation['median_case']['loss_breakdown']['io_in_loss']:.1f} dB
-  * I/O Output Loss: {soa_output_calculation['median_case']['loss_breakdown']['io_out_loss']:.1f} dB
-  * Architecture Loss: {soa_output_calculation['median_case']['loss_breakdown']['architecture_loss']:.1f} dB
-
-"""
-            
-            # Add 3σ SOA requirements if available
-            if soa_output_calculation['sigma_case'] is not None:
-                results += f"""3σ Case SOA Requirements:
-- Final Target Pout: {soa_output_calculation['sigma_case']['final_target_pout_db']:.2f} dBm
-- Required SOA Output: {soa_output_calculation['sigma_case']['soa_output_requirement_db']:.2f} dBm
-- Loss Breakdown:
-  * I/O Input Loss: {soa_output_calculation['sigma_case']['loss_breakdown']['io_in_loss']:.1f} dB
-  * I/O Output Loss: {soa_output_calculation['sigma_case']['loss_breakdown']['io_out_loss']:.1f} dB
-  * Architecture Loss: {soa_output_calculation['sigma_case']['loss_breakdown']['architecture_loss']:.1f} dB
-
-"""
-            
-            results += f"""Component Count:
+Component Count:
 """
             
             for component, count in component_count.items():
-                results += f"- {component.replace('_', ' ').title()}: {count}\n"
+                common_header += f"- {component.replace('_', ' ').title()}: {count}\n"
             
-            results += f"""
+            common_header += f"""
 Loss Breakdown:
 - I/O Input Loss: {loss_breakdown['io_losses']['io_in_loss']:.1f} dB
 - I/O Output Loss: {loss_breakdown['io_losses']['io_out_loss']:.1f} dB
@@ -1640,11 +1791,11 @@ Loss Breakdown:
             arch_losses = loss_breakdown['architecture_specific']
             for loss_type, value in arch_losses.items():
                 if 'total' in loss_type:
-                    results += f"- {loss_type.replace('_', ' ').title()}: {value:.1f} dB\n"
+                    common_header += f"- {loss_type.replace('_', ' ').title()}: {value:.1f} dB\n"
                 elif loss_type == 'note':
-                    results += f"- {value}\n"
+                    common_header += f"- {value}\n"
             
-            results += f"""
+            common_header += f"""
 Performance Metrics:
 - Total Loss: {loss_breakdown['total_loss']:.1f} dB
 - Power Penalty: {performance_metrics['power_budget']['power_penalty_db']:.1f} dB
@@ -1659,52 +1810,82 @@ Architecture-Specific Analysis:
             
             effective_arch = module_config['effective_architecture']
             if effective_arch == 'psr':
-                results += f"- PSR Components: 2 × {psr_loss:.1f} dB = {2*psr_loss:.1f} dB (PSR in/out)\n"
+                common_header += f"- PSR Components: 2 × {float(self.guide3a_psr_loss_var.get()):.1f} dB = {2*float(self.guide3a_psr_loss_var.get()):.1f} dB (PSR in/out)\n"
             elif effective_arch == 'pol_control':
-                results += f"- PSR Components: 2 × {psr_loss:.1f} dB = {2*psr_loss:.1f} dB (PSR in/out)\n"
-                results += f"- Phase Shifter Components: 2 × {phase_shifter_loss:.1f} dB = {2*phase_shifter_loss:.1f} dB (Phase shifter in/out)\n"
-                results += f"- Coupler Components: 2 × {coupler_loss:.1f} dB = {2*coupler_loss:.1f} dB (Coupler in/out)\n"
+                common_header += f"- PSR Components: 2 × {float(self.guide3a_psr_loss_var.get()):.1f} dB = {2*float(self.guide3a_psr_loss_var.get()):.1f} dB (PSR in/out)\n"
+                common_header += f"- Phase Shifter Components: 2 × {float(self.guide3a_phase_shifter_loss_var.get()):.1f} dB = {2*float(self.guide3a_phase_shifter_loss_var.get()):.1f} dB (Phase shifter in/out)\n"
+                common_header += f"- Coupler Components: 2 × {float(self.guide3a_coupler_loss_var.get()):.1f} dB = {2*float(self.guide3a_coupler_loss_var.get()):.1f} dB (Coupler in/out)\n"
             elif effective_arch == 'psrless':
-                results += f"- No additional components beyond I/O in PSRless architecture\n"
+                common_header += f"- No additional components beyond I/O in PSRless architecture\n"
             
-            results += f"""
+            common_header += f"""
 Summary:
 - Base I/O Loss: {loss_breakdown['io_losses']['total_io_loss']:.1f} dB
 - Architecture-Specific Loss: {loss_breakdown['total_loss'] - loss_breakdown['io_losses']['total_io_loss']:.1f} dB
 - Total System Loss: {loss_breakdown['total_loss']:.1f} dB
+
 """
             
-            self.guide3a_results_text.insert(1.0, results)
+            # Create median case content
+            median_content = common_header + f"""MEDIAN LOSS CASE ANALYSIS
+{'='*30}
+
+Performance Parameters:
+- Target Pout - Median: {float(self.guide3a_target_pout_var.get()):.2f} dBm
+- SOA Penalty - Median: {float(self.guide3a_soa_penalty_var.get()):.1f} dB
+
+Target Pout Calculation:
+- Base Target Pout: {target_pout_calculation['median_case']['base_target_pout_db']:.2f} dBm
+- SOA Penalty: {target_pout_calculation['median_case']['soa_penalty_db']:.1f} dB
+- Total Target Pout: {target_pout_calculation['median_case']['total_target_pout_db']:.2f} dBm
+
+SOA Requirements (Output Losses Only):
+- Final Target Pout: {soa_output_calculation['median_case']['final_target_pout_db']:.2f} dBm
+- Required SOA Output: {soa_output_calculation['median_case']['soa_output_requirement_db']:.2f} dBm
+- Loss Breakdown:
+  * I/O Output Loss: {soa_output_calculation['median_case']['loss_breakdown']['io_out_loss']:.1f} dB
+  * Architecture Output Loss: {soa_output_calculation['median_case']['loss_breakdown']['architecture_output_loss']:.1f} dB
+"""
+            
+            # Create 3σ case content
+            sigma_content = common_header + f"""3σ LOSS CASE ANALYSIS
+{'='*30}
+
+Performance Parameters:
+- Target Pout - 3σ: {float(self.guide3a_target_pout_3sigma_var.get()):.2f} dBm
+- SOA Penalty - 3σ: {float(self.guide3a_soa_penalty_3sigma_var.get()):.1f} dB
+
+"""
+            
+            if target_pout_calculation['sigma_case'] is not None:
+                sigma_content += f"""Target Pout Calculation:
+- Base Target Pout: {target_pout_calculation['sigma_case']['base_target_pout_db']:.2f} dBm
+- SOA Penalty: {target_pout_calculation['sigma_case']['soa_penalty_db']:.1f} dB
+- Total Target Pout: {target_pout_calculation['sigma_case']['total_target_pout_db']:.2f} dBm
+
+"""
+            else:
+                sigma_content += "Target Pout Calculation: Not available\n\n"
+            
+            if soa_output_calculation['sigma_case'] is not None:
+                sigma_content += f"""SOA Requirements (Output Losses Only):
+- Final Target Pout: {soa_output_calculation['sigma_case']['final_target_pout_db']:.2f} dBm
+- Required SOA Output: {soa_output_calculation['sigma_case']['soa_output_requirement_db']:.2f} dBm
+- Loss Breakdown:
+  * I/O Output Loss: {soa_output_calculation['sigma_case']['loss_breakdown']['io_out_loss']:.1f} dB
+  * Architecture Output Loss: {soa_output_calculation['sigma_case']['loss_breakdown']['architecture_output_loss']:.1f} dB
+"""
+            else:
+                sigma_content += "SOA Requirements: Not available"
+            
+            # Display results in respective text widgets
+            self.guide3a_median_results_text.insert(1.0, median_content)
+            self.guide3a_sigma_results_text.insert(1.0, sigma_content)
             
         except ValueError:
             messagebox.showerror("Input Error", "Please ensure all values are valid numbers.")
         except Exception as e:
             messagebox.showerror("Calculation Error", f"An error occurred during calculation: {e}")
-
-    def reset_guide3a(self):
-        """Reset all Guide3A inputs to default values"""
-        self.fiber_input_type_var.set("pm")
-        self.guide3a_architecture_var.set("psrless")
-        self.num_fibers_var.set("40")
-        
-        # Reset performance parameters (matching EuropaSOA defaults)
-        self.guide3a_wavelength_var.set("1310")
-        self.guide3a_temp_var.set("40")
-        
-        # Reset loss components
-        self.guide3a_io_in_loss_var.set("1.5")
-        self.guide3a_io_out_loss_var.set("1.5")
-        self.guide3a_psr_loss_var.set("0.5")
-        self.guide3a_phase_shifter_loss_var.set("0.5")
-        self.guide3a_coupler_loss_var.set("0.2")
-        
-        # Reset link requirements
-        self.guide3a_target_pout_var.set("-2.75")
-        self.guide3a_target_pout_3sigma_var.set("1.75")
-        self.guide3a_soa_penalty_var.set("2")
-        self.guide3a_soa_penalty_3sigma_var.set("2")
-        
-        self.guide3a_results_text.delete(1.0, tk.END)
 
     def on_fiber_type_change(self, event):
         """Callback function to update PIC architecture when fiber input type changes"""
