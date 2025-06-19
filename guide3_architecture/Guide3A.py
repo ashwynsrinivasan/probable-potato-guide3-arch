@@ -1,4 +1,5 @@
 import math
+from EuropaSOA import EuropaSOA
 
 class Guide3A:
     """
@@ -14,7 +15,7 @@ class Guide3A:
     # Supported fiber input types
     SUPPORTED_FIBER_TYPES = ['pm', 'sm']
     
-    def __init__(self, pic_architecture: str, fiber_input_type: str = 'sm', num_fibers: int = 40, **kwargs):
+    def __init__(self, pic_architecture: str, fiber_input_type: str = 'pm', num_fibers: int = 40, **kwargs):
         """
         Initialize Guide3A with specified architecture and module configuration.
         
@@ -24,10 +25,6 @@ class Guide3A:
             num_fibers (int): Number of fibers (must be multiple of 20)
             **kwargs: Optional custom loss values (io_in_loss, io_out_loss, etc.)
         """
-        if pic_architecture not in self.SUPPORTED_ARCHITECTURES:
-            raise ValueError(f"Unsupported architecture: {pic_architecture}. "
-                           f"Supported: {self.SUPPORTED_ARCHITECTURES}")
-        
         if fiber_input_type not in self.SUPPORTED_FIBER_TYPES:
             raise ValueError(f"Unsupported fiber input type: {fiber_input_type}. "
                            f"Supported: {self.SUPPORTED_FIBER_TYPES}")
@@ -35,15 +32,24 @@ class Guide3A:
         if num_fibers % 20 != 0:
             raise ValueError(f"Number of fibers must be a multiple of 20. Got: {num_fibers}")
         
+        # For PM fiber, architecture must be psrless
+        if fiber_input_type == 'pm' and pic_architecture != 'psrless':
+            raise ValueError(f"For PM fiber input type, PIC architecture must be 'psrless'. Got: {pic_architecture}")
+        
+        # For SM fiber, architecture must be psr or pol_control
+        if fiber_input_type == 'sm' and pic_architecture not in ['psr', 'pol_control']:
+            raise ValueError(f"For SM fiber input type, PIC architecture must be 'psr' or 'pol_control'. Got: {pic_architecture}")
+        
+        if pic_architecture not in self.SUPPORTED_ARCHITECTURES:
+            raise ValueError(f"Unsupported architecture: {pic_architecture}. "
+                           f"Supported: {self.SUPPORTED_ARCHITECTURES}")
+        
         self.pic_architecture = pic_architecture
         self.fiber_input_type = fiber_input_type
         self.num_fibers = num_fibers
         
         # Calculate module configuration
-        if self.fiber_input_type == 'pm':
-            self.effective_architecture = 'psrless'
-        else:
-            self.effective_architecture = pic_architecture
+        self.effective_architecture = pic_architecture
 
         if self.effective_architecture == 'psrless':
             self.num_soas = self.num_fibers
@@ -63,6 +69,22 @@ class Guide3A:
         # Performance parameters
         self.operating_wavelength_nm = kwargs.get('operating_wavelength_nm', 1310)
         self.temperature_c = kwargs.get('temperature_c', 25)
+        self.target_pout = kwargs.get('target_pout', -2.75)  # dBm
+        self.soa_penalty = kwargs.get('soa_penalty', 2)  # dB
+        
+        # SOA parameters (for psr architecture)
+        self.soa_width_um = kwargs.get('soa_width_um', 2.0)
+        self.soa_active_length_um = kwargs.get('soa_active_length_um', 790)
+        self.soa_j_density = kwargs.get('soa_j_density', 4)  # kA/cm^2
+        self.soa_temperature_c = kwargs.get('soa_temperature_c', 40)
+        self.soa_wavelength_nm = kwargs.get('soa_wavelength_nm', 1310)
+        self.soa = None
+        if self.effective_architecture == 'psr':
+            self.soa = EuropaSOA(
+                L_active_um=self.soa_active_length_um,
+                W_um=self.soa_width_um,
+                verbose=False
+            )
         
         # Validate inputs
         self._validate_parameters()
@@ -86,6 +108,14 @@ class Guide3A:
         # Check temperature range
         if not (-40 <= self.temperature_c <= 85):
             raise ValueError(f"Temperature must be between -40 and 85°C: {self.temperature_c}")
+        
+        # Check target Pout range
+        if not (-10 <= self.target_pout <= 20):
+            raise ValueError(f"Target Pout must be between -10 and 20 dBm: {self.target_pout}")
+        
+        # Check SOA penalty range
+        if self.soa_penalty < 0:
+            raise ValueError(f"SOA penalty must be non-negative: {self.soa_penalty}")
     
     def get_total_loss(self):
         """
@@ -99,6 +129,7 @@ class Guide3A:
         # Add architecture-specific losses
         if self.effective_architecture == 'psr':
             total_loss += 2 * self.psr_loss  # psr_in and psr_out
+            total_loss += 0.6  # tap_in and tap_out (0.3 dB each)
             
         elif self.effective_architecture == 'pol_control':
             total_loss += 2 * self.psr_loss  # psr_in and psr_out
@@ -131,7 +162,10 @@ class Guide3A:
         if self.effective_architecture == 'psr':
             breakdown['architecture_specific'] = {
                 'psr_loss': self.psr_loss,
-                'total_psr_loss': 2 * self.psr_loss
+                'total_psr_loss': 2 * self.psr_loss,
+                'tap_in_loss': 0.3,
+                'tap_out_loss': 0.3,
+                'total_tap_loss': 0.6
             }
             
         elif self.effective_architecture == 'pol_control':
@@ -314,3 +348,141 @@ Performance Metrics:
 """
         
         return report 
+
+    def get_soa_performance(self):
+        """
+        Get SOA performance metrics if SOA is configured.
+        
+        Returns:
+            dict: SOA performance metrics or None if not configured
+        """
+        if self.soa is None:
+            return None
+        
+        try:
+            current_ma = self.soa.calculate_current_mA_from_J(self.soa_j_density)
+            operating_voltage = self.soa.get_operating_voltage(current_ma)
+            electrical_power = current_ma * operating_voltage
+            
+            # Calculate unsaturated gain
+            unsaturated_gain_db = self.soa.get_unsaturated_gain(
+                self.soa_wavelength_nm, self.soa_temperature_c, self.soa_j_density)
+            
+            # Calculate saturation power
+            saturation_power_dbm = self.soa.get_output_saturation_power_dBm(
+                self.soa_wavelength_nm, self.soa_j_density, self.soa_temperature_c)
+            
+            return {
+                'current_ma': current_ma,
+                'operating_voltage_v': operating_voltage,
+                'electrical_power_mw': electrical_power,
+                'unsaturated_gain_db': unsaturated_gain_db,
+                'saturation_power_dbm': saturation_power_dbm
+            }
+        except Exception as e:
+            return {'error': str(e)}
+
+    def calculate_target_pout_all_wavelengths(self, num_wavelengths: int, target_pout_3sigma: float | None = None, soa_penalty_3sigma: float | None = None):
+        """
+        Calculate target Pout for all wavelengths based on the formula:
+        Pout + penalty + 10*log10(number_of_wavelengths)
+        
+        Args:
+            num_wavelengths (int): Number of wavelengths
+            target_pout_3sigma (float): Target Pout for 3σ case (optional)
+            soa_penalty_3sigma (float): SOA penalty for 3σ case (optional)
+            
+        Returns:
+            dict: Target Pout calculations for median and 3σ cases
+        """
+        if num_wavelengths <= 0:
+            raise ValueError("Number of wavelengths must be positive")
+        
+        # Calculate wavelength penalty: 10*log10(number_of_wavelengths)
+        wavelength_penalty = 10 * math.log10(num_wavelengths)
+        
+        # Median case calculation
+        median_target_pout = self.target_pout + self.soa_penalty + wavelength_penalty
+        
+        # 3σ case calculation (if provided)
+        sigma_target_pout = None
+        if target_pout_3sigma is not None and soa_penalty_3sigma is not None:
+            sigma_target_pout = target_pout_3sigma + soa_penalty_3sigma + wavelength_penalty
+        
+        result = {
+            'num_wavelengths': num_wavelengths,
+            'wavelength_penalty_db': wavelength_penalty,
+            'median_case': {
+                'base_target_pout_db': self.target_pout,
+                'soa_penalty_db': self.soa_penalty,
+                'total_target_pout_db': median_target_pout
+            }
+        }
+        
+        # Add sigma case if all required values are provided
+        if target_pout_3sigma is not None and soa_penalty_3sigma is not None and sigma_target_pout is not None:
+            result['sigma_case'] = {
+                'base_target_pout_db': target_pout_3sigma,
+                'soa_penalty_db': soa_penalty_3sigma,
+                'total_target_pout_db': sigma_target_pout
+            }
+        
+        return result 
+
+    def calculate_target_pout_after_soa(self, num_wavelengths: int, target_pout_3sigma: float | None = None, soa_penalty_3sigma: float | None = None):
+        """
+        Calculate the target Pout required from each SOA based on losses.
+        Works backwards from the final target Pout to determine SOA output requirements.
+        
+        Args:
+            num_wavelengths (int): Number of wavelengths
+            target_pout_3sigma (float): Target Pout for 3σ case (optional)
+            soa_penalty_3sigma (float): SOA penalty for 3σ case (optional)
+            
+        Returns:
+            dict: Target Pout requirements for each SOA
+        """
+        if num_wavelengths <= 0:
+            raise ValueError("Number of wavelengths must be positive")
+        
+        # Get the total target Pout for all wavelengths
+        total_target_calc = self.calculate_target_pout_all_wavelengths(
+            num_wavelengths, target_pout_3sigma, soa_penalty_3sigma
+        )
+        
+        # Get loss breakdown
+        loss_breakdown = self.get_loss_breakdown()
+        total_loss = loss_breakdown['total_loss']
+        
+        # Calculate SOA output requirements
+        # SOA output = Final target + Total losses (working backwards)
+        median_soa_output = total_target_calc['median_case']['total_target_pout_db'] + total_loss
+        
+        result = {
+            'num_wavelengths': num_wavelengths,
+            'total_system_loss_db': total_loss,
+            'median_case': {
+                'final_target_pout_db': total_target_calc['median_case']['total_target_pout_db'],
+                'soa_output_requirement_db': median_soa_output,
+                'loss_breakdown': {
+                    'io_in_loss': loss_breakdown['io_losses']['io_in_loss'],
+                    'io_out_loss': loss_breakdown['io_losses']['io_out_loss'],
+                    'architecture_loss': total_loss - loss_breakdown['io_losses']['total_io_loss']
+                }
+            }
+        }
+        
+        # Add 3σ case if available
+        if total_target_calc['sigma_case'] is not None:
+            sigma_soa_output = total_target_calc['sigma_case']['total_target_pout_db'] + total_loss
+            result['sigma_case'] = {
+                'final_target_pout_db': total_target_calc['sigma_case']['total_target_pout_db'],
+                'soa_output_requirement_db': sigma_soa_output,
+                'loss_breakdown': {
+                    'io_in_loss': loss_breakdown['io_losses']['io_in_loss'],
+                    'io_out_loss': loss_breakdown['io_losses']['io_out_loss'],
+                    'architecture_loss': total_loss - loss_breakdown['io_losses']['total_io_loss']
+                }
+            }
+        
+        return result 

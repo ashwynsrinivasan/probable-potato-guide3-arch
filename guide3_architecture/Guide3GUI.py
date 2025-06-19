@@ -40,7 +40,7 @@ class Guide3GUI(tk.Tk):
                 'sigma_loss': True
             },
             'guide3a_parameters': {
-                'fiber_input_type': 'sm',
+                'fiber_input_type': 'pm',
                 'pic_architecture': 'psrless',
                 'num_fibers': 40,
                 'operating_wavelength': 1310,
@@ -49,7 +49,11 @@ class Guide3GUI(tk.Tk):
                 'io_out_loss': 1.5,
                 'psr_loss': 0.5,
                 'phase_shifter_loss': 0.5,
-                'coupler_loss': 0.2
+                'coupler_loss': 0.2,
+                'target_pout': -2.75,
+                'target_pout_3sigma': 1.75,
+                'soa_penalty': 2,
+                'soa_penalty_3sigma': 2
             }
         }
         
@@ -88,6 +92,34 @@ class Guide3GUI(tk.Tk):
         config_file_frame.pack(side=tk.LEFT)
         ttk.Button(config_file_frame, text="Load Config", command=self.load_config).pack(side=tk.LEFT, padx=5, pady=2)
         ttk.Button(config_file_frame, text="Save Config", command=self.save_config).pack(side=tk.LEFT, padx=5, pady=2)
+
+        # Wavelength Configuration (below topbar)
+        wavelength_config_frame = ttk.LabelFrame(main_frame, text="Wavelength Configuration", padding="10")
+        wavelength_config_frame.pack(fill=tk.X, pady=(0, 10))
+        
+        # Number of wavelengths (left side)
+        ttk.Label(wavelength_config_frame, text="Number of Wavelengths:").pack(side=tk.LEFT, padx=(0, 5))
+        self.num_wavelengths_var = tk.StringVar(value="8")
+        self.num_wavelengths_entry = ttk.Entry(wavelength_config_frame, textvariable=self.num_wavelengths_var, width=10)
+        self.num_wavelengths_entry.pack(side=tk.LEFT, padx=(0, 10))
+        
+        ttk.Button(wavelength_config_frame, text="Update Wavelengths", command=self.update_wavelength_inputs).pack(side=tk.LEFT, padx=(0, 10))
+        
+        # Individual wavelength inputs (horizontal)
+        self.wavelength_vars = []
+        self.wavelength_entries = []
+        
+        for i in range(8):
+            ttk.Label(wavelength_config_frame, text=f"λ{i+1}:").pack(side=tk.LEFT, padx=(0, 2))
+            wavelength_var = tk.StringVar(value=self.default_wavelengths[i])
+            wavelength_entry = ttk.Entry(wavelength_config_frame, textvariable=wavelength_var, width=8)
+            wavelength_entry.pack(side=tk.LEFT, padx=(0, 5))
+            
+            self.wavelength_vars.append(wavelength_var)
+            self.wavelength_entries.append(wavelength_entry)
+        
+        # Save wavelength set button
+        ttk.Button(wavelength_config_frame, text="Save Wavelength Set", command=self.save_wavelength_set).pack(side=tk.LEFT, padx=(10, 0))
 
         # Notebook for tabs (model-specific content)
         notebook = ttk.Notebook(main_frame)
@@ -202,37 +234,13 @@ class Guide3GUI(tk.Tk):
         self.temp_entry = ttk.Entry(operation_frame, textvariable=self.temp_var, width=15)
         self.temp_entry.pack(anchor='w', padx=5)
 
-        # --- Wavelength Configuration (Top-right) ---
-        wavelength_frame = ttk.LabelFrame(top_right_frame, text="Wavelength Configuration", padding="10")
-        wavelength_frame.pack(fill=tk.BOTH, expand=True, pady=5)
-
-        # Number of wavelengths
-        ttk.Label(wavelength_frame, text="Number of Wavelengths:").pack(pady=(5, 2), anchor='w')
-        self.num_wavelengths_var = tk.StringVar(value="8")
-        self.num_wavelengths_entry = ttk.Entry(wavelength_frame, textvariable=self.num_wavelengths_var, width=15)
-        self.num_wavelengths_entry.pack(anchor='w', padx=5)
-        
-        ttk.Button(wavelength_frame, text="Update Wavelengths", command=self.update_wavelength_inputs).pack(anchor='w', padx=5, pady=(5, 10))
-
-        # Individual wavelength inputs
-        self.wavelength_vars = []
-        self.wavelength_entries = []
-        
-        for i in range(8):
-            ttk.Label(wavelength_frame, text=f"Wavelength {i+1} (nm) [1290-1330]:").pack(pady=(5, 2), anchor='w')
-            wavelength_var = tk.StringVar(value=self.default_wavelengths[i])
-            wavelength_entry = ttk.Entry(wavelength_frame, textvariable=wavelength_var, width=15)
-            wavelength_entry.pack(anchor='w', padx=5)
-            
-            self.wavelength_vars.append(wavelength_var)
-            self.wavelength_entries.append(wavelength_entry)
-        
-        # Save wavelength set button
-        ttk.Button(wavelength_frame, text="Save Wavelength Set", command=self.save_wavelength_set).pack(anchor='w', padx=5, pady=(10, 5))
+        # Wavelength configuration moved to common section at top
 
         # Right side - Results Display
         results_frame = ttk.LabelFrame(soa_main_frame, text="Results", padding="10")
         results_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
+        results_frame.pack_configure(expand=True, fill=tk.BOTH)
+        results_frame.place(relx=0.2, rely=0, relwidth=0.8, relheight=1.0)
         
         # Action buttons at the top of results section
         action_frame = ttk.Frame(results_frame)
@@ -306,54 +314,118 @@ class Guide3GUI(tk.Tk):
         guide3a_main_frame = ttk.Frame(self.guide3a_tab)
         guide3a_main_frame.pack(fill='both', expand=True, padx=10, pady=10)
         
-        # Left side - Input parameters
-        guide3a_input_frame = ttk.LabelFrame(guide3a_main_frame, text="Guide3A Parameters", padding="10")
-        guide3a_input_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
+        # Left side - Input parameters with scrolling
+        input_container = ttk.Frame(guide3a_main_frame)
+        input_container.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
         
-        # Module Configuration Frame
-        module_config_frame = ttk.LabelFrame(guide3a_input_frame, text="Module Configuration", padding="10")
-        module_config_frame.pack(fill=tk.X, pady=(0, 10))
+        # Create canvas with both scrollbars for input parameters
+        input_canvas = tk.Canvas(input_container, width=400, height=600)
+        input_v_scrollbar = ttk.Scrollbar(input_container, orient="vertical", command=input_canvas.yview)
+        input_h_scrollbar = ttk.Scrollbar(input_container, orient="horizontal", command=input_canvas.xview)
+        input_scrollable_frame = ttk.Frame(input_canvas)
+
+        input_scrollable_frame.bind(
+            "<Configure>",
+            lambda e: input_canvas.configure(scrollregion=input_canvas.bbox("all"))
+        )
+
+        input_canvas.create_window((0, 0), window=input_scrollable_frame, anchor="nw")
+        input_canvas.configure(yscrollcommand=input_v_scrollbar.set, xscrollcommand=input_h_scrollbar.set)
+
+        # Pack the canvas and scrollbars
+        input_canvas.pack(side="left", fill="both", expand=True)
+        input_v_scrollbar.pack(side="right", fill="y")
+        input_h_scrollbar.pack(side="bottom", fill="x")
+        
+        # Bind mouse wheel scrolling
+        input_canvas.bind_all("<MouseWheel>", lambda event: input_canvas.yview_scroll(int(-1*(event.delta/120)), "units"))
+        input_canvas.bind_all("<Shift-MouseWheel>", lambda event: input_canvas.xview_scroll(int(-1*(event.delta/120)), "units"))
+
+        # Create 4 quadrants
+        # Top-left quadrant
+        top_left_frame = ttk.Frame(input_scrollable_frame)
+        top_left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 5), pady=(0, 5))
+        
+        # Top-right quadrant
+        top_right_frame = ttk.Frame(input_scrollable_frame)
+        top_right_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(5, 0), pady=(0, 5))
+        
+        # Bottom-left quadrant
+        bottom_left_frame = ttk.Frame(input_scrollable_frame)
+        bottom_left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 5), pady=(5, 0))
+        
+        # Bottom-right quadrant
+        bottom_right_frame = ttk.Frame(input_scrollable_frame)
+        bottom_right_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(5, 0), pady=(5, 0))
+
+        # --- Module Configuration (Top-left) ---
+        module_config_frame = ttk.LabelFrame(top_left_frame, text="Module Configuration", padding="10")
+        module_config_frame.pack(fill=tk.X, pady=5)
         
         # Fiber Input Type
         ttk.Label(module_config_frame, text="Fiber Input Type:").pack(pady=(5, 2), anchor='w')
-        self.fiber_input_type_var = tk.StringVar(value="sm")
+        self.fiber_input_type_var = tk.StringVar(value="pm")
         self.fiber_input_type_combo = ttk.Combobox(module_config_frame, textvariable=self.fiber_input_type_var,
                                                   values=["pm", "sm"], width=20, state="readonly")
         self.fiber_input_type_combo.pack(anchor='w', padx=5, pady=(0, 10))
+        
+        # Bind callback to update architecture when fiber type changes
+        self.fiber_input_type_combo.bind('<<ComboboxSelected>>', self.on_fiber_type_change)
         
         # PIC Architecture Selection
         ttk.Label(module_config_frame, text="PIC Architecture:").pack(pady=(5, 2), anchor='w')
         self.guide3a_architecture_var = tk.StringVar(value="psrless")
         self.guide3a_architecture_combo = ttk.Combobox(module_config_frame, textvariable=self.guide3a_architecture_var,
-                                                      values=["psrless", "psr", "pol_control"], 
+                                                      values=["psrless"], 
                                                       width=20, state="readonly")
         self.guide3a_architecture_combo.pack(anchor='w', padx=5, pady=(0, 10))
+        # Ensure correct state for default fiber type
+        if self.fiber_input_type_var.get() == "pm":
+            self.guide3a_architecture_combo['state'] = "disabled"
+        else:
+            self.guide3a_architecture_combo['state'] = "readonly"
         
         # Number of Fibers
         ttk.Label(module_config_frame, text="Number of Fibers (multiple of 20):").pack(pady=(5, 2), anchor='w')
         self.num_fibers_var = tk.StringVar(value="40")
         self.num_fibers_entry = ttk.Entry(module_config_frame, textvariable=self.num_fibers_var, width=15)
         self.num_fibers_entry.pack(anchor='w', padx=5, pady=(0, 10))
-        
-        # Performance Parameters Frame
-        performance_frame = ttk.LabelFrame(guide3a_input_frame, text="Performance Parameters", padding="10")
-        performance_frame.pack(fill=tk.X, pady=10)
-        
-        # Operating Wavelength (matching EuropaSOA)
-        ttk.Label(performance_frame, text="Operating Wavelength (nm) [1290-1330]:").pack(pady=(5, 2), anchor='w')
+
+        # Guide3A wavelength and temperature variables (hidden, used for calculations)
         self.guide3a_wavelength_var = tk.StringVar(value="1310")
-        self.guide3a_wavelength_entry = ttk.Entry(performance_frame, textvariable=self.guide3a_wavelength_var, width=15)
-        self.guide3a_wavelength_entry.pack(anchor='w', padx=5)
-        
-        # Temperature (matching EuropaSOA)
-        ttk.Label(performance_frame, text="Temperature (°C) [25-80]:").pack(pady=(5, 2), anchor='w')
         self.guide3a_temp_var = tk.StringVar(value="40")
-        self.guide3a_temp_entry = ttk.Entry(performance_frame, textvariable=self.guide3a_temp_var, width=15)
-        self.guide3a_temp_entry.pack(anchor='w', padx=5)
         
-        # Loss Components Frame
-        loss_components_frame = ttk.LabelFrame(guide3a_input_frame, text="Loss Components (dB)", padding="10")
-        loss_components_frame.pack(fill=tk.X, pady=10)
+        # Link Requirements Frame (moved below Module Configuration)
+        link_requirements_frame = ttk.LabelFrame(top_left_frame, text="Link requirement per λ", padding="10")
+        link_requirements_frame.pack(fill=tk.X, pady=5)
+        
+        # Target Pout
+        ttk.Label(link_requirements_frame, text="Target Pout [dBm] [-10 to 20]:").pack(pady=(5, 2), anchor='w')
+        self.guide3a_target_pout_var = tk.StringVar(value="-2.75")
+        self.guide3a_target_pout_entry = ttk.Entry(link_requirements_frame, textvariable=self.guide3a_target_pout_var, width=15)
+        self.guide3a_target_pout_entry.pack(anchor='w', padx=5)
+        
+        # Target Pout 3σ
+        ttk.Label(link_requirements_frame, text="Target Pout 3σ [dBm] [-10 to 20]:").pack(pady=(5, 2), anchor='w')
+        self.guide3a_target_pout_3sigma_var = tk.StringVar(value="1.75")
+        self.guide3a_target_pout_3sigma_entry = ttk.Entry(link_requirements_frame, textvariable=self.guide3a_target_pout_3sigma_var, width=15)
+        self.guide3a_target_pout_3sigma_entry.pack(anchor='w', padx=5)
+        
+        # Penalty due to SOA
+        ttk.Label(link_requirements_frame, text="Penalty due to SOA in dB:").pack(pady=(5, 2), anchor='w')
+        self.guide3a_soa_penalty_var = tk.StringVar(value="2")
+        self.guide3a_soa_penalty_entry = ttk.Entry(link_requirements_frame, textvariable=self.guide3a_soa_penalty_var, width=15)
+        self.guide3a_soa_penalty_entry.pack(anchor='w', padx=5)
+        
+        # Penalty due to SOA 3σ
+        ttk.Label(link_requirements_frame, text="Penalty due to SOA 3σ in dB:").pack(pady=(5, 2), anchor='w')
+        self.guide3a_soa_penalty_3sigma_var = tk.StringVar(value="2")
+        self.guide3a_soa_penalty_3sigma_entry = ttk.Entry(link_requirements_frame, textvariable=self.guide3a_soa_penalty_3sigma_var, width=15)
+        self.guide3a_soa_penalty_3sigma_entry.pack(anchor='w', padx=5)
+        
+        # Loss Components Frame (Bottom-right quadrant)
+        loss_components_frame = ttk.LabelFrame(bottom_right_frame, text="Loss Components (dB)", padding="10")
+        loss_components_frame.pack(fill=tk.X, pady=5)
         
         # I/O Loss
         ttk.Label(loss_components_frame, text="I/O Input Loss:").pack(pady=(5, 2), anchor='w')
@@ -384,16 +456,17 @@ class Guide3GUI(tk.Tk):
         self.guide3a_coupler_loss_entry = ttk.Entry(loss_components_frame, textvariable=self.guide3a_coupler_loss_var, width=15)
         self.guide3a_coupler_loss_entry.pack(anchor='w', padx=5)
         
-        # Action buttons
-        action_frame = ttk.Frame(guide3a_input_frame)
-        action_frame.pack(fill=tk.X, pady=10)
-        
-        ttk.Button(action_frame, text="Calculate", command=self.calculate_guide3a).pack(side=tk.LEFT, padx=(0, 5))
-        ttk.Button(action_frame, text="Reset", command=self.reset_guide3a).pack(side=tk.LEFT, padx=5)
+        # Action buttons will be placed under the results section
         
         # Right side - Results Display
         guide3a_results_frame = ttk.LabelFrame(guide3a_main_frame, text="Guide3A Results", padding="10")
         guide3a_results_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
+        
+        # Action buttons at the top of results section
+        action_frame = ttk.Frame(guide3a_results_frame)
+        action_frame.pack(fill=tk.X, pady=(0, 10))
+        ttk.Button(action_frame, text="Calculate", command=self.calculate_guide3a).pack(side=tk.LEFT, padx=(0, 5))
+        ttk.Button(action_frame, text="Reset", command=self.reset_guide3a).pack(side=tk.LEFT, padx=5)
         
         self.guide3a_results_text = tk.Text(guide3a_results_frame, height=20, width=50)
         guide3a_results_scrollbar = ttk.Scrollbar(guide3a_results_frame, orient="vertical", command=self.guide3a_results_text.yview)
@@ -446,6 +519,10 @@ class Guide3GUI(tk.Tk):
                 self.guide3a_psr_loss_var.set(str(self.default_config['guide3a_parameters']['psr_loss']))
                 self.guide3a_phase_shifter_loss_var.set(str(self.default_config['guide3a_parameters']['phase_shifter_loss']))
                 self.guide3a_coupler_loss_var.set(str(self.default_config['guide3a_parameters']['coupler_loss']))
+                self.guide3a_target_pout_var.set(str(self.default_config['guide3a_parameters']['target_pout']))
+                self.guide3a_soa_penalty_var.set(str(self.default_config['guide3a_parameters']['soa_penalty']))
+                self.guide3a_target_pout_3sigma_var.set(str(self.default_config['guide3a_parameters']['target_pout_3sigma']))
+                self.guide3a_soa_penalty_3sigma_var.set(str(self.default_config['guide3a_parameters']['soa_penalty_3sigma']))
             
             messagebox.showinfo("Defaults Loaded", "Default configuration has been loaded successfully.")
             
@@ -491,6 +568,10 @@ class Guide3GUI(tk.Tk):
                 self.default_config['guide3a_parameters']['psr_loss'] = float(self.guide3a_psr_loss_var.get())
                 self.default_config['guide3a_parameters']['phase_shifter_loss'] = float(self.guide3a_phase_shifter_loss_var.get())
                 self.default_config['guide3a_parameters']['coupler_loss'] = float(self.guide3a_coupler_loss_var.get())
+                self.default_config['guide3a_parameters']['target_pout'] = float(self.guide3a_target_pout_var.get())
+                self.default_config['guide3a_parameters']['soa_penalty'] = float(self.guide3a_soa_penalty_var.get())
+                self.default_config['guide3a_parameters']['target_pout_3sigma'] = float(self.guide3a_target_pout_3sigma_var.get())
+                self.default_config['guide3a_parameters']['soa_penalty_3sigma'] = float(self.guide3a_soa_penalty_3sigma_var.get())
             
             messagebox.showinfo("Defaults Updated", "Default configuration has been updated with current values.")
             
@@ -539,7 +620,7 @@ class Guide3GUI(tk.Tk):
                 
                 # Load Guide3A parameters
                 if 'guide3a_parameters' in config:
-                    self.fiber_input_type_var.set(config['guide3a_parameters'].get('fiber_input_type', 'sm'))
+                    self.fiber_input_type_var.set(config['guide3a_parameters'].get('fiber_input_type', 'pm'))
                     self.guide3a_architecture_var.set(config['guide3a_parameters'].get('pic_architecture', 'psrless'))
                     self.num_fibers_var.set(str(config['guide3a_parameters'].get('num_fibers', 40)))
                     self.guide3a_wavelength_var.set(str(config['guide3a_parameters'].get('operating_wavelength', 1310)))
@@ -549,6 +630,10 @@ class Guide3GUI(tk.Tk):
                     self.guide3a_psr_loss_var.set(str(config['guide3a_parameters'].get('psr_loss', 0.5)))
                     self.guide3a_phase_shifter_loss_var.set(str(config['guide3a_parameters'].get('phase_shifter_loss', 0.5)))
                     self.guide3a_coupler_loss_var.set(str(config['guide3a_parameters'].get('coupler_loss', 0.2)))
+                    self.guide3a_target_pout_var.set(str(config['guide3a_parameters'].get('target_pout', -2.75)))
+                    self.guide3a_soa_penalty_var.set(str(config['guide3a_parameters'].get('soa_penalty', 2)))
+                    self.guide3a_target_pout_3sigma_var.set(str(config['guide3a_parameters'].get('target_pout_3sigma', 1.75)))
+                    self.guide3a_soa_penalty_3sigma_var.set(str(config['guide3a_parameters'].get('soa_penalty_3sigma', 2)))
                 
                 messagebox.showinfo("Config Loaded", f"Configuration loaded from {filename}")
                 
@@ -595,7 +680,11 @@ class Guide3GUI(tk.Tk):
                         'io_out_loss': float(self.guide3a_io_out_loss_var.get()),
                         'psr_loss': float(self.guide3a_psr_loss_var.get()),
                         'phase_shifter_loss': float(self.guide3a_phase_shifter_loss_var.get()),
-                        'coupler_loss': float(self.guide3a_coupler_loss_var.get())
+                        'coupler_loss': float(self.guide3a_coupler_loss_var.get()),
+                        'target_pout': float(self.guide3a_target_pout_var.get()),
+                        'soa_penalty': float(self.guide3a_soa_penalty_var.get()),
+                        'target_pout_3sigma': float(self.guide3a_target_pout_3sigma_var.get()),
+                        'soa_penalty_3sigma': float(self.guide3a_soa_penalty_3sigma_var.get())
                     }
                 }
                 
@@ -1369,13 +1458,23 @@ Operation Parameters:
             phase_shifter_loss = float(self.guide3a_phase_shifter_loss_var.get())
             coupler_loss = float(self.guide3a_coupler_loss_var.get())
             
+            # Link requirements
+            target_pout = float(self.guide3a_target_pout_var.get())
+            target_pout_3sigma = float(self.guide3a_target_pout_3sigma_var.get())
+            soa_penalty = float(self.guide3a_soa_penalty_var.get())
+            soa_penalty_3sigma = float(self.guide3a_soa_penalty_3sigma_var.get())
+            
             # Validate inputs
             if fiber_input_type not in ["pm", "sm"]:
                 messagebox.showerror("Invalid Input", "Fiber Input Type must be 'pm' or 'sm'")
                 return
             
-            if pic_architecture not in ["psrless", "psr", "pol_control"]:
-                messagebox.showerror("Invalid Input", "PIC Architecture must be one of the supported types")
+            # For PM fiber, architecture must be psrless
+            if fiber_input_type == "pm":
+                pic_architecture = "psrless"
+            # For SM fiber, architecture must be psr or pol_control
+            elif fiber_input_type == "sm" and pic_architecture not in ["psr", "pol_control"]:
+                messagebox.showerror("Invalid Input", "For SM fiber, PIC Architecture must be 'psr' or 'pol_control'")
                 return
             
             if num_fibers % 20 != 0:
@@ -1388,6 +1487,22 @@ Operation Parameters:
             
             if not (25 <= temperature <= 80):
                 messagebox.showerror("Invalid Input", "Temperature must be between 25 and 80°C")
+                return
+            
+            if not (-10 <= target_pout <= 20):
+                messagebox.showerror("Invalid Input", "Target Pout - Median must be between -10 and 20 dBm")
+                return
+            
+            if not (-10 <= target_pout_3sigma <= 20):
+                messagebox.showerror("Invalid Input", "Target Pout - 3σ must be between -10 and 20 dBm")
+                return
+            
+            if soa_penalty < 0:
+                messagebox.showerror("Invalid Input", "SOA penalty - Median must be non-negative")
+                return
+            
+            if soa_penalty_3sigma < 0:
+                messagebox.showerror("Invalid Input", "SOA penalty - 3σ must be non-negative")
                 return
             
             if any(loss < 0 for loss in [io_in_loss, io_out_loss, psr_loss, phase_shifter_loss, coupler_loss]):
@@ -1408,7 +1523,10 @@ Operation Parameters:
                 io_out_loss=io_out_loss,
                 psr_loss=psr_loss,
                 phase_shifter_loss=phase_shifter_loss,
-                coupler_loss=coupler_loss
+                coupler_loss=coupler_loss,
+                target_pout=target_pout,
+                soa_penalty=soa_penalty,
+                soa_penalty_3sigma=soa_penalty_3sigma
             )
             
             # Get comprehensive analysis
@@ -1418,6 +1536,21 @@ Operation Parameters:
             component_count = guide3a.get_component_count()
             architecture_description = guide3a.get_architecture_description()
             module_config = guide3a.get_module_configuration()
+            
+            # Calculate target Pout for all wavelengths
+            num_wavelengths = int(self.num_wavelengths_var.get())
+            target_pout_calculation = guide3a.calculate_target_pout_all_wavelengths(
+                num_wavelengths=num_wavelengths,
+                target_pout_3sigma=target_pout_3sigma,
+                soa_penalty_3sigma=soa_penalty_3sigma
+            )
+            
+            # Calculate SOA output requirements
+            soa_output_calculation = guide3a.calculate_target_pout_after_soa(
+                num_wavelengths=num_wavelengths,
+                target_pout_3sigma=target_pout_3sigma,
+                soa_penalty_3sigma=soa_penalty_3sigma
+            )
             
             # Clear results
             self.guide3a_results_text.delete(1.0, tk.END)
@@ -1435,11 +1568,62 @@ Module Configuration:
 - Number of PICs: {module_config['num_pics']}
 - Number of Unit Cells: {module_config['num_unit_cells']}
 
-Performance Parameters:
+Performance Parameters (Nominal):
 - Operating Wavelength: {operating_wavelength:.0f} nm
 - Temperature: {temperature:.0f} °C
+- Target Pout - Median: {target_pout:.2f} dBm
+- SOA Penalty - Median: {soa_penalty:.1f} dB
 
-Component Count:
+Performance Parameters (3σ):
+- Target Pout - 3σ: {target_pout_3sigma:.2f} dBm
+- SOA Penalty -3σ: {soa_penalty_3sigma:.1f} dB
+
+Target Pout for All Wavelengths:
+- Number of Wavelengths: {target_pout_calculation['num_wavelengths']}
+- Wavelength Penalty: {target_pout_calculation['wavelength_penalty_db']:.2f} dB (10*log10({target_pout_calculation['num_wavelengths']}))
+
+Median Case:
+- Base Target Pout: {target_pout_calculation['median_case']['base_target_pout_db']:.2f} dBm
+- SOA Penalty: {target_pout_calculation['median_case']['soa_penalty_db']:.1f} dB
+- Total Target Pout: {target_pout_calculation['median_case']['total_target_pout_db']:.2f} dBm
+
+"""
+            
+            # Add 3σ case if available
+            if target_pout_calculation['sigma_case'] is not None:
+                results += f"""3σ Case:
+- Base Target Pout: {target_pout_calculation['sigma_case']['base_target_pout_db']:.2f} dBm
+- SOA Penalty: {target_pout_calculation['sigma_case']['soa_penalty_db']:.1f} dB
+- Total Target Pout: {target_pout_calculation['sigma_case']['total_target_pout_db']:.2f} dBm
+
+"""
+            
+            results += f"""SOA Output Requirements (After Losses):
+- Total System Loss: {soa_output_calculation['total_system_loss_db']:.2f} dB
+
+Median Case SOA Requirements:
+- Final Target Pout: {soa_output_calculation['median_case']['final_target_pout_db']:.2f} dBm
+- Required SOA Output: {soa_output_calculation['median_case']['soa_output_requirement_db']:.2f} dBm
+- Loss Breakdown:
+  * I/O Input Loss: {soa_output_calculation['median_case']['loss_breakdown']['io_in_loss']:.1f} dB
+  * I/O Output Loss: {soa_output_calculation['median_case']['loss_breakdown']['io_out_loss']:.1f} dB
+  * Architecture Loss: {soa_output_calculation['median_case']['loss_breakdown']['architecture_loss']:.1f} dB
+
+"""
+            
+            # Add 3σ SOA requirements if available
+            if soa_output_calculation['sigma_case'] is not None:
+                results += f"""3σ Case SOA Requirements:
+- Final Target Pout: {soa_output_calculation['sigma_case']['final_target_pout_db']:.2f} dBm
+- Required SOA Output: {soa_output_calculation['sigma_case']['soa_output_requirement_db']:.2f} dBm
+- Loss Breakdown:
+  * I/O Input Loss: {soa_output_calculation['sigma_case']['loss_breakdown']['io_in_loss']:.1f} dB
+  * I/O Output Loss: {soa_output_calculation['sigma_case']['loss_breakdown']['io_out_loss']:.1f} dB
+  * Architecture Loss: {soa_output_calculation['sigma_case']['loss_breakdown']['architecture_loss']:.1f} dB
+
+"""
+            
+            results += f"""Component Count:
 """
             
             for component, count in component_count.items():
@@ -1499,7 +1683,7 @@ Summary:
 
     def reset_guide3a(self):
         """Reset all Guide3A inputs to default values"""
-        self.fiber_input_type_var.set("sm")
+        self.fiber_input_type_var.set("pm")
         self.guide3a_architecture_var.set("psrless")
         self.num_fibers_var.set("40")
         
@@ -1514,7 +1698,30 @@ Summary:
         self.guide3a_phase_shifter_loss_var.set("0.5")
         self.guide3a_coupler_loss_var.set("0.2")
         
+        # Reset link requirements
+        self.guide3a_target_pout_var.set("-2.75")
+        self.guide3a_target_pout_3sigma_var.set("1.75")
+        self.guide3a_soa_penalty_var.set("2")
+        self.guide3a_soa_penalty_3sigma_var.set("2")
+        
         self.guide3a_results_text.delete(1.0, tk.END)
+
+    def on_fiber_type_change(self, event):
+        """Callback function to update PIC architecture when fiber input type changes"""
+        fiber_type = self.fiber_input_type_var.get()
+        
+        if fiber_type == "pm":
+            # For PM fiber, automatically set to psrless
+            self.guide3a_architecture_var.set("psrless")
+            # Update combobox values to only show psrless
+            self.guide3a_architecture_combo['values'] = ["psrless"]
+            self.guide3a_architecture_combo['state'] = "disabled"
+        else:
+            # For SM fiber, allow psr or pol_control
+            self.guide3a_architecture_var.set("psr")
+            # Update combobox values to show psr and pol_control
+            self.guide3a_architecture_combo['values'] = ["psr", "pol_control"]
+            self.guide3a_architecture_combo['state'] = "readonly"
 
 if __name__ == "__main__":
     app = Guide3GUI()
