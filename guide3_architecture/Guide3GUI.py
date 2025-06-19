@@ -38,6 +38,14 @@ class Guide3GUI(tk.Tk):
             'link_loss_modes': {
                 'median_loss': True,
                 'sigma_loss': True
+            },
+            'pic_parameters': {
+                'pic_architecture': 'psr',
+                'io_in_loss': 1.5,
+                'io_out_loss': 1.5,
+                'psr_loss': 0.5,
+                'phase_shifter_loss': 0.5,
+                'coupler_loss': 0.2
             }
         }
         
@@ -289,7 +297,72 @@ class Guide3GUI(tk.Tk):
         # EuropaPIC Tab
         self.pic_tab = ttk.Frame(notebook)
         notebook.add(self.pic_tab, text='EuropaPIC')
-        ttk.Label(self.pic_tab, text="EuropaPIC Model Interface (placeholder)").pack(padx=10, pady=10)
+        
+        # Create main frame for EuropaPIC
+        pic_main_frame = ttk.Frame(self.pic_tab)
+        pic_main_frame.pack(fill='both', expand=True, padx=10, pady=10)
+        
+        # Left side - Input parameters
+        pic_input_frame = ttk.LabelFrame(pic_main_frame, text="PIC Parameters", padding="10")
+        pic_input_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
+        
+        # PIC Architecture Selection
+        ttk.Label(pic_input_frame, text="PIC Architecture:").pack(pady=(5, 2), anchor='w')
+        self.pic_architecture_var = tk.StringVar(value="psr")
+        self.pic_architecture_combo = ttk.Combobox(pic_input_frame, textvariable=self.pic_architecture_var,
+                                                  values=["psr", "pol_control"], width=20, state="readonly")
+        self.pic_architecture_combo.pack(anchor='w', padx=5, pady=(0, 10))
+        
+        # Loss Components Frame
+        loss_components_frame = ttk.LabelFrame(pic_input_frame, text="Loss Components (dB)", padding="10")
+        loss_components_frame.pack(fill=tk.X, pady=10)
+        
+        # I/O Loss
+        ttk.Label(loss_components_frame, text="I/O Input Loss:").pack(pady=(5, 2), anchor='w')
+        self.io_in_loss_var = tk.StringVar(value="1.5")
+        self.io_in_loss_entry = ttk.Entry(loss_components_frame, textvariable=self.io_in_loss_var, width=15)
+        self.io_in_loss_entry.pack(anchor='w', padx=5)
+        
+        ttk.Label(loss_components_frame, text="I/O Output Loss:").pack(pady=(5, 2), anchor='w')
+        self.io_out_loss_var = tk.StringVar(value="1.5")
+        self.io_out_loss_entry = ttk.Entry(loss_components_frame, textvariable=self.io_out_loss_var, width=15)
+        self.io_out_loss_entry.pack(anchor='w', padx=5)
+        
+        # PSR Loss
+        ttk.Label(loss_components_frame, text="PSR Loss:").pack(pady=(5, 2), anchor='w')
+        self.psr_loss_var = tk.StringVar(value="0.5")
+        self.psr_loss_entry = ttk.Entry(loss_components_frame, textvariable=self.psr_loss_var, width=15)
+        self.psr_loss_entry.pack(anchor='w', padx=5)
+        
+        # Phase Shifter Loss
+        ttk.Label(loss_components_frame, text="Phase Shifter Loss:").pack(pady=(5, 2), anchor='w')
+        self.phase_shifter_loss_var = tk.StringVar(value="0.5")
+        self.phase_shifter_entry = ttk.Entry(loss_components_frame, textvariable=self.phase_shifter_loss_var, width=15)
+        self.phase_shifter_entry.pack(anchor='w', padx=5)
+        
+        # Coupler Loss
+        ttk.Label(loss_components_frame, text="Coupler Loss:").pack(pady=(5, 2), anchor='w')
+        self.coupler_loss_var = tk.StringVar(value="0.2")
+        self.coupler_loss_entry = ttk.Entry(loss_components_frame, textvariable=self.coupler_loss_var, width=15)
+        self.coupler_loss_entry.pack(anchor='w', padx=5)
+        
+        # Action buttons
+        action_frame = ttk.Frame(pic_input_frame)
+        action_frame.pack(fill=tk.X, pady=10)
+        
+        ttk.Button(action_frame, text="Calculate", command=self.calculate_pic).pack(side=tk.LEFT, padx=(0, 5))
+        ttk.Button(action_frame, text="Reset", command=self.reset_pic).pack(side=tk.LEFT, padx=5)
+        
+        # Right side - Results Display
+        pic_results_frame = ttk.LabelFrame(pic_main_frame, text="PIC Results", padding="10")
+        pic_results_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
+        
+        self.pic_results_text = tk.Text(pic_results_frame, height=20, width=50)
+        pic_results_scrollbar = ttk.Scrollbar(pic_results_frame, orient="vertical", command=self.pic_results_text.yview)
+        self.pic_results_text.configure(yscrollcommand=pic_results_scrollbar.set)
+        
+        self.pic_results_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        pic_results_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
         # Guide3A Tab
         self.guide3a_tab = ttk.Frame(notebook)
@@ -299,6 +372,7 @@ class Guide3GUI(tk.Tk):
     def auto_calculate_defaults(self):
         """Automatically calculate and display results for default inputs"""
         self.calculate_soa()
+        self.calculate_pic()
 
     def load_defaults(self):
         """Load the default configuration values"""
@@ -326,6 +400,15 @@ class Guide3GUI(tk.Tk):
             # Load link loss modes
             self.link_loss_modes["median-loss"].set(self.default_config['link_loss_modes']['median_loss'])
             self.link_loss_modes["3-sigma-loss"].set(self.default_config['link_loss_modes']['sigma_loss'])
+            
+            # Load PIC parameters
+            if 'pic_parameters' in self.default_config:
+                self.pic_architecture_var.set(self.default_config['pic_parameters']['pic_architecture'])
+                self.io_in_loss_var.set(str(self.default_config['pic_parameters']['io_in_loss']))
+                self.io_out_loss_var.set(str(self.default_config['pic_parameters']['io_out_loss']))
+                self.psr_loss_var.set(str(self.default_config['pic_parameters']['psr_loss']))
+                self.phase_shifter_loss_var.set(str(self.default_config['pic_parameters']['phase_shifter_loss']))
+                self.coupler_loss_var.set(str(self.default_config['pic_parameters']['coupler_loss']))
             
             messagebox.showinfo("Defaults Loaded", "Default configuration has been loaded successfully.")
             
@@ -358,6 +441,15 @@ class Guide3GUI(tk.Tk):
             # Update link loss modes
             self.default_config['link_loss_modes']['median_loss'] = self.link_loss_modes["median-loss"].get()
             self.default_config['link_loss_modes']['sigma_loss'] = self.link_loss_modes["3-sigma-loss"].get()
+            
+            # Update PIC parameters
+            if 'pic_parameters' in self.default_config:
+                self.default_config['pic_parameters']['pic_architecture'] = self.pic_architecture_var.get()
+                self.default_config['pic_parameters']['io_in_loss'] = float(self.io_in_loss_var.get())
+                self.default_config['pic_parameters']['io_out_loss'] = float(self.io_out_loss_var.get())
+                self.default_config['pic_parameters']['psr_loss'] = float(self.psr_loss_var.get())
+                self.default_config['pic_parameters']['phase_shifter_loss'] = float(self.phase_shifter_loss_var.get())
+                self.default_config['pic_parameters']['coupler_loss'] = float(self.coupler_loss_var.get())
             
             messagebox.showinfo("Defaults Updated", "Default configuration has been updated with current values.")
             
@@ -404,6 +496,15 @@ class Guide3GUI(tk.Tk):
                     self.link_loss_modes["median-loss"].set(config['link_loss_modes'].get('median_loss', True))
                     self.link_loss_modes["3-sigma-loss"].set(config['link_loss_modes'].get('sigma_loss', True))
                 
+                # Load PIC parameters
+                if 'pic_parameters' in config:
+                    self.pic_architecture_var.set(config['pic_parameters'].get('pic_architecture', 'psr'))
+                    self.io_in_loss_var.set(str(config['pic_parameters'].get('io_in_loss', 1.5)))
+                    self.io_out_loss_var.set(str(config['pic_parameters'].get('io_out_loss', 1.5)))
+                    self.psr_loss_var.set(str(config['pic_parameters'].get('psr_loss', 0.5)))
+                    self.phase_shifter_loss_var.set(str(config['pic_parameters'].get('phase_shifter_loss', 0.5)))
+                    self.coupler_loss_var.set(str(config['pic_parameters'].get('coupler_loss', 0.2)))
+                
                 messagebox.showinfo("Config Loaded", f"Configuration loaded from {filename}")
                 
         except Exception as e:
@@ -438,6 +539,14 @@ class Guide3GUI(tk.Tk):
                     'link_loss_modes': {
                         'median_loss': self.link_loss_modes["median-loss"].get(),
                         'sigma_loss': self.link_loss_modes["3-sigma-loss"].get()
+                    },
+                    'pic_parameters': {
+                        'pic_architecture': self.pic_architecture_var.get(),
+                        'io_in_loss': float(self.io_in_loss_var.get()),
+                        'io_out_loss': float(self.io_out_loss_var.get()),
+                        'psr_loss': float(self.psr_loss_var.get()),
+                        'phase_shifter_loss': float(self.phase_shifter_loss_var.get()),
+                        'coupler_loss': float(self.coupler_loss_var.get())
                     }
                 }
                 
@@ -1191,6 +1300,92 @@ Operation Parameters:
         
         fig.update_xaxes(title_text="Wavelength (nm)", row=row, col=col)
         fig.update_yaxes(title_text="Saturation Power (dBm)", row=row, col=col)
+
+    def calculate_pic(self):
+        """Calculate PIC parameters based on input values using EuropaPIC class"""
+        try:
+            # Get input values
+            pic_architecture = self.pic_architecture_var.get()
+            io_in_loss = float(self.io_in_loss_var.get())
+            io_out_loss = float(self.io_out_loss_var.get())
+            psr_loss = float(self.psr_loss_var.get())
+            phase_shifter_loss = float(self.phase_shifter_loss_var.get())
+            coupler_loss = float(self.coupler_loss_var.get())
+            
+            # Validate inputs
+            if pic_architecture not in ["psr", "pol_control"]:
+                messagebox.showerror("Invalid Input", "PIC Architecture must be 'psr' or 'pol_control'")
+                return
+            
+            if any(loss < 0 for loss in [io_in_loss, io_out_loss, psr_loss, phase_shifter_loss, coupler_loss]):
+                messagebox.showerror("Invalid Input", "All loss values must be non-negative")
+                return
+            
+            # Import EuropaPIC class
+            from EuropaPIC import EuropaPIC
+            
+            # Create EuropaPIC instance with custom loss values
+            pic = EuropaPIC(pic_architecture)
+            pic.io_in_loss = io_in_loss
+            pic.io_out_loss = io_out_loss
+            pic.psr_loss = psr_loss
+            pic.phase_shifter_loss = phase_shifter_loss
+            pic.coupler_loss = coupler_loss
+            
+            # Calculate total loss
+            total_loss = pic.get_total_loss()
+            
+            # Clear results
+            self.pic_results_text.delete(1.0, tk.END)
+            
+            # Display results
+            results = f"""EuropaPIC Analysis Results:
+{'='*50}
+
+PIC Architecture: {pic_architecture.upper()}
+
+Loss Components Breakdown:
+- I/O Input Loss: {io_in_loss:.1f} dB
+- I/O Output Loss: {io_out_loss:.1f} dB
+- PSR Loss: {psr_loss:.1f} dB
+- Phase Shifter Loss: {phase_shifter_loss:.1f} dB
+- Coupler Loss: {coupler_loss:.1f} dB
+
+Architecture-Specific Components:
+"""
+            
+            if pic_architecture == 'psr':
+                results += f"- PSR Components: 2 × {psr_loss:.1f} dB = {2*psr_loss:.1f} dB (PSR in/out)\n"
+            elif pic_architecture == 'pol_control':
+                results += f"- PSR Components: 2 × {psr_loss:.1f} dB = {2*psr_loss:.1f} dB (PSR in/out)\n"
+                results += f"- Phase Shifter Components: 2 × {phase_shifter_loss:.1f} dB = {2*phase_shifter_loss:.1f} dB (Phase shifter in/out)\n"
+                results += f"- Coupler Components: 2 × {coupler_loss:.1f} dB = {2*coupler_loss:.1f} dB (Coupler in/out)\n"
+            
+            results += f"""
+Total PIC Loss: {total_loss:.1f} dB
+
+Component Summary:
+- Base I/O Loss: {io_in_loss + io_out_loss:.1f} dB
+- Architecture-Specific Loss: {total_loss - (io_in_loss + io_out_loss):.1f} dB
+- Total System Loss: {total_loss:.1f} dB
+"""
+            
+            self.pic_results_text.insert(1.0, results)
+            
+        except ValueError:
+            messagebox.showerror("Input Error", "Please ensure all loss values are valid numbers.")
+        except Exception as e:
+            messagebox.showerror("Calculation Error", f"An error occurred during calculation: {e}")
+
+    def reset_pic(self):
+        """Reset all EuropaPIC inputs to default values"""
+        self.pic_architecture_var.set("psr")
+        self.io_in_loss_var.set("1.5")
+        self.io_out_loss_var.set("1.5")
+        self.psr_loss_var.set("0.5")
+        self.phase_shifter_loss_var.set("0.5")
+        self.coupler_loss_var.set("0.2")
+        self.pic_results_text.delete(1.0, tk.END)
 
 if __name__ == "__main__":
     app = Guide3GUI()
