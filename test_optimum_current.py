@@ -25,7 +25,7 @@ def test_optimum_current_density():
         psr_loss=0.5,
         phase_shifter_loss=0.5,
         coupler_loss=0.2,
-        target_pout=-2.75,
+        target_pout=-3.3,
         soa_penalty=2,
         soa_penalty_3sigma=2
     )
@@ -40,7 +40,7 @@ def test_optimum_current_density():
     try:
         result = guide3a.estimate_optimum_soa_current_density(
             num_wavelengths=num_wavelengths,
-            target_pout_3sigma=1.75,
+            target_pout_3sigma=-0.3,
             soa_penalty_3sigma=2,
             wavelengths=wavelengths
         )

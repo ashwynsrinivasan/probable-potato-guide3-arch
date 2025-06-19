@@ -12,9 +12,9 @@ class Guide3GUI(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Guide3 GUI")
-        # Set window size to 1500x900 px and make it fixed size
+        # Set window size to 1500x900 px and make it resizable
         self.geometry("1500x900")
-        self.resizable(False, False)
+        self.resizable(True, True)
         self.link_loss_modes = {"median-loss": tk.BooleanVar(), "3-sigma-loss": tk.BooleanVar()}
         # Initialize default wavelengths
         self.default_wavelengths = ["1301.47", "1303.73", "1306.01", "1308.28", "1310.57", "1312.87", "1315.17", "1317.48"]
@@ -51,8 +51,8 @@ class Guide3GUI(tk.Tk):
                 'psr_loss': 0.5,
                 'phase_shifter_loss': 0.5,
                 'coupler_loss': 0.2,
-                'target_pout': -2.75,
-                'target_pout_3sigma': 1.75,
+                'target_pout': -3.3,
+                'target_pout_3sigma': -0.3,
                 'soa_penalty': 2,
                 'soa_penalty_3sigma': 2
             }
@@ -228,13 +228,13 @@ class Guide3GUI(tk.Tk):
         
         # Target Pout
         ttk.Label(link_requirements_frame, text="Target Pout [dBm] [-10 to 20]:").pack(pady=(5, 2), anchor='w')
-        self.guide3a_target_pout_var = tk.StringVar(value="-2.75")
+        self.guide3a_target_pout_var = tk.StringVar(value="-3.3")
         self.guide3a_target_pout_entry = ttk.Entry(link_requirements_frame, textvariable=self.guide3a_target_pout_var, width=15)
         self.guide3a_target_pout_entry.pack(anchor='w', padx=5)
         
         # Target Pout 3σ
         ttk.Label(link_requirements_frame, text="Target Pout 3σ [dBm] [-10 to 20]:").pack(pady=(5, 2), anchor='w')
-        self.guide3a_target_pout_3sigma_var = tk.StringVar(value="1.75")
+        self.guide3a_target_pout_3sigma_var = tk.StringVar(value="-0.3")
         self.guide3a_target_pout_3sigma_entry = ttk.Entry(link_requirements_frame, textvariable=self.guide3a_target_pout_3sigma_var, width=15)
         self.guide3a_target_pout_3sigma_entry.pack(anchor='w', padx=5)
         
@@ -720,9 +720,9 @@ class Guide3GUI(tk.Tk):
                     self.guide3a_psr_loss_var.set(str(config['guide3a_parameters'].get('psr_loss', 0.5)))
                     self.guide3a_phase_shifter_loss_var.set(str(config['guide3a_parameters'].get('phase_shifter_loss', 0.5)))
                     self.guide3a_coupler_loss_var.set(str(config['guide3a_parameters'].get('coupler_loss', 0.2)))
-                    self.guide3a_target_pout_var.set(str(config['guide3a_parameters'].get('target_pout', -2.75)))
+                    self.guide3a_target_pout_var.set(str(config['guide3a_parameters'].get('target_pout', -3.3)))
                     self.guide3a_soa_penalty_var.set(str(config['guide3a_parameters'].get('soa_penalty', 2)))
-                    self.guide3a_target_pout_3sigma_var.set(str(config['guide3a_parameters'].get('target_pout_3sigma', 1.75)))
+                    self.guide3a_target_pout_3sigma_var.set(str(config['guide3a_parameters'].get('target_pout_3sigma', -0.3)))
                     self.guide3a_soa_penalty_3sigma_var.set(str(config['guide3a_parameters'].get('soa_penalty_3sigma', 2)))
                 
                 messagebox.showinfo("Config Loaded", f"Configuration loaded from {filename}")
@@ -1741,14 +1741,7 @@ Target Pout Calculation:
 - SOA Penalty: {target_pout_calculation['median_case']['soa_penalty_db']:.1f} dB
 - Total Target Pout: {target_pout_calculation['median_case']['total_target_pout_db']:.2f} dBm
 
-SOA Requirements (Output Losses Only):
-- Final Target Pout: {soa_output_calculation['median_case']['final_target_pout_db']:.2f} dBm
-- Required SOA Output: {soa_output_calculation['median_case']['soa_output_requirement_db']:.2f} dBm
-- Loss Breakdown:
-  * I/O Output Loss: {soa_output_calculation['median_case']['loss_breakdown']['io_out_loss']:.1f} dB
-  * Architecture Output Loss: {soa_output_calculation['median_case']['loss_breakdown']['architecture_output_loss']:.1f} dB
-
-Optimum SOA Current Density Analysis:
+SOA Current Analysis:
 - Optimum Current Density: {optimum_current_calculation['median_case']['current_density_kA_cm2']:.2f} kA/cm²
 - Optimum Current: {optimum_current_calculation['median_case']['current_ma']:.1f} mA
 - Target Saturation Power: {optimum_current_calculation['median_case']['target_saturation_power_mw']:.2f} mW (2dB above target Pout)
@@ -1782,14 +1775,13 @@ Performance Parameters:
 - Required SOA Output: {soa_output_calculation['sigma_case']['soa_output_requirement_db']:.2f} dBm
 - Loss Breakdown:
   * I/O Output Loss: {soa_output_calculation['sigma_case']['loss_breakdown']['io_out_loss']:.1f} dB
-  * Architecture Output Loss: {soa_output_calculation['sigma_case']['loss_breakdown']['architecture_output_loss']:.1f} dB
 
 """
             else:
                 sigma_content += "SOA Requirements: Not available\n\n"
             
             if optimum_current_calculation['sigma_case'] is not None:
-                sigma_content += f"""Optimum SOA Current Density Analysis:
+                sigma_content += f"""SOA Current Analysis:
 - Optimum Current Density: {optimum_current_calculation['sigma_case']['current_density_kA_cm2']:.2f} kA/cm²
 - Optimum Current: {optimum_current_calculation['sigma_case']['current_ma']:.1f} mA
 - Target Saturation Power: {optimum_current_calculation['sigma_case']['target_saturation_power_mw']:.2f} mW (2dB above target Pout)
@@ -1797,7 +1789,7 @@ Performance Parameters:
 - Power Margin: {optimum_current_calculation['sigma_case']['margin_db']:.2f} dB
 """
             else:
-                sigma_content += "Optimum SOA Current Density Analysis: Not available"
+                sigma_content += "SOA Current Analysis: Not available"
             
             # Display results in respective text widgets
             self.guide3a_median_results_text.insert(1.0, median_content)
@@ -1826,8 +1818,8 @@ Performance Parameters:
         self.guide3a_coupler_loss_var.set("0.2")
         
         # Reset link requirements
-        self.guide3a_target_pout_var.set("-2.75")
-        self.guide3a_target_pout_3sigma_var.set("1.75")
+        self.guide3a_target_pout_var.set("-3.3")
+        self.guide3a_target_pout_3sigma_var.set("-0.3")
         self.guide3a_soa_penalty_var.set("2")
         self.guide3a_soa_penalty_3sigma_var.set("2")
         
@@ -1835,7 +1827,7 @@ Performance Parameters:
         self.guide3a_sigma_results_text.delete(1.0, tk.END)
 
     def transfer_to_europasoa(self):
-        """Transfer calculated SOA output requirements from Guide3A to EuropaSOA tab"""
+        """Transfer calculated SOA output requirements and current density from Guide3A to EuropaSOA tab"""
         try:
             # Get current Guide3A parameters
             from Guide3A import Guide3A
@@ -1865,14 +1857,41 @@ Performance Parameters:
                 soa_penalty_3sigma=float(self.guide3a_soa_penalty_3sigma_var.get())
             )
             
+            # Calculate optimum current density
+            wavelengths = []
+            for i in range(num_wavelengths):
+                try:
+                    wavelength = float(self.wavelength_vars[i].get())
+                    wavelengths.append(wavelength)
+                except ValueError:
+                    wavelengths.append(1310.0)  # Default if invalid
+            
+            optimum_current_calculation = guide3a.estimate_optimum_soa_current_density(
+                num_wavelengths=num_wavelengths,
+                target_pout_3sigma=float(self.guide3a_target_pout_3sigma_var.get()),
+                soa_penalty_3sigma=float(self.guide3a_soa_penalty_3sigma_var.get()),
+                wavelengths=wavelengths
+            )
+            
             # Transfer median case SOA output requirement to EuropaSOA target Pout
             median_soa_output = soa_output_calculation['median_case']['soa_output_requirement_db']
             self.pout_median_var.set(f"{median_soa_output:.2f}")
             
+            # Transfer median case current density to EuropaSOA
+            median_current_density = optimum_current_calculation['median_case']['current_density_kA_cm2']
+            self.j_density_median_var.set(f"{median_current_density:.1f}")
+            
             # Transfer 3σ case SOA output requirement to EuropaSOA target Pout
+            sigma_soa_output = None
+            sigma_current_density = None
             if soa_output_calculation['sigma_case'] is not None:
                 sigma_soa_output = soa_output_calculation['sigma_case']['soa_output_requirement_db']
                 self.pout_sigma_var.set(f"{sigma_soa_output:.2f}")
+            
+            # Transfer 3σ case current density to EuropaSOA
+            if optimum_current_calculation['sigma_case'] is not None:
+                sigma_current_density = optimum_current_calculation['sigma_case']['current_density_kA_cm2']
+                self.j_density_sigma_var.set(f"{sigma_current_density:.1f}")
             
             # Switch to EuropaSOA tab
             for child in self.winfo_children():
@@ -1883,16 +1902,21 @@ Performance Parameters:
                             break
                     break
             
-            messagebox.showinfo("Transfer Complete", 
-                              f"SOA output requirements transferred to EuropaSOA tab:\n"
-                              f"Median: {median_soa_output:.2f} dBm\n"
-                              f"3σ: {sigma_soa_output:.2f} dBm (if available)")
+            # Create transfer message
+            transfer_msg = f"SOA output requirements and current density transferred to EuropaSOA tab:\n"
+            transfer_msg += f"Median: {median_soa_output:.2f} dBm, {median_current_density:.1f} kA/cm²\n"
+            if sigma_soa_output is not None and sigma_current_density is not None:
+                transfer_msg += f"3σ: {sigma_soa_output:.2f} dBm, {sigma_current_density:.1f} kA/cm²"
+            else:
+                transfer_msg += f"3σ: Not available"
+            
+            messagebox.showinfo("Transfer Complete", transfer_msg)
             
         except Exception as e:
             messagebox.showerror("Transfer Error", f"Failed to transfer results: {e}")
 
     def use_guide3a_results(self):
-        """Use the calculated SOA output requirements from Guide3A as target Pout in EuropaSOA"""
+        """Use the calculated SOA output requirements and current density from Guide3A as target Pout in EuropaSOA"""
         try:
             # Get current Guide3A parameters
             from Guide3A import Guide3A
@@ -1922,18 +1946,49 @@ Performance Parameters:
                 soa_penalty_3sigma=float(self.guide3a_soa_penalty_3sigma_var.get())
             )
             
+            # Calculate optimum current density
+            wavelengths = []
+            for i in range(num_wavelengths):
+                try:
+                    wavelength = float(self.wavelength_vars[i].get())
+                    wavelengths.append(wavelength)
+                except ValueError:
+                    wavelengths.append(1310.0)  # Default if invalid
+            
+            optimum_current_calculation = guide3a.estimate_optimum_soa_current_density(
+                num_wavelengths=num_wavelengths,
+                target_pout_3sigma=float(self.guide3a_target_pout_3sigma_var.get()),
+                soa_penalty_3sigma=float(self.guide3a_soa_penalty_3sigma_var.get()),
+                wavelengths=wavelengths
+            )
+            
             # Update EuropaSOA target Pout values
             median_soa_output = soa_output_calculation['median_case']['soa_output_requirement_db']
             self.pout_median_var.set(f"{median_soa_output:.2f}")
             
+            # Update EuropaSOA current density values
+            median_current_density = optimum_current_calculation['median_case']['current_density_kA_cm2']
+            self.j_density_median_var.set(f"{median_current_density:.1f}")
+            
+            sigma_soa_output = None
+            sigma_current_density = None
             if soa_output_calculation['sigma_case'] is not None:
                 sigma_soa_output = soa_output_calculation['sigma_case']['soa_output_requirement_db']
                 self.pout_sigma_var.set(f"{sigma_soa_output:.2f}")
             
-            messagebox.showinfo("Updated", 
-                              f"EuropaSOA target Pout values updated:\n"
-                              f"Median: {median_soa_output:.2f} dBm\n"
-                              f"3σ: {sigma_soa_output:.2f} dBm (if available)")
+            if optimum_current_calculation['sigma_case'] is not None:
+                sigma_current_density = optimum_current_calculation['sigma_case']['current_density_kA_cm2']
+                self.j_density_sigma_var.set(f"{sigma_current_density:.1f}")
+            
+            # Create update message
+            update_msg = f"EuropaSOA target Pout and current density values updated:\n"
+            update_msg += f"Median: {median_soa_output:.2f} dBm, {median_current_density:.1f} kA/cm²\n"
+            if sigma_soa_output is not None and sigma_current_density is not None:
+                update_msg += f"3σ: {sigma_soa_output:.2f} dBm, {sigma_current_density:.1f} kA/cm²"
+            else:
+                update_msg += f"3σ: Not available"
+            
+            messagebox.showinfo("Updated", update_msg)
             
         except Exception as e:
             messagebox.showerror("Update Error", f"Failed to update EuropaSOA values: {e}")
