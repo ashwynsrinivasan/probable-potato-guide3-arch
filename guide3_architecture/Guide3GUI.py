@@ -39,22 +39,17 @@ class Guide3GUI(tk.Tk):
                 'median_loss': True,
                 'sigma_loss': True
             },
-            'pic_parameters': {
-                'pic_architecture': 'psr',
+            'guide3a_parameters': {
+                'fiber_input_type': 'sm',
+                'pic_architecture': 'psrless',
+                'num_fibers': 40,
                 'operating_wavelength': 1310,
-                'temperature': 25,
-                'bandwidth': 10,
-                'waveguide_length': 2.0,
-                'waveguide_loss': 0.1,
+                'temperature': 40,
                 'io_in_loss': 1.5,
                 'io_out_loss': 1.5,
                 'psr_loss': 0.5,
                 'phase_shifter_loss': 0.5,
-                'coupler_loss': 0.2,
-                'mux_loss': 0.3,
-                'demux_loss': 0.3,
-                'modulator_loss': 0.8,
-                'detector_loss': 0.4
+                'coupler_loss': 0.2
             }
         }
         
@@ -303,123 +298,114 @@ class Guide3GUI(tk.Tk):
         self.sigma_results_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         sigma_results_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-        # EuropaPIC Tab
-        self.pic_tab = ttk.Frame(notebook)
-        notebook.add(self.pic_tab, text='EuropaPIC')
+        # Guide3A Tab (formerly EuropaPIC)
+        self.guide3a_tab = ttk.Frame(notebook)
+        notebook.add(self.guide3a_tab, text='Guide3A')
         
-        # Create main frame for EuropaPIC
-        pic_main_frame = ttk.Frame(self.pic_tab)
-        pic_main_frame.pack(fill='both', expand=True, padx=10, pady=10)
+        # Create main frame for Guide3A
+        guide3a_main_frame = ttk.Frame(self.guide3a_tab)
+        guide3a_main_frame.pack(fill='both', expand=True, padx=10, pady=10)
         
         # Left side - Input parameters
-        pic_input_frame = ttk.LabelFrame(pic_main_frame, text="PIC Parameters", padding="10")
-        pic_input_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
+        guide3a_input_frame = ttk.LabelFrame(guide3a_main_frame, text="Guide3A Parameters", padding="10")
+        guide3a_input_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
+        
+        # Module Configuration Frame
+        module_config_frame = ttk.LabelFrame(guide3a_input_frame, text="Module Configuration", padding="10")
+        module_config_frame.pack(fill=tk.X, pady=(0, 10))
+        
+        # Fiber Input Type
+        ttk.Label(module_config_frame, text="Fiber Input Type:").pack(pady=(5, 2), anchor='w')
+        self.fiber_input_type_var = tk.StringVar(value="sm")
+        self.fiber_input_type_combo = ttk.Combobox(module_config_frame, textvariable=self.fiber_input_type_var,
+                                                  values=["pm", "sm"], width=20, state="readonly")
+        self.fiber_input_type_combo.pack(anchor='w', padx=5, pady=(0, 10))
         
         # PIC Architecture Selection
-        ttk.Label(pic_input_frame, text="PIC Architecture:").pack(pady=(5, 2), anchor='w')
-        self.pic_architecture_var = tk.StringVar(value="psr")
-        self.pic_architecture_combo = ttk.Combobox(pic_input_frame, textvariable=self.pic_architecture_var,
-                                                  values=["psr", "pol_control", "psrless"], 
-                                                  width=20, state="readonly")
-        self.pic_architecture_combo.pack(anchor='w', padx=5, pady=(0, 10))
+        ttk.Label(module_config_frame, text="PIC Architecture:").pack(pady=(5, 2), anchor='w')
+        self.guide3a_architecture_var = tk.StringVar(value="psrless")
+        self.guide3a_architecture_combo = ttk.Combobox(module_config_frame, textvariable=self.guide3a_architecture_var,
+                                                      values=["psrless", "psr", "pol_control"], 
+                                                      width=20, state="readonly")
+        self.guide3a_architecture_combo.pack(anchor='w', padx=5, pady=(0, 10))
+        
+        # Number of Fibers
+        ttk.Label(module_config_frame, text="Number of Fibers (multiple of 20):").pack(pady=(5, 2), anchor='w')
+        self.num_fibers_var = tk.StringVar(value="40")
+        self.num_fibers_entry = ttk.Entry(module_config_frame, textvariable=self.num_fibers_var, width=15)
+        self.num_fibers_entry.pack(anchor='w', padx=5, pady=(0, 10))
         
         # Performance Parameters Frame
-        performance_frame = ttk.LabelFrame(pic_input_frame, text="Performance Parameters", padding="10")
+        performance_frame = ttk.LabelFrame(guide3a_input_frame, text="Performance Parameters", padding="10")
         performance_frame.pack(fill=tk.X, pady=10)
         
-        # Operating Wavelength
-        ttk.Label(performance_frame, text="Operating Wavelength (nm) [1260-1360]:").pack(pady=(5, 2), anchor='w')
-        self.operating_wavelength_var = tk.StringVar(value="1310")
-        self.operating_wavelength_entry = ttk.Entry(performance_frame, textvariable=self.operating_wavelength_var, width=15)
-        self.operating_wavelength_entry.pack(anchor='w', padx=5)
+        # Operating Wavelength (matching EuropaSOA)
+        ttk.Label(performance_frame, text="Operating Wavelength (nm) [1290-1330]:").pack(pady=(5, 2), anchor='w')
+        self.guide3a_wavelength_var = tk.StringVar(value="1310")
+        self.guide3a_wavelength_entry = ttk.Entry(performance_frame, textvariable=self.guide3a_wavelength_var, width=15)
+        self.guide3a_wavelength_entry.pack(anchor='w', padx=5)
         
-        # Temperature
-        ttk.Label(performance_frame, text="Temperature (°C) [-40-85]:").pack(pady=(5, 2), anchor='w')
-        self.pic_temp_var = tk.StringVar(value="25")
-        self.pic_temp_entry = ttk.Entry(performance_frame, textvariable=self.pic_temp_var, width=15)
-        self.pic_temp_entry.pack(anchor='w', padx=5)
+        # Temperature (matching EuropaSOA)
+        ttk.Label(performance_frame, text="Temperature (°C) [25-80]:").pack(pady=(5, 2), anchor='w')
+        self.guide3a_temp_var = tk.StringVar(value="40")
+        self.guide3a_temp_entry = ttk.Entry(performance_frame, textvariable=self.guide3a_temp_var, width=15)
+        self.guide3a_temp_entry.pack(anchor='w', padx=5)
         
         # Loss Components Frame
-        loss_components_frame = ttk.LabelFrame(pic_input_frame, text="Loss Components (dB)", padding="10")
+        loss_components_frame = ttk.LabelFrame(guide3a_input_frame, text="Loss Components (dB)", padding="10")
         loss_components_frame.pack(fill=tk.X, pady=10)
         
         # I/O Loss
         ttk.Label(loss_components_frame, text="I/O Input Loss:").pack(pady=(5, 2), anchor='w')
-        self.io_in_loss_var = tk.StringVar(value="1.5")
-        self.io_in_loss_entry = ttk.Entry(loss_components_frame, textvariable=self.io_in_loss_var, width=15)
-        self.io_in_loss_entry.pack(anchor='w', padx=5)
+        self.guide3a_io_in_loss_var = tk.StringVar(value="1.5")
+        self.guide3a_io_in_loss_entry = ttk.Entry(loss_components_frame, textvariable=self.guide3a_io_in_loss_var, width=15)
+        self.guide3a_io_in_loss_entry.pack(anchor='w', padx=5)
         
         ttk.Label(loss_components_frame, text="I/O Output Loss:").pack(pady=(5, 2), anchor='w')
-        self.io_out_loss_var = tk.StringVar(value="1.5")
-        self.io_out_loss_entry = ttk.Entry(loss_components_frame, textvariable=self.io_out_loss_var, width=15)
-        self.io_out_loss_entry.pack(anchor='w', padx=5)
+        self.guide3a_io_out_loss_var = tk.StringVar(value="1.5")
+        self.guide3a_io_out_loss_entry = ttk.Entry(loss_components_frame, textvariable=self.guide3a_io_out_loss_var, width=15)
+        self.guide3a_io_out_loss_entry.pack(anchor='w', padx=5)
         
         # PSR Loss
         ttk.Label(loss_components_frame, text="PSR Loss:").pack(pady=(5, 2), anchor='w')
-        self.psr_loss_var = tk.StringVar(value="0.5")
-        self.psr_loss_entry = ttk.Entry(loss_components_frame, textvariable=self.psr_loss_var, width=15)
-        self.psr_loss_entry.pack(anchor='w', padx=5)
+        self.guide3a_psr_loss_var = tk.StringVar(value="0.5")
+        self.guide3a_psr_loss_entry = ttk.Entry(loss_components_frame, textvariable=self.guide3a_psr_loss_var, width=15)
+        self.guide3a_psr_loss_entry.pack(anchor='w', padx=5)
         
         # Phase Shifter Loss
         ttk.Label(loss_components_frame, text="Phase Shifter Loss:").pack(pady=(5, 2), anchor='w')
-        self.phase_shifter_loss_var = tk.StringVar(value="0.5")
-        self.phase_shifter_entry = ttk.Entry(loss_components_frame, textvariable=self.phase_shifter_loss_var, width=15)
-        self.phase_shifter_entry.pack(anchor='w', padx=5)
+        self.guide3a_phase_shifter_loss_var = tk.StringVar(value="0.5")
+        self.guide3a_phase_shifter_entry = ttk.Entry(loss_components_frame, textvariable=self.guide3a_phase_shifter_loss_var, width=15)
+        self.guide3a_phase_shifter_entry.pack(anchor='w', padx=5)
         
         # Coupler Loss
         ttk.Label(loss_components_frame, text="Coupler Loss:").pack(pady=(5, 2), anchor='w')
-        self.coupler_loss_var = tk.StringVar(value="0.2")
-        self.coupler_loss_entry = ttk.Entry(loss_components_frame, textvariable=self.coupler_loss_var, width=15)
-        self.coupler_loss_entry.pack(anchor='w', padx=5)
-        
-        # Additional Loss Components for New Architectures
-        ttk.Label(loss_components_frame, text="MUX Loss:").pack(pady=(5, 2), anchor='w')
-        self.mux_loss_var = tk.StringVar(value="0.3")
-        self.mux_loss_entry = ttk.Entry(loss_components_frame, textvariable=self.mux_loss_var, width=15)
-        self.mux_loss_entry.pack(anchor='w', padx=5)
-        
-        ttk.Label(loss_components_frame, text="DEMUX Loss:").pack(pady=(5, 2), anchor='w')
-        self.demux_loss_var = tk.StringVar(value="0.3")
-        self.demux_loss_entry = ttk.Entry(loss_components_frame, textvariable=self.demux_loss_var, width=15)
-        self.demux_loss_entry.pack(anchor='w', padx=5)
-        
-        ttk.Label(loss_components_frame, text="Modulator Loss:").pack(pady=(5, 2), anchor='w')
-        self.modulator_loss_var = tk.StringVar(value="0.8")
-        self.modulator_loss_entry = ttk.Entry(loss_components_frame, textvariable=self.modulator_loss_var, width=15)
-        self.modulator_loss_entry.pack(anchor='w', padx=5)
-        
-        ttk.Label(loss_components_frame, text="Detector Loss:").pack(pady=(5, 2), anchor='w')
-        self.detector_loss_var = tk.StringVar(value="0.4")
-        self.detector_loss_entry = ttk.Entry(loss_components_frame, textvariable=self.detector_loss_var, width=15)
-        self.detector_loss_entry.pack(anchor='w', padx=5)
+        self.guide3a_coupler_loss_var = tk.StringVar(value="0.2")
+        self.guide3a_coupler_loss_entry = ttk.Entry(loss_components_frame, textvariable=self.guide3a_coupler_loss_var, width=15)
+        self.guide3a_coupler_loss_entry.pack(anchor='w', padx=5)
         
         # Action buttons
-        action_frame = ttk.Frame(pic_input_frame)
+        action_frame = ttk.Frame(guide3a_input_frame)
         action_frame.pack(fill=tk.X, pady=10)
         
-        ttk.Button(action_frame, text="Calculate", command=self.calculate_pic).pack(side=tk.LEFT, padx=(0, 5))
-        ttk.Button(action_frame, text="Reset", command=self.reset_pic).pack(side=tk.LEFT, padx=5)
+        ttk.Button(action_frame, text="Calculate", command=self.calculate_guide3a).pack(side=tk.LEFT, padx=(0, 5))
+        ttk.Button(action_frame, text="Reset", command=self.reset_guide3a).pack(side=tk.LEFT, padx=5)
         
         # Right side - Results Display
-        pic_results_frame = ttk.LabelFrame(pic_main_frame, text="PIC Results", padding="10")
-        pic_results_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
+        guide3a_results_frame = ttk.LabelFrame(guide3a_main_frame, text="Guide3A Results", padding="10")
+        guide3a_results_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
         
-        self.pic_results_text = tk.Text(pic_results_frame, height=20, width=50)
-        pic_results_scrollbar = ttk.Scrollbar(pic_results_frame, orient="vertical", command=self.pic_results_text.yview)
-        self.pic_results_text.configure(yscrollcommand=pic_results_scrollbar.set)
+        self.guide3a_results_text = tk.Text(guide3a_results_frame, height=20, width=50)
+        guide3a_results_scrollbar = ttk.Scrollbar(guide3a_results_frame, orient="vertical", command=self.guide3a_results_text.yview)
+        self.guide3a_results_text.configure(yscrollcommand=guide3a_results_scrollbar.set)
         
-        self.pic_results_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        pic_results_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-
-        # Guide3A Tab
-        self.guide3a_tab = ttk.Frame(notebook)
-        notebook.add(self.guide3a_tab, text='Guide3A')
-        ttk.Label(self.guide3a_tab, text="Guide3A Model Interface (placeholder)").pack(padx=10, pady=10)
+        self.guide3a_results_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        guide3a_results_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
     def auto_calculate_defaults(self):
         """Automatically calculate and display results for default inputs"""
         self.calculate_soa()
-        self.calculate_pic()
+        self.calculate_guide3a()
 
     def load_defaults(self):
         """Load the default configuration values"""
@@ -448,16 +434,18 @@ class Guide3GUI(tk.Tk):
             self.link_loss_modes["median-loss"].set(self.default_config['link_loss_modes']['median_loss'])
             self.link_loss_modes["3-sigma-loss"].set(self.default_config['link_loss_modes']['sigma_loss'])
             
-            # Load PIC parameters
-            if 'pic_parameters' in self.default_config:
-                self.pic_architecture_var.set(self.default_config['pic_parameters']['pic_architecture'])
-                self.operating_wavelength_var.set(str(self.default_config['pic_parameters']['operating_wavelength']))
-                self.pic_temp_var.set(str(self.default_config['pic_parameters']['temperature']))
-                self.io_in_loss_var.set(str(self.default_config['pic_parameters']['io_in_loss']))
-                self.io_out_loss_var.set(str(self.default_config['pic_parameters']['io_out_loss']))
-                self.psr_loss_var.set(str(self.default_config['pic_parameters']['psr_loss']))
-                self.phase_shifter_loss_var.set(str(self.default_config['pic_parameters']['phase_shifter_loss']))
-                self.coupler_loss_var.set(str(self.default_config['pic_parameters']['coupler_loss']))
+            # Load Guide3A parameters
+            if 'guide3a_parameters' in self.default_config:
+                self.fiber_input_type_var.set(self.default_config['guide3a_parameters']['fiber_input_type'])
+                self.guide3a_architecture_var.set(self.default_config['guide3a_parameters']['pic_architecture'])
+                self.num_fibers_var.set(str(self.default_config['guide3a_parameters']['num_fibers']))
+                self.guide3a_wavelength_var.set(str(self.default_config['guide3a_parameters']['operating_wavelength']))
+                self.guide3a_temp_var.set(str(self.default_config['guide3a_parameters']['temperature']))
+                self.guide3a_io_in_loss_var.set(str(self.default_config['guide3a_parameters']['io_in_loss']))
+                self.guide3a_io_out_loss_var.set(str(self.default_config['guide3a_parameters']['io_out_loss']))
+                self.guide3a_psr_loss_var.set(str(self.default_config['guide3a_parameters']['psr_loss']))
+                self.guide3a_phase_shifter_loss_var.set(str(self.default_config['guide3a_parameters']['phase_shifter_loss']))
+                self.guide3a_coupler_loss_var.set(str(self.default_config['guide3a_parameters']['coupler_loss']))
             
             messagebox.showinfo("Defaults Loaded", "Default configuration has been loaded successfully.")
             
@@ -491,20 +479,18 @@ class Guide3GUI(tk.Tk):
             self.default_config['link_loss_modes']['median_loss'] = self.link_loss_modes["median-loss"].get()
             self.default_config['link_loss_modes']['sigma_loss'] = self.link_loss_modes["3-sigma-loss"].get()
             
-            # Update PIC parameters
-            if 'pic_parameters' in self.default_config:
-                self.default_config['pic_parameters']['pic_architecture'] = self.pic_architecture_var.get()
-                self.default_config['pic_parameters']['operating_wavelength'] = float(self.operating_wavelength_var.get())
-                self.default_config['pic_parameters']['temperature'] = float(self.pic_temp_var.get())
-                self.default_config['pic_parameters']['io_in_loss'] = float(self.io_in_loss_var.get())
-                self.default_config['pic_parameters']['io_out_loss'] = float(self.io_out_loss_var.get())
-                self.default_config['pic_parameters']['psr_loss'] = float(self.psr_loss_var.get())
-                self.default_config['pic_parameters']['phase_shifter_loss'] = float(self.phase_shifter_loss_var.get())
-                self.default_config['pic_parameters']['coupler_loss'] = float(self.coupler_loss_var.get())
-                self.default_config['pic_parameters']['mux_loss'] = float(self.mux_loss_var.get())
-                self.default_config['pic_parameters']['demux_loss'] = float(self.demux_loss_var.get())
-                self.default_config['pic_parameters']['modulator_loss'] = float(self.modulator_loss_var.get())
-                self.default_config['pic_parameters']['detector_loss'] = float(self.detector_loss_var.get())
+            # Update Guide3A parameters
+            if 'guide3a_parameters' in self.default_config:
+                self.default_config['guide3a_parameters']['fiber_input_type'] = self.fiber_input_type_var.get()
+                self.default_config['guide3a_parameters']['pic_architecture'] = self.guide3a_architecture_var.get()
+                self.default_config['guide3a_parameters']['num_fibers'] = int(self.num_fibers_var.get())
+                self.default_config['guide3a_parameters']['operating_wavelength'] = float(self.guide3a_wavelength_var.get())
+                self.default_config['guide3a_parameters']['temperature'] = float(self.guide3a_temp_var.get())
+                self.default_config['guide3a_parameters']['io_in_loss'] = float(self.guide3a_io_in_loss_var.get())
+                self.default_config['guide3a_parameters']['io_out_loss'] = float(self.guide3a_io_out_loss_var.get())
+                self.default_config['guide3a_parameters']['psr_loss'] = float(self.guide3a_psr_loss_var.get())
+                self.default_config['guide3a_parameters']['phase_shifter_loss'] = float(self.guide3a_phase_shifter_loss_var.get())
+                self.default_config['guide3a_parameters']['coupler_loss'] = float(self.guide3a_coupler_loss_var.get())
             
             messagebox.showinfo("Defaults Updated", "Default configuration has been updated with current values.")
             
@@ -551,16 +537,18 @@ class Guide3GUI(tk.Tk):
                     self.link_loss_modes["median-loss"].set(config['link_loss_modes'].get('median_loss', True))
                     self.link_loss_modes["3-sigma-loss"].set(config['link_loss_modes'].get('sigma_loss', True))
                 
-                # Load PIC parameters
-                if 'pic_parameters' in config:
-                    self.pic_architecture_var.set(config['pic_parameters'].get('pic_architecture', 'psr'))
-                    self.operating_wavelength_var.set(str(config['pic_parameters'].get('operating_wavelength', 1310)))
-                    self.pic_temp_var.set(str(config['pic_parameters'].get('temperature', 25)))
-                    self.io_in_loss_var.set(str(config['pic_parameters'].get('io_in_loss', 1.5)))
-                    self.io_out_loss_var.set(str(config['pic_parameters'].get('io_out_loss', 1.5)))
-                    self.psr_loss_var.set(str(config['pic_parameters'].get('psr_loss', 0.5)))
-                    self.phase_shifter_loss_var.set(str(config['pic_parameters'].get('phase_shifter_loss', 0.5)))
-                    self.coupler_loss_var.set(str(config['pic_parameters'].get('coupler_loss', 0.2)))
+                # Load Guide3A parameters
+                if 'guide3a_parameters' in config:
+                    self.fiber_input_type_var.set(config['guide3a_parameters'].get('fiber_input_type', 'sm'))
+                    self.guide3a_architecture_var.set(config['guide3a_parameters'].get('pic_architecture', 'psrless'))
+                    self.num_fibers_var.set(str(config['guide3a_parameters'].get('num_fibers', 40)))
+                    self.guide3a_wavelength_var.set(str(config['guide3a_parameters'].get('operating_wavelength', 1310)))
+                    self.guide3a_temp_var.set(str(config['guide3a_parameters'].get('temperature', 40)))
+                    self.guide3a_io_in_loss_var.set(str(config['guide3a_parameters'].get('io_in_loss', 1.5)))
+                    self.guide3a_io_out_loss_var.set(str(config['guide3a_parameters'].get('io_out_loss', 1.5)))
+                    self.guide3a_psr_loss_var.set(str(config['guide3a_parameters'].get('psr_loss', 0.5)))
+                    self.guide3a_phase_shifter_loss_var.set(str(config['guide3a_parameters'].get('phase_shifter_loss', 0.5)))
+                    self.guide3a_coupler_loss_var.set(str(config['guide3a_parameters'].get('coupler_loss', 0.2)))
                 
                 messagebox.showinfo("Config Loaded", f"Configuration loaded from {filename}")
                 
@@ -597,15 +585,17 @@ class Guide3GUI(tk.Tk):
                         'median_loss': self.link_loss_modes["median-loss"].get(),
                         'sigma_loss': self.link_loss_modes["3-sigma-loss"].get()
                     },
-                    'pic_parameters': {
-                        'pic_architecture': self.pic_architecture_var.get(),
-                        'operating_wavelength': float(self.operating_wavelength_var.get()),
-                        'temperature': float(self.pic_temp_var.get()),
-                        'io_in_loss': float(self.io_in_loss_var.get()),
-                        'io_out_loss': float(self.io_out_loss_var.get()),
-                        'psr_loss': float(self.psr_loss_var.get()),
-                        'phase_shifter_loss': float(self.phase_shifter_loss_var.get()),
-                        'coupler_loss': float(self.coupler_loss_var.get())
+                    'guide3a_parameters': {
+                        'fiber_input_type': self.fiber_input_type_var.get(),
+                        'pic_architecture': self.guide3a_architecture_var.get(),
+                        'num_fibers': int(self.num_fibers_var.get()),
+                        'operating_wavelength': float(self.guide3a_wavelength_var.get()),
+                        'temperature': float(self.guide3a_temp_var.get()),
+                        'io_in_loss': float(self.guide3a_io_in_loss_var.get()),
+                        'io_out_loss': float(self.guide3a_io_out_loss_var.get()),
+                        'psr_loss': float(self.guide3a_psr_loss_var.get()),
+                        'phase_shifter_loss': float(self.guide3a_phase_shifter_loss_var.get()),
+                        'coupler_loss': float(self.guide3a_coupler_loss_var.get())
                     }
                 }
                 
@@ -1360,46 +1350,58 @@ Operation Parameters:
         fig.update_xaxes(title_text="Wavelength (nm)", row=row, col=col)
         fig.update_yaxes(title_text="Saturation Power (dBm)", row=row, col=col)
 
-    def calculate_pic(self):
-        """Calculate PIC parameters based on input values using enhanced EuropaPIC class"""
+    def calculate_guide3a(self):
+        """Calculate Guide3A parameters based on input values using Guide3A class"""
         try:
             # Get input values
-            pic_architecture = self.pic_architecture_var.get()
+            fiber_input_type = self.fiber_input_type_var.get()
+            pic_architecture = self.guide3a_architecture_var.get()
+            num_fibers = int(self.num_fibers_var.get())
             
-            # Performance parameters
-            operating_wavelength = float(self.operating_wavelength_var.get())
-            temperature = float(self.pic_temp_var.get())
+            # Performance parameters (matching EuropaSOA)
+            operating_wavelength = float(self.guide3a_wavelength_var.get())
+            temperature = float(self.guide3a_temp_var.get())
             
             # Loss components
-            io_in_loss = float(self.io_in_loss_var.get())
-            io_out_loss = float(self.io_out_loss_var.get())
-            psr_loss = float(self.psr_loss_var.get())
-            phase_shifter_loss = float(self.phase_shifter_loss_var.get())
-            coupler_loss = float(self.coupler_loss_var.get())
+            io_in_loss = float(self.guide3a_io_in_loss_var.get())
+            io_out_loss = float(self.guide3a_io_out_loss_var.get())
+            psr_loss = float(self.guide3a_psr_loss_var.get())
+            phase_shifter_loss = float(self.guide3a_phase_shifter_loss_var.get())
+            coupler_loss = float(self.guide3a_coupler_loss_var.get())
             
             # Validate inputs
-            if pic_architecture not in ["psr", "pol_control", "psrless"]:
+            if fiber_input_type not in ["pm", "sm"]:
+                messagebox.showerror("Invalid Input", "Fiber Input Type must be 'pm' or 'sm'")
+                return
+            
+            if pic_architecture not in ["psrless", "psr", "pol_control"]:
                 messagebox.showerror("Invalid Input", "PIC Architecture must be one of the supported types")
                 return
             
-            if not (1260 <= operating_wavelength <= 1360):
-                messagebox.showerror("Invalid Input", "Operating wavelength must be between 1260 and 1360 nm")
+            if num_fibers % 20 != 0:
+                messagebox.showerror("Invalid Input", "Number of fibers must be a multiple of 20")
                 return
             
-            if not (-40 <= temperature <= 85):
-                messagebox.showerror("Invalid Input", "Temperature must be between -40 and 85°C")
+            if not (1290 <= operating_wavelength <= 1330):
+                messagebox.showerror("Invalid Input", "Operating wavelength must be between 1290 and 1330 nm")
+                return
+            
+            if not (25 <= temperature <= 80):
+                messagebox.showerror("Invalid Input", "Temperature must be between 25 and 80°C")
                 return
             
             if any(loss < 0 for loss in [io_in_loss, io_out_loss, psr_loss, phase_shifter_loss, coupler_loss]):
                 messagebox.showerror("Invalid Input", "All loss values must be non-negative")
                 return
             
-            # Import enhanced EuropaPIC class
-            from EuropaPIC import EuropaPIC
+            # Import Guide3A class
+            from Guide3A import Guide3A
             
-            # Create EuropaPIC instance with all parameters
-            pic = EuropaPIC(
+            # Create Guide3A instance with all parameters
+            guide3a = Guide3A(
                 pic_architecture=pic_architecture,
+                fiber_input_type=fiber_input_type,
+                num_fibers=num_fibers,
                 operating_wavelength_nm=operating_wavelength,
                 temperature_c=temperature,
                 io_in_loss=io_in_loss,
@@ -1410,21 +1412,28 @@ Operation Parameters:
             )
             
             # Get comprehensive analysis
-            total_loss = pic.get_total_loss()
-            loss_breakdown = pic.get_loss_breakdown()
-            performance_metrics = pic.get_performance_metrics()
-            component_count = pic.get_component_count()
-            architecture_description = pic.get_architecture_description()
+            total_loss = guide3a.get_total_loss()
+            loss_breakdown = guide3a.get_loss_breakdown()
+            performance_metrics = guide3a.get_performance_metrics()
+            component_count = guide3a.get_component_count()
+            architecture_description = guide3a.get_architecture_description()
+            module_config = guide3a.get_module_configuration()
             
             # Clear results
-            self.pic_results_text.delete(1.0, tk.END)
+            self.guide3a_results_text.delete(1.0, tk.END)
             
             # Display comprehensive results
-            results = f"""EuropaPIC Enhanced Analysis Results
+            results = f"""Guide3A Enhanced Analysis Results
 {'='*60}
 
-Architecture: {pic_architecture.upper()}
-Description: {architecture_description}
+Module Configuration:
+- Fiber Input Type: {module_config['fiber_input_type'].upper()}
+- PIC Architecture: {module_config['pic_architecture'].upper()}
+- Effective Architecture: {module_config['effective_architecture'].upper()}
+- Number of Fibers: {module_config['num_fibers']}
+- Number of SOAs: {module_config['num_soas']}
+- Number of PICs: {module_config['num_pics']}
+- Number of Unit Cells: {module_config['num_unit_cells']}
 
 Performance Parameters:
 - Operating Wavelength: {operating_wavelength:.0f} nm
@@ -1464,13 +1473,14 @@ Performance Metrics:
 Architecture-Specific Analysis:
 """
             
-            if pic_architecture == 'psr':
+            effective_arch = module_config['effective_architecture']
+            if effective_arch == 'psr':
                 results += f"- PSR Components: 2 × {psr_loss:.1f} dB = {2*psr_loss:.1f} dB (PSR in/out)\n"
-            elif pic_architecture == 'pol_control':
+            elif effective_arch == 'pol_control':
                 results += f"- PSR Components: 2 × {psr_loss:.1f} dB = {2*psr_loss:.1f} dB (PSR in/out)\n"
                 results += f"- Phase Shifter Components: 2 × {phase_shifter_loss:.1f} dB = {2*phase_shifter_loss:.1f} dB (Phase shifter in/out)\n"
                 results += f"- Coupler Components: 2 × {coupler_loss:.1f} dB = {2*coupler_loss:.1f} dB (Coupler in/out)\n"
-            elif pic_architecture == 'psrless':
+            elif effective_arch == 'psrless':
                 results += f"- No additional components beyond I/O in PSRless architecture\n"
             
             results += f"""
@@ -1480,29 +1490,31 @@ Summary:
 - Total System Loss: {loss_breakdown['total_loss']:.1f} dB
 """
             
-            self.pic_results_text.insert(1.0, results)
+            self.guide3a_results_text.insert(1.0, results)
             
         except ValueError:
             messagebox.showerror("Input Error", "Please ensure all values are valid numbers.")
         except Exception as e:
             messagebox.showerror("Calculation Error", f"An error occurred during calculation: {e}")
 
-    def reset_pic(self):
-        """Reset all EuropaPIC inputs to default values"""
-        self.pic_architecture_var.set("psr")
+    def reset_guide3a(self):
+        """Reset all Guide3A inputs to default values"""
+        self.fiber_input_type_var.set("sm")
+        self.guide3a_architecture_var.set("psrless")
+        self.num_fibers_var.set("40")
         
-        # Reset performance parameters
-        self.operating_wavelength_var.set("1310")
-        self.pic_temp_var.set("25")
+        # Reset performance parameters (matching EuropaSOA defaults)
+        self.guide3a_wavelength_var.set("1310")
+        self.guide3a_temp_var.set("40")
         
         # Reset loss components
-        self.io_in_loss_var.set("1.5")
-        self.io_out_loss_var.set("1.5")
-        self.psr_loss_var.set("0.5")
-        self.phase_shifter_loss_var.set("0.5")
-        self.coupler_loss_var.set("0.2")
+        self.guide3a_io_in_loss_var.set("1.5")
+        self.guide3a_io_out_loss_var.set("1.5")
+        self.guide3a_psr_loss_var.set("0.5")
+        self.guide3a_phase_shifter_loss_var.set("0.5")
+        self.guide3a_coupler_loss_var.set("0.2")
         
-        self.pic_results_text.delete(1.0, tk.END)
+        self.guide3a_results_text.delete(1.0, tk.END)
 
 if __name__ == "__main__":
     app = Guide3GUI()
