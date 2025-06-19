@@ -1,7 +1,9 @@
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, filedialog
 from EuropaSOA import EuropaSOA
 import math
+import yaml
+import os
 
 class Guide3GUI(tk.Tk):
     def __init__(self):
@@ -12,7 +14,34 @@ class Guide3GUI(tk.Tk):
         self.link_loss_modes = {"median-loss": tk.BooleanVar(), "3-sigma-loss": tk.BooleanVar()}
         # Initialize default wavelengths
         self.default_wavelengths = ["1301.47", "1303.73", "1306.01", "1308.28", "1310.57", "1312.87", "1315.17", "1317.48"]
+        
+        # Default configuration
+        self.default_config = {
+            'device_parameters': {
+                'width_um': 2.0,
+                'active_length_um': 790
+            },
+            'operation_parameters': {
+                'pout_median_dbm': 9,
+                'pout_sigma_dbm': 13,
+                'j_density_median': 4,
+                'j_density_sigma': 7,
+                'temperature_c': 40
+            },
+            'wavelength_config': {
+                'num_wavelengths': 8,
+                'wavelengths': self.default_wavelengths
+            },
+            'link_loss_modes': {
+                'median_loss': True,
+                'sigma_loss': True
+            }
+        }
+        
         self._create_widgets()
+        
+        # Auto-calculate with default values
+        self.auto_calculate_defaults()
 
     def _create_widgets(self):
         # Main frame
@@ -173,6 +202,24 @@ class Guide3GUI(tk.Tk):
         # Save wavelength set button
         ttk.Button(wavelength_frame, text="Save Wavelength Set", command=self.save_wavelength_set).pack(anchor='w', padx=5, pady=(10, 5))
 
+        # --- Configuration Management (Bottom-left) ---
+        config_frame = ttk.LabelFrame(bottom_left_frame, text="Configuration Management", padding="10")
+        config_frame.pack(fill=tk.BOTH, expand=True, pady=5)
+        
+        # Defaults management
+        defaults_frame = ttk.Frame(config_frame)
+        defaults_frame.pack(fill=tk.X, pady=5)
+        ttk.Label(defaults_frame, text="Defaults Management:").pack(anchor='w')
+        ttk.Button(defaults_frame, text="Load Defaults", command=self.load_defaults).pack(anchor='w', padx=5, pady=2)
+        ttk.Button(defaults_frame, text="Update Defaults", command=self.update_defaults).pack(anchor='w', padx=5, pady=2)
+        
+        # Config file management
+        config_file_frame = ttk.Frame(config_frame)
+        config_file_frame.pack(fill=tk.X, pady=5)
+        ttk.Label(config_file_frame, text="Configuration Files:").pack(anchor='w')
+        ttk.Button(config_file_frame, text="Load Config", command=self.load_config).pack(anchor='w', padx=5, pady=2)
+        ttk.Button(config_file_frame, text="Save Config", command=self.save_config).pack(anchor='w', padx=5, pady=2)
+
         # Right side - Results Display
         results_frame = ttk.LabelFrame(soa_main_frame, text="Results", padding="10")
         results_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
@@ -215,6 +262,178 @@ class Guide3GUI(tk.Tk):
         self.guide3a_tab = ttk.Frame(notebook)
         notebook.add(self.guide3a_tab, text='Guide3A')
         ttk.Label(self.guide3a_tab, text="Guide3A Model Interface (placeholder)").pack(padx=10, pady=10)
+
+    def auto_calculate_defaults(self):
+        """Automatically calculate and display results for default inputs"""
+        self.calculate_soa()
+
+    def load_defaults(self):
+        """Load the default configuration values"""
+        try:
+            # Load device parameters
+            self.w_um_var.set(str(self.default_config['device_parameters']['width_um']))
+            self.l_active_var.set(str(self.default_config['device_parameters']['active_length_um']))
+            
+            # Load operation parameters
+            self.pout_median_var.set(str(self.default_config['operation_parameters']['pout_median_dbm']))
+            self.pout_sigma_var.set(str(self.default_config['operation_parameters']['pout_sigma_dbm']))
+            self.j_density_median_var.set(str(self.default_config['operation_parameters']['j_density_median']))
+            self.j_density_sigma_var.set(str(self.default_config['operation_parameters']['j_density_sigma']))
+            self.temp_var.set(str(self.default_config['operation_parameters']['temperature_c']))
+            
+            # Load wavelength configuration
+            self.num_wavelengths_var.set(str(self.default_config['wavelength_config']['num_wavelengths']))
+            wavelengths = self.default_config['wavelength_config']['wavelengths']
+            for i, wavelength_var in enumerate(self.wavelength_vars):
+                if i < len(wavelengths):
+                    wavelength_var.set(wavelengths[i])
+                else:
+                    wavelength_var.set("")
+            
+            # Load link loss modes
+            self.link_loss_modes["median-loss"].set(self.default_config['link_loss_modes']['median_loss'])
+            self.link_loss_modes["3-sigma-loss"].set(self.default_config['link_loss_modes']['sigma_loss'])
+            
+            messagebox.showinfo("Defaults Loaded", "Default configuration has been loaded successfully.")
+            
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to load defaults: {e}")
+
+    def update_defaults(self):
+        """Update the default configuration with current values"""
+        try:
+            # Update device parameters
+            self.default_config['device_parameters']['width_um'] = float(self.w_um_var.get())
+            self.default_config['device_parameters']['active_length_um'] = float(self.l_active_var.get())
+            
+            # Update operation parameters
+            self.default_config['operation_parameters']['pout_median_dbm'] = float(self.pout_median_var.get())
+            self.default_config['operation_parameters']['pout_sigma_dbm'] = float(self.pout_sigma_var.get())
+            self.default_config['operation_parameters']['j_density_median'] = float(self.j_density_median_var.get())
+            self.default_config['operation_parameters']['j_density_sigma'] = float(self.j_density_sigma_var.get())
+            self.default_config['operation_parameters']['temperature_c'] = float(self.temp_var.get())
+            
+            # Update wavelength configuration
+            self.default_config['wavelength_config']['num_wavelengths'] = int(self.num_wavelengths_var.get())
+            wavelengths = []
+            for i, wavelength_var in enumerate(self.wavelength_vars):
+                wavelength_value = wavelength_var.get().strip()
+                if wavelength_value:
+                    wavelengths.append(wavelength_value)
+            self.default_config['wavelength_config']['wavelengths'] = wavelengths
+            
+            # Update link loss modes
+            self.default_config['link_loss_modes']['median_loss'] = self.link_loss_modes["median-loss"].get()
+            self.default_config['link_loss_modes']['sigma_loss'] = self.link_loss_modes["3-sigma-loss"].get()
+            
+            messagebox.showinfo("Defaults Updated", "Default configuration has been updated with current values.")
+            
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to update defaults: {e}")
+
+    def load_config(self):
+        """Load configuration from a YAML file"""
+        try:
+            filename = filedialog.askopenfilename(
+                title="Load Configuration",
+                filetypes=[("YAML files", "*.yaml"), ("YML files", "*.yml"), ("All files", "*.*")]
+            )
+            
+            if filename:
+                with open(filename, 'r') as file:
+                    config = yaml.safe_load(file)
+                
+                # Load device parameters
+                if 'device_parameters' in config:
+                    self.w_um_var.set(str(config['device_parameters'].get('width_um', 2.0)))
+                    self.l_active_var.set(str(config['device_parameters'].get('active_length_um', 790)))
+                
+                # Load operation parameters
+                if 'operation_parameters' in config:
+                    self.pout_median_var.set(str(config['operation_parameters'].get('pout_median_dbm', 9)))
+                    self.pout_sigma_var.set(str(config['operation_parameters'].get('pout_sigma_dbm', 13)))
+                    self.j_density_median_var.set(str(config['operation_parameters'].get('j_density_median', 4)))
+                    self.j_density_sigma_var.set(str(config['operation_parameters'].get('j_density_sigma', 7)))
+                    self.temp_var.set(str(config['operation_parameters'].get('temperature_c', 40)))
+                
+                # Load wavelength configuration
+                if 'wavelength_config' in config:
+                    self.num_wavelengths_var.set(str(config['wavelength_config'].get('num_wavelengths', 8)))
+                    wavelengths = config['wavelength_config'].get('wavelengths', self.default_wavelengths)
+                    for i, wavelength_var in enumerate(self.wavelength_vars):
+                        if i < len(wavelengths):
+                            wavelength_var.set(str(wavelengths[i]))
+                        else:
+                            wavelength_var.set("")
+                
+                # Load link loss modes
+                if 'link_loss_modes' in config:
+                    self.link_loss_modes["median-loss"].set(config['link_loss_modes'].get('median_loss', True))
+                    self.link_loss_modes["3-sigma-loss"].set(config['link_loss_modes'].get('sigma_loss', True))
+                
+                messagebox.showinfo("Config Loaded", f"Configuration loaded from {filename}")
+                
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to load configuration: {e}")
+
+    def save_config(self):
+        """Save current configuration to a YAML file"""
+        try:
+            filename = filedialog.asksaveasfilename(
+                title="Save Configuration",
+                defaultextension=".yaml",
+                filetypes=[("YAML files", "*.yaml"), ("YML files", "*.yml"), ("All files", "*.*")]
+            )
+            
+            if filename:
+                config = {
+                    'device_parameters': {
+                        'width_um': float(self.w_um_var.get()),
+                        'active_length_um': float(self.l_active_var.get())
+                    },
+                    'operation_parameters': {
+                        'pout_median_dbm': float(self.pout_median_var.get()),
+                        'pout_sigma_dbm': float(self.pout_sigma_var.get()),
+                        'j_density_median': float(self.j_density_median_var.get()),
+                        'j_density_sigma': float(self.j_density_sigma_var.get()),
+                        'temperature_c': float(self.temp_var.get())
+                    },
+                    'wavelength_config': {
+                        'num_wavelengths': int(self.num_wavelengths_var.get()),
+                        'wavelengths': [wv.get().strip() for wv in self.wavelength_vars if wv.get().strip()]
+                    },
+                    'link_loss_modes': {
+                        'median_loss': self.link_loss_modes["median-loss"].get(),
+                        'sigma_loss': self.link_loss_modes["3-sigma-loss"].get()
+                    }
+                }
+                
+                with open(filename, 'w') as file:
+                    yaml.dump(config, file, default_flow_style=False, indent=2)
+                
+                messagebox.showinfo("Config Saved", f"Configuration saved to {filename}")
+                
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to save configuration: {e}")
+
+    def create_wavelength_table(self, wavelengths, results_data, case_name):
+        """Create a formatted table for wavelength analysis results"""
+        table = f"\n{case_name} Wavelength Analysis:\n"
+        table += "=" * 80 + "\n"
+        table += f"{'Wavelength':<12} {'Unsaturated':<12} {'Saturation':<12} {'Required':<12} {'Saturated':<12} {'WPE':<8}\n"
+        table += f"{'(nm)':<12} {'Gain (dB)':<12} {'Power (dBm)':<12} {'P_in (dBm)':<12} {'Gain (dB)':<12} {'(%)':<8}\n"
+        table += "-" * 80 + "\n"
+        
+        for i, (wavelength, data) in enumerate(zip(wavelengths, results_data)):
+            if data['achievable']:
+                table += f"{wavelength:<12.2f} {data['unsaturated_gain']:<12.2f} {data['saturation_power']:<12.2f} "
+                table += f"{data['required_pin']:<12.2f} {data['saturated_gain']:<12.2f} {data['wpe']:<8.2f}\n"
+            else:
+                table += f"{wavelength:<12.2f} {data['unsaturated_gain']:<12.2f} {data['saturation_power']:<12.2f} "
+                table += f"{'N/A':<12} {'N/A':<12} {'N/A':<8}\n"
+        
+        table += "=" * 80 + "\n"
+        return table
 
     def calculate_soa(self):
         """Calculate SOA parameters based on input values using EuropaSOA class"""
@@ -304,8 +523,8 @@ Operation Parameters:
                 electrical_power_median = current_ma_median * operating_voltage_median
                 
                 # Calculate for each wavelength
-                wavelength_results = []
-                for i, wavelength in enumerate(wavelengths):
+                median_wavelength_results = []
+                for wavelength in wavelengths:
                     # Get unsaturated gain
                     unsaturated_gain_db = soa.get_unsaturated_gain(wavelength, temp_c, j_density_median)
                     
@@ -321,29 +540,35 @@ Operation Parameters:
                         saturated_gain_db = soa.get_saturated_gain(wavelength, temp_c, j_density_median, required_pin_mw)
                         wpe_percent = soa.calculate_wpe(current_ma_median, wavelength, temp_c, required_pin_mw)
                         
-                        wavelength_results.append(f"""Wavelength {i+1} ({wavelength:.2f} nm):
-  - Unsaturated Gain: {unsaturated_gain_db:.2f} dB
-  - Saturation Power: {saturation_power_dbm:.2f} dBm
-  - Required P_in: {10*math.log10(required_pin_mw):.2f} dBm
-  - Saturated Gain: {saturated_gain_db:.2f} dB
-  - Wall Plug Efficiency: {wpe_percent:.2f} %""")
+                        median_wavelength_results.append({
+                            'unsaturated_gain': unsaturated_gain_db,
+                            'saturation_power': saturation_power_dbm,
+                            'required_pin': 10*math.log10(required_pin_mw),
+                            'saturated_gain': saturated_gain_db,
+                            'wpe': wpe_percent,
+                            'achievable': True
+                        })
                     else:
-                        wavelength_results.append(f"""Wavelength {i+1} ({wavelength:.2f} nm):
-  - Unsaturated Gain: {unsaturated_gain_db:.2f} dB
-  - Saturation Power: {saturation_power_dbm:.2f} dBm
-  - Required P_in: Not achievable
-  - Saturated Gain: N/A
-  - Wall Plug Efficiency: N/A""")
+                        median_wavelength_results.append({
+                            'unsaturated_gain': unsaturated_gain_db,
+                            'saturation_power': saturation_power_dbm,
+                            'required_pin': None,
+                            'saturated_gain': None,
+                            'wpe': None,
+                            'achievable': False
+                        })
                 
-                median_results = common_info + f"""Median Loss Case Results:
+                median_summary = f"""Median Loss Case Results:
 - Target P_out: {pout_median:.1f} dBm
 - Current Density: {j_density_median:.1f} kA/cm²
 - Operating Current: {current_ma_median:.2f} mA
 - Operating Voltage: {operating_voltage_median:.3f} V
 - Electrical Power: {electrical_power_median:.2f} mW
 
-Wavelength Analysis:
-{chr(10).join(wavelength_results)}"""
+"""
+                
+                median_table = self.create_wavelength_table(wavelengths, median_wavelength_results, "Median Loss Case")
+                median_results = common_info + median_summary + median_table
                 
                 self.median_results_text.insert(1.0, median_results)
             else:
@@ -366,8 +591,8 @@ Wavelength Analysis:
                 electrical_power_sigma = current_ma_sigma * operating_voltage_sigma
                 
                 # Calculate for each wavelength
-                wavelength_results = []
-                for i, wavelength in enumerate(wavelengths):
+                sigma_wavelength_results = []
+                for wavelength in wavelengths:
                     # Get unsaturated gain
                     unsaturated_gain_db = soa.get_unsaturated_gain(wavelength, temp_c, j_density_sigma)
                     
@@ -383,29 +608,35 @@ Wavelength Analysis:
                         saturated_gain_db = soa.get_saturated_gain(wavelength, temp_c, j_density_sigma, required_pin_mw)
                         wpe_percent = soa.calculate_wpe(current_ma_sigma, wavelength, temp_c, required_pin_mw)
                         
-                        wavelength_results.append(f"""Wavelength {i+1} ({wavelength:.2f} nm):
-  - Unsaturated Gain: {unsaturated_gain_db:.2f} dB
-  - Saturation Power: {saturation_power_dbm:.2f} dBm
-  - Required P_in: {10*math.log10(required_pin_mw):.2f} dBm
-  - Saturated Gain: {saturated_gain_db:.2f} dB
-  - Wall Plug Efficiency: {wpe_percent:.2f} %""")
+                        sigma_wavelength_results.append({
+                            'unsaturated_gain': unsaturated_gain_db,
+                            'saturation_power': saturation_power_dbm,
+                            'required_pin': 10*math.log10(required_pin_mw),
+                            'saturated_gain': saturated_gain_db,
+                            'wpe': wpe_percent,
+                            'achievable': True
+                        })
                     else:
-                        wavelength_results.append(f"""Wavelength {i+1} ({wavelength:.2f} nm):
-  - Unsaturated Gain: {unsaturated_gain_db:.2f} dB
-  - Saturation Power: {saturation_power_dbm:.2f} dBm
-  - Required P_in: Not achievable
-  - Saturated Gain: N/A
-  - Wall Plug Efficiency: N/A""")
+                        sigma_wavelength_results.append({
+                            'unsaturated_gain': unsaturated_gain_db,
+                            'saturation_power': saturation_power_dbm,
+                            'required_pin': None,
+                            'saturated_gain': None,
+                            'wpe': None,
+                            'achievable': False
+                        })
                 
-                sigma_results = common_info + f"""3σ Loss Case Results:
+                sigma_summary = f"""3σ Loss Case Results:
 - Target P_out: {pout_sigma:.1f} dBm
 - Current Density: {j_density_sigma:.1f} kA/cm²
 - Operating Current: {current_ma_sigma:.2f} mA
 - Operating Voltage: {operating_voltage_sigma:.3f} V
 - Electrical Power: {electrical_power_sigma:.2f} mW
 
-Wavelength Analysis:
-{chr(10).join(wavelength_results)}"""
+"""
+                
+                sigma_table = self.create_wavelength_table(wavelengths, sigma_wavelength_results, "3σ Loss Case")
+                sigma_results = common_info + sigma_summary + sigma_table
                 
                 self.sigma_results_text.insert(1.0, sigma_results)
             else:
