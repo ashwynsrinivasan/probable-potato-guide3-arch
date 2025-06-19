@@ -12,8 +12,9 @@ class Guide3GUI(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Guide3 GUI")
-        # Set window size to 30cm x 20cm (approximately 1134 x 756 pixels at 96 DPI)
-        self.geometry("1134x756")
+        # Set window size to 1500x900 px and make it fixed size
+        self.geometry("1500x900")
+        self.resizable(False, False)
         self.link_loss_modes = {"median-loss": tk.BooleanVar(), "3-sigma-loss": tk.BooleanVar()}
         # Initialize default wavelengths
         self.default_wavelengths = ["1301.47", "1303.73", "1306.01", "1308.28", "1310.57", "1312.87", "1315.17", "1317.48"]
@@ -105,18 +106,24 @@ class Guide3GUI(tk.Tk):
         
         ttk.Button(wavelength_config_frame, text="Update Wavelengths", command=self.update_wavelength_inputs).pack(side=tk.LEFT, padx=(0, 10))
         
-        # Individual wavelength inputs (horizontal)
+        # Individual wavelength inputs (grid layout: 4 rows x 8 columns)
         self.wavelength_vars = []
         self.wavelength_entries = []
         
-        for i in range(8):
-            ttk.Label(wavelength_config_frame, text=f"λ{i+1}:").pack(side=tk.LEFT, padx=(0, 2))
-            wavelength_var = tk.StringVar(value=self.default_wavelengths[i])
-            wavelength_entry = ttk.Entry(wavelength_config_frame, textvariable=wavelength_var, width=8)
-            wavelength_entry.pack(side=tk.LEFT, padx=(0, 5))
-            
-            self.wavelength_vars.append(wavelength_var)
-            self.wavelength_entries.append(wavelength_entry)
+        # Create a frame for the wavelength grid
+        wavelength_grid_frame = ttk.Frame(wavelength_config_frame)
+        wavelength_grid_frame.pack(side=tk.LEFT, padx=(10, 0))
+        
+        for row in range(4):
+            for col in range(8):
+                wavelength_index = row * 8 + col
+                ttk.Label(wavelength_grid_frame, text=f"λ{wavelength_index+1}:").grid(row=row, column=col*2, padx=(0, 2), sticky='e')
+                wavelength_var = tk.StringVar(value=self.default_wavelengths[wavelength_index] if wavelength_index < len(self.default_wavelengths) else "")
+                wavelength_entry = ttk.Entry(wavelength_grid_frame, textvariable=wavelength_var, width=8)
+                wavelength_entry.grid(row=row, column=col*2+1, padx=(0, 5), sticky='w')
+                
+                self.wavelength_vars.append(wavelength_var)
+                self.wavelength_entries.append(wavelength_entry)
         
         # Save wavelength set button
         ttk.Button(wavelength_config_frame, text="Save Wavelength Set", command=self.save_wavelength_set).pack(side=tk.LEFT, padx=(10, 0))
@@ -348,9 +355,9 @@ class Guide3GUI(tk.Tk):
         guide3a_main_frame = ttk.Frame(self.guide3a_tab)
         guide3a_main_frame.pack(fill='both', expand=True, padx=10, pady=10)
         
-        # Left side - Input parameters with scrolling
+        # Left side - Input parameters with scrolling (40% width)
         input_container = ttk.Frame(guide3a_main_frame)
-        input_container.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
+        input_container.place(relx=0, rely=0, relwidth=0.4, relheight=1.0)
         
         # Create canvas with both scrollbars for input parameters
         input_canvas = tk.Canvas(input_container, width=400, height=600)
@@ -492,9 +499,9 @@ class Guide3GUI(tk.Tk):
         
         # Action buttons will be placed under the results section
         
-        # Right side - Results Display
+        # Right side - Results Display (60% width)
         guide3a_results_frame = ttk.LabelFrame(guide3a_main_frame, text="Guide3A Results", padding="10")
-        guide3a_results_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
+        guide3a_results_frame.place(relx=0.4, rely=0, relwidth=0.6, relheight=1.0)
         
         # Action buttons at the top of results section
         action_frame = ttk.Frame(guide3a_results_frame)
@@ -805,8 +812,8 @@ class Guide3GUI(tk.Tk):
             
             # Get number of wavelengths and validate
             num_wavelengths = int(self.num_wavelengths_var.get())
-            if num_wavelengths < 1 or num_wavelengths > 8:
-                messagebox.showerror("Invalid Input", "Number of wavelengths must be between 1 and 8")
+            if num_wavelengths < 1 or num_wavelengths > 32:
+                messagebox.showerror("Invalid Input", "Number of wavelengths must be between 1 and 32")
                 return
             
             # Get wavelength values
@@ -985,9 +992,12 @@ Note: Results are based on Guide3A SOA output requirements.
         self.j_density_sigma_var.set("7")
         self.num_wavelengths_var.set("8")
         
-        # Reset wavelength values to defaults
+        # Reset wavelength values to defaults (first 8)
         for i, wavelength_var in enumerate(self.wavelength_vars):
-            wavelength_var.set(self.default_wavelengths[i])
+            if i < len(self.default_wavelengths):
+                wavelength_var.set(self.default_wavelengths[i])
+            else:
+                wavelength_var.set("")
         
         self.temp_var.set("40")
         self.link_loss_modes["median-loss"].set(True)
@@ -998,16 +1008,19 @@ Note: Results are based on Guide3A SOA output requirements.
     def update_wavelength_inputs(self):
         """Update the wavelength input fields based on the number specified"""
         num_wavelengths = int(self.num_wavelengths_var.get())
-        if num_wavelengths < 1 or num_wavelengths > 8:
-            messagebox.showerror("Invalid Input", "Number of wavelengths must be between 1 and 8")
+        if num_wavelengths < 1 or num_wavelengths > 32:
+            messagebox.showerror("Invalid Input", "Number of wavelengths must be between 1 and 32")
             return
         
-        # Reset wavelength values to defaults
+        # Reset wavelength values to defaults or clear them
         for i, wavelength_var in enumerate(self.wavelength_vars):
             if i < num_wavelengths:
-                wavelength_var.set(self.default_wavelengths[i])
+                if i < len(self.default_wavelengths):
+                    wavelength_var.set(self.default_wavelengths[i])
+                else:
+                    wavelength_var.set("")  # Clear if no default available
             else:
-                wavelength_var.set("")
+                wavelength_var.set("")  # Clear unused fields
 
     def save_wavelength_set(self):
         """Save the current wavelength set as defaults"""
@@ -1030,8 +1043,8 @@ Note: Results are based on Guide3A SOA output requirements.
                 else:
                     new_defaults.append("")  # Keep empty for unused wavelengths
             
-            # Update the default wavelengths
-            self.default_wavelengths = new_defaults
+            # Update the default wavelengths (extend to 32 if needed)
+            self.default_wavelengths = new_defaults[:32]  # Limit to 32 wavelengths
             
             messagebox.showinfo("Wavelength Set Saved", "The current wavelength set has been saved as defaults.\nThese values will be used when updating wavelengths or resetting the form.")
             
@@ -1055,8 +1068,8 @@ Note: Results are based on Guide3A SOA output requirements.
             
             # Get number of wavelengths and validate
             num_wavelengths = int(self.num_wavelengths_var.get())
-            if num_wavelengths < 1 or num_wavelengths > 8:
-                messagebox.showerror("Invalid Input", "Number of wavelengths must be between 1 and 8")
+            if num_wavelengths < 1 or num_wavelengths > 32:
+                messagebox.showerror("Invalid Input", "Number of wavelengths must be between 1 and 32")
                 return
             
             # Get wavelength values
@@ -1540,8 +1553,8 @@ Note: Results are based on Guide3A SOA output requirements.
             
             # Get number of wavelengths and validate
             num_wavelengths = int(self.num_wavelengths_var.get())
-            if num_wavelengths < 1 or num_wavelengths > 8:
-                messagebox.showerror("Invalid Input", "Number of wavelengths must be between 1 and 8")
+            if num_wavelengths < 1 or num_wavelengths > 32:
+                messagebox.showerror("Invalid Input", "Number of wavelengths must be between 1 and 32")
                 return
             
             # Get wavelength values
