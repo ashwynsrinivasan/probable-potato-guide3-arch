@@ -51,20 +51,33 @@ class Guide3GUI(tk.Tk):
         main_frame = ttk.Frame(self)
         main_frame.pack(fill='both', expand=True, padx=10, pady=10)
 
-        # Link Loss Section
-        link_loss_frame = ttk.LabelFrame(main_frame, text="Link Loss", padding="10")
-        link_loss_frame.pack(fill='x', pady=(0, 10))
+        # Top bar for common inputs
+        topbar_frame = ttk.Frame(main_frame)
+        topbar_frame.pack(fill='x', pady=(0, 10))
 
-        ttk.Checkbutton(link_loss_frame, text="median-loss", 
-                       variable=self.link_loss_modes["median-loss"]).pack(anchor='w')
-        ttk.Checkbutton(link_loss_frame, text="3-σL-loss", 
-                       variable=self.link_loss_modes["3-sigma-loss"]).pack(anchor='w')
-
-        # Set default selections
+        # Link Loss Section (left of topbar)
+        link_loss_frame = ttk.LabelFrame(topbar_frame, text="Link Loss", padding="10")
+        link_loss_frame.pack(side=tk.LEFT, padx=(0, 10))
+        ttk.Checkbutton(link_loss_frame, text="median-loss", variable=self.link_loss_modes["median-loss"]).pack(anchor='w')
+        ttk.Checkbutton(link_loss_frame, text="3-σL-loss", variable=self.link_loss_modes["3-sigma-loss"]).pack(anchor='w')
         self.link_loss_modes["median-loss"].set(True)
         self.link_loss_modes["3-sigma-loss"].set(True)
 
-        # Notebook for tabs
+        # Configuration Management (right of topbar)
+        config_management_frame = ttk.Frame(topbar_frame)
+        config_management_frame.pack(side=tk.LEFT, padx=(0, 10))
+        # Defaults Management (left)
+        defaults_frame = ttk.LabelFrame(config_management_frame, text="Defaults Management", padding="10")
+        defaults_frame.pack(side=tk.LEFT, padx=(0, 10))
+        ttk.Button(defaults_frame, text="Load Defaults", command=self.load_defaults).pack(side=tk.LEFT, padx=5, pady=2)
+        ttk.Button(defaults_frame, text="Update Defaults", command=self.update_defaults).pack(side=tk.LEFT, padx=5, pady=2)
+        # Configuration Files (right)
+        config_file_frame = ttk.LabelFrame(config_management_frame, text="Configuration Files", padding="10")
+        config_file_frame.pack(side=tk.LEFT)
+        ttk.Button(config_file_frame, text="Load Config", command=self.load_config).pack(side=tk.LEFT, padx=5, pady=2)
+        ttk.Button(config_file_frame, text="Save Config", command=self.save_config).pack(side=tk.LEFT, padx=5, pady=2)
+
+        # Notebook for tabs (model-specific content)
         notebook = ttk.Notebook(main_frame)
         notebook.pack(fill='both', expand=True)
 
@@ -205,24 +218,6 @@ class Guide3GUI(tk.Tk):
         # Save wavelength set button
         ttk.Button(wavelength_frame, text="Save Wavelength Set", command=self.save_wavelength_set).pack(anchor='w', padx=5, pady=(10, 5))
 
-        # --- Configuration Management (Bottom-left) ---
-        config_frame = ttk.LabelFrame(bottom_left_frame, text="Configuration Management", padding="10")
-        config_frame.pack(fill=tk.BOTH, expand=True, pady=5)
-        
-        # Defaults management
-        defaults_frame = ttk.Frame(config_frame)
-        defaults_frame.pack(fill=tk.X, pady=5)
-        ttk.Label(defaults_frame, text="Defaults Management:").pack(anchor='w')
-        ttk.Button(defaults_frame, text="Load Defaults", command=self.load_defaults).pack(anchor='w', padx=5, pady=2)
-        ttk.Button(defaults_frame, text="Update Defaults", command=self.update_defaults).pack(anchor='w', padx=5, pady=2)
-        
-        # Config file management
-        config_file_frame = ttk.Frame(config_frame)
-        config_file_frame.pack(fill=tk.X, pady=5)
-        ttk.Label(config_file_frame, text="Configuration Files:").pack(anchor='w')
-        ttk.Button(config_file_frame, text="Load Config", command=self.load_config).pack(anchor='w', padx=5, pady=2)
-        ttk.Button(config_file_frame, text="Save Config", command=self.save_config).pack(anchor='w', padx=5, pady=2)
-
         # Right side - Results Display
         results_frame = ttk.LabelFrame(soa_main_frame, text="Results", padding="10")
         results_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
@@ -233,7 +228,41 @@ class Guide3GUI(tk.Tk):
         
         ttk.Button(action_frame, text="Calculate", command=self.calculate_soa).pack(side=tk.LEFT, padx=(0, 5))
         ttk.Button(action_frame, text="Reset", command=self.reset_soa).pack(side=tk.LEFT, padx=5)
-        ttk.Button(action_frame, text="Plot Curves", command=self.open_plot_window).pack(side=tk.LEFT, padx=5)
+        
+        # Plot options frame
+        plot_options_frame = ttk.LabelFrame(results_frame, text="Plot Options", padding="10")
+        plot_options_frame.pack(fill=tk.X, pady=(0, 10))
+        
+        # Create checkboxes for different plot types
+        self.plot_vars = {
+            'wpe_vs_length': tk.BooleanVar(),
+            'gain_vs_length': tk.BooleanVar(),
+            'pin_vs_length': tk.BooleanVar(),
+            'wpe_vs_wavelength': tk.BooleanVar(),
+            'gain_vs_wavelength': tk.BooleanVar(),
+            'pin_vs_wavelength': tk.BooleanVar(),
+            'saturation_vs_wavelength': tk.BooleanVar()
+        }
+        
+        # Set defaults
+        for var in self.plot_vars.values():
+            var.set(True)
+        
+        # Create checkboxes in a grid
+        row = 0
+        col = 0
+        for plot_name, var in self.plot_vars.items():
+            display_name = plot_name.replace('_', ' ').replace('vs', 'vs').title()
+            ttk.Checkbutton(plot_options_frame, text=display_name, variable=var).grid(
+                row=row, column=col, sticky='w', padx=5, pady=2)
+            col += 1
+            if col > 3:  # 4 columns
+                col = 0
+                row += 1
+        
+        # Plot button - use grid instead of pack
+        ttk.Button(plot_options_frame, text="Generate Plots", command=self.generate_plots).grid(
+            row=row+1, column=0, columnspan=4, sticky='w', padx=5, pady=(10, 0))
         
         # Top section - Median Results
         median_results_frame = ttk.LabelFrame(results_frame, text="Median Loss Case", padding="5")
@@ -714,20 +743,39 @@ Operation Parameters:
         except Exception as e:
             messagebox.showerror("Error", f"Failed to save wavelength set: {e}")
 
-    def open_plot_window(self):
-        """Open a new window to plot the results"""
+    def generate_plots(self):
+        """Generate the selected plots"""
         try:
+            # Get selected plot types
+            selected_plots = [name for name, var in self.plot_vars.items() if var.get()]
+            
+            if not selected_plots:
+                messagebox.showwarning("No Plots Selected", "Please select at least one plot type.")
+                return
+            
             # Get current input values
             w_um = float(self.w_um_var.get())
             l_active = float(self.l_active_var.get())
             temp_c = float(self.temp_var.get())
             
-            # Get wavelength values
+            # Get number of wavelengths and validate
             num_wavelengths = int(self.num_wavelengths_var.get())
+            if num_wavelengths < 1 or num_wavelengths > 8:
+                messagebox.showerror("Invalid Input", "Number of wavelengths must be between 1 and 8")
+                return
+            
+            # Get wavelength values
             wavelengths = []
             for i in range(num_wavelengths):
-                wavelength = float(self.wavelength_vars[i].get())
-                wavelengths.append(wavelength)
+                try:
+                    wavelength = float(self.wavelength_vars[i].get())
+                    if not (1290 <= wavelength <= 1330):
+                        messagebox.showerror("Invalid Input", f"Wavelength {i+1} must be between 1290 and 1330 nm")
+                        return
+                    wavelengths.append(wavelength)
+                except ValueError:
+                    messagebox.showerror("Invalid Input", f"Wavelength {i+1} must be a valid number")
+                    return
             
             # Check which link loss modes are selected
             median_selected = self.link_loss_modes["median-loss"].get()
@@ -743,100 +791,20 @@ Operation Parameters:
             j_density_median = float(self.j_density_median_var.get()) if median_selected else None
             j_density_sigma = float(self.j_density_sigma_var.get()) if sigma_selected else None
             
-            # Open plotting window
-            plot_window = PlotWindow(self, w_um, l_active, temp_c, wavelengths, 
-                                   median_selected, sigma_selected,
-                                   pout_median, pout_sigma, j_density_median, j_density_sigma)
-            
-        except Exception as e:
-            messagebox.showerror("Error", f"Failed to open plot window: {e}")
-
-
-class PlotWindow(tk.Toplevel):
-    def __init__(self, parent, w_um, l_active, temp_c, wavelengths, 
-                 median_selected, sigma_selected, pout_median, pout_sigma, 
-                 j_density_median, j_density_sigma):
-        super().__init__(parent)
-        self.title("SOA Performance Plots")
-        self.geometry("1200x800")
-        
-        self.parent = parent
-        self.w_um = w_um
-        self.l_active = l_active
-        self.temp_c = temp_c
-        self.wavelengths = wavelengths
-        self.median_selected = median_selected
-        self.sigma_selected = sigma_selected
-        self.pout_median = pout_median
-        self.pout_sigma = pout_sigma
-        self.j_density_median = j_density_median
-        self.j_density_sigma = j_density_sigma
-        
-        self._create_widgets()
-        
-    def _create_widgets(self):
-        # Main frame
-        main_frame = ttk.Frame(self)
-        main_frame.pack(fill='both', expand=True, padx=10, pady=10)
-        
-        # Plot selection frame
-        selection_frame = ttk.LabelFrame(main_frame, text="Plot Options", padding="10")
-        selection_frame.pack(fill='x', pady=(0, 10))
-        
-        # Create checkboxes for different plot types
-        self.plot_vars = {
-            'wpe_vs_length': tk.BooleanVar(),
-            'gain_vs_length': tk.BooleanVar(),
-            'pin_vs_length': tk.BooleanVar(),
-            'wpe_vs_wavelength': tk.BooleanVar(),
-            'gain_vs_wavelength': tk.BooleanVar(),
-            'pin_vs_wavelength': tk.BooleanVar(),
-            'saturation_vs_wavelength': tk.BooleanVar()
-        }
-        
-        # Set defaults
-        for var in self.plot_vars.values():
-            var.set(True)
-        
-        # Create checkboxes in a grid
-        row = 0
-        col = 0
-        for plot_name, var in self.plot_vars.items():
-            display_name = plot_name.replace('_', ' ').replace('vs', 'vs').title()
-            ttk.Checkbutton(selection_frame, text=display_name, variable=var).grid(
-                row=row, column=col, sticky='w', padx=5, pady=2)
-            col += 1
-            if col > 3:  # 4 columns
-                col = 0
-                row += 1
-        
-        # Button frame
-        button_frame = ttk.Frame(main_frame)
-        button_frame.pack(fill='x', pady=10)
-        
-        ttk.Button(button_frame, text="Generate Plots", command=self.generate_plots).pack(side=tk.LEFT, padx=(0, 10))
-        ttk.Button(button_frame, text="Close", command=self.destroy).pack(side=tk.LEFT)
-        
-    def generate_plots(self):
-        """Generate the selected plots"""
-        try:
-            # Get selected plot types
-            selected_plots = [name for name, var in self.plot_vars.items() if var.get()]
-            
-            if not selected_plots:
-                messagebox.showwarning("No Plots Selected", "Please select at least one plot type.")
-                return
-            
             # Create SOA instance
-            soa = EuropaSOA(L_active_um=self.l_active, W_um=self.w_um, verbose=False)
+            soa = EuropaSOA(L_active_um=l_active, W_um=w_um, verbose=False)
             
             # Generate plots
-            self._create_plots(soa, selected_plots)
+            self._create_plots(soa, selected_plots, wavelengths, temp_c, 
+                             median_selected, sigma_selected,
+                             pout_median, pout_sigma, j_density_median, j_density_sigma)
             
         except Exception as e:
-            messagebox.showerror("Plotting Error", f"An error occurred while generating plots: {e}")
+            messagebox.showerror("Error", f"Failed to generate plots: {e}")
     
-    def _create_plots(self, soa, selected_plots):
+    def _create_plots(self, soa, selected_plots, wavelengths, temp_c,
+                     median_selected, sigma_selected, pout_median, pout_sigma, 
+                     j_density_median, j_density_sigma):
         """Create the selected plots"""
         # Define active length range for length-based plots
         l_active_range = np.linspace(40, 880, 50)
@@ -859,19 +827,32 @@ class PlotWindow(tk.Toplevel):
             col = plot_idx % cols + 1
             
             if plot_name == 'wpe_vs_length':
-                self._plot_wpe_vs_length(fig, soa, l_active_range, row, col)
+                self._plot_wpe_vs_length(fig, soa, l_active_range, row, col, temp_c, wavelengths,
+                                       median_selected, sigma_selected, pout_median, pout_sigma,
+                                       j_density_median, j_density_sigma)
             elif plot_name == 'gain_vs_length':
-                self._plot_gain_vs_length(fig, soa, l_active_range, row, col)
+                self._plot_gain_vs_length(fig, soa, l_active_range, row, col, temp_c, wavelengths,
+                                        median_selected, sigma_selected, pout_median, pout_sigma,
+                                        j_density_median, j_density_sigma)
             elif plot_name == 'pin_vs_length':
-                self._plot_pin_vs_length(fig, soa, l_active_range, row, col)
+                self._plot_pin_vs_length(fig, soa, l_active_range, row, col, temp_c, wavelengths,
+                                       median_selected, sigma_selected, pout_median, pout_sigma,
+                                       j_density_median, j_density_sigma)
             elif plot_name == 'wpe_vs_wavelength':
-                self._plot_wpe_vs_wavelength(fig, soa, row, col)
+                self._plot_wpe_vs_wavelength(fig, soa, row, col, temp_c, wavelengths,
+                                           median_selected, sigma_selected, pout_median, pout_sigma,
+                                           j_density_median, j_density_sigma)
             elif plot_name == 'gain_vs_wavelength':
-                self._plot_gain_vs_wavelength(fig, soa, row, col)
+                self._plot_gain_vs_wavelength(fig, soa, row, col, temp_c, wavelengths,
+                                            median_selected, sigma_selected, pout_median, pout_sigma,
+                                            j_density_median, j_density_sigma)
             elif plot_name == 'pin_vs_wavelength':
-                self._plot_pin_vs_wavelength(fig, soa, row, col)
+                self._plot_pin_vs_wavelength(fig, soa, row, col, temp_c, wavelengths,
+                                           median_selected, sigma_selected, pout_median, pout_sigma,
+                                           j_density_median, j_density_sigma)
             elif plot_name == 'saturation_vs_wavelength':
-                self._plot_saturation_vs_wavelength(fig, soa, row, col)
+                self._plot_saturation_vs_wavelength(fig, soa, row, col, temp_c, wavelengths,
+                                                  median_selected, sigma_selected, j_density_median, j_density_sigma)
             
             plot_idx += 1
         
@@ -886,45 +867,47 @@ class PlotWindow(tk.Toplevel):
         # Show the plot
         fig.show()
     
-    def _plot_wpe_vs_length(self, fig, soa, l_active_range, row, col):
+    def _plot_wpe_vs_length(self, fig, soa, l_active_range, row, col, temp_c, wavelengths,
+                           median_selected, sigma_selected, pout_median, pout_sigma,
+                           j_density_median, j_density_sigma):
         """Plot WPE vs Active Length"""
         wpe_median = []
         wpe_sigma = []
         
         for l_active in l_active_range:
             # Create SOA instance for this length
-            soa_temp = EuropaSOA(L_active_um=l_active, W_um=self.w_um, verbose=False)
+            soa_temp = EuropaSOA(L_active_um=l_active, W_um=soa.W_um, verbose=False)
             
-            if self.median_selected:
-                current_ma = soa_temp.calculate_current_mA_from_J(self.j_density_median)
-                target_pout_mw = 10**(self.pout_median / 10.0)
+            if median_selected:
+                current_ma = soa_temp.calculate_current_mA_from_J(j_density_median)
+                target_pout_mw = 10**(pout_median / 10.0)
                 required_pin_mw = soa_temp.find_Pin_for_target_Pout(
-                    target_pout_mw, current_ma, self.wavelengths[0], self.temp_c)
+                    target_pout_mw, current_ma, wavelengths[0], temp_c)
                 if required_pin_mw is not None:
-                    wpe = soa_temp.calculate_wpe(current_ma, self.wavelengths[0], self.temp_c, required_pin_mw)
+                    wpe = soa_temp.calculate_wpe(current_ma, wavelengths[0], temp_c, required_pin_mw)
                     wpe_median.append(wpe)
                 else:
                     wpe_median.append(None)
             
-            if self.sigma_selected:
-                current_ma = soa_temp.calculate_current_mA_from_J(self.j_density_sigma)
-                target_pout_mw = 10**(self.pout_sigma / 10.0)
+            if sigma_selected:
+                current_ma = soa_temp.calculate_current_mA_from_J(j_density_sigma)
+                target_pout_mw = 10**(pout_sigma / 10.0)
                 required_pin_mw = soa_temp.find_Pin_for_target_Pout(
-                    target_pout_mw, current_ma, self.wavelengths[0], self.temp_c)
+                    target_pout_mw, current_ma, wavelengths[0], temp_c)
                 if required_pin_mw is not None:
-                    wpe = soa_temp.calculate_wpe(current_ma, self.wavelengths[0], self.temp_c, required_pin_mw)
+                    wpe = soa_temp.calculate_wpe(current_ma, wavelengths[0], temp_c, required_pin_mw)
                     wpe_sigma.append(wpe)
                 else:
                     wpe_sigma.append(None)
         
-        if self.median_selected:
+        if median_selected:
             fig.add_trace(
                 go.Scatter(x=l_active_range, y=wpe_median, mode='lines', 
                           name='Median Loss', line=dict(color='blue')),
                 row=row, col=col
             )
         
-        if self.sigma_selected:
+        if sigma_selected:
             fig.add_trace(
                 go.Scatter(x=l_active_range, y=wpe_sigma, mode='lines', 
                           name='3σ Loss', line=dict(color='red')),
@@ -934,47 +917,49 @@ class PlotWindow(tk.Toplevel):
         fig.update_xaxes(title_text="Active Length (µm)", row=row, col=col)
         fig.update_yaxes(title_text="Wall Plug Efficiency (%)", row=row, col=col)
     
-    def _plot_gain_vs_length(self, fig, soa, l_active_range, row, col):
+    def _plot_gain_vs_length(self, fig, soa, l_active_range, row, col, temp_c, wavelengths,
+                            median_selected, sigma_selected, pout_median, pout_sigma,
+                            j_density_median, j_density_sigma):
         """Plot SOA Gain vs Active Length"""
         gain_median = []
         gain_sigma = []
         
         for l_active in l_active_range:
             # Create SOA instance for this length
-            soa_temp = EuropaSOA(L_active_um=l_active, W_um=self.w_um, verbose=False)
+            soa_temp = EuropaSOA(L_active_um=l_active, W_um=soa.W_um, verbose=False)
             
-            if self.median_selected:
-                current_ma = soa_temp.calculate_current_mA_from_J(self.j_density_median)
-                target_pout_mw = 10**(self.pout_median / 10.0)
+            if median_selected:
+                current_ma = soa_temp.calculate_current_mA_from_J(j_density_median)
+                target_pout_mw = 10**(pout_median / 10.0)
                 required_pin_mw = soa_temp.find_Pin_for_target_Pout(
-                    target_pout_mw, current_ma, self.wavelengths[0], self.temp_c)
+                    target_pout_mw, current_ma, wavelengths[0], temp_c)
                 if required_pin_mw is not None:
                     gain = soa_temp.get_saturated_gain(
-                        self.wavelengths[0], self.temp_c, self.j_density_median, required_pin_mw)
+                        wavelengths[0], temp_c, j_density_median, required_pin_mw)
                     gain_median.append(gain)
                 else:
                     gain_median.append(None)
             
-            if self.sigma_selected:
-                current_ma = soa_temp.calculate_current_mA_from_J(self.j_density_sigma)
-                target_pout_mw = 10**(self.pout_sigma / 10.0)
+            if sigma_selected:
+                current_ma = soa_temp.calculate_current_mA_from_J(j_density_sigma)
+                target_pout_mw = 10**(pout_sigma / 10.0)
                 required_pin_mw = soa_temp.find_Pin_for_target_Pout(
-                    target_pout_mw, current_ma, self.wavelengths[0], self.temp_c)
+                    target_pout_mw, current_ma, wavelengths[0], temp_c)
                 if required_pin_mw is not None:
                     gain = soa_temp.get_saturated_gain(
-                        self.wavelengths[0], self.temp_c, self.j_density_sigma, required_pin_mw)
+                        wavelengths[0], temp_c, j_density_sigma, required_pin_mw)
                     gain_sigma.append(gain)
                 else:
                     gain_sigma.append(None)
         
-        if self.median_selected:
+        if median_selected:
             fig.add_trace(
                 go.Scatter(x=l_active_range, y=gain_median, mode='lines', 
                           name='Median Loss', line=dict(color='blue'), showlegend=False),
                 row=row, col=col
             )
         
-        if self.sigma_selected:
+        if sigma_selected:
             fig.add_trace(
                 go.Scatter(x=l_active_range, y=gain_sigma, mode='lines', 
                           name='3σ Loss', line=dict(color='red'), showlegend=False),
@@ -984,43 +969,45 @@ class PlotWindow(tk.Toplevel):
         fig.update_xaxes(title_text="Active Length (µm)", row=row, col=col)
         fig.update_yaxes(title_text="Gain (dB)", row=row, col=col)
     
-    def _plot_pin_vs_length(self, fig, soa, l_active_range, row, col):
+    def _plot_pin_vs_length(self, fig, soa, l_active_range, row, col, temp_c, wavelengths,
+                           median_selected, sigma_selected, pout_median, pout_sigma,
+                           j_density_median, j_density_sigma):
         """Plot P_in vs Active Length"""
         pin_median = []
         pin_sigma = []
         
         for l_active in l_active_range:
             # Create SOA instance for this length
-            soa_temp = EuropaSOA(L_active_um=l_active, W_um=self.w_um, verbose=False)
+            soa_temp = EuropaSOA(L_active_um=l_active, W_um=soa.W_um, verbose=False)
             
-            if self.median_selected:
-                current_ma = soa_temp.calculate_current_mA_from_J(self.j_density_median)
-                target_pout_mw = 10**(self.pout_median / 10.0)
+            if median_selected:
+                current_ma = soa_temp.calculate_current_mA_from_J(j_density_median)
+                target_pout_mw = 10**(pout_median / 10.0)
                 required_pin_mw = soa_temp.find_Pin_for_target_Pout(
-                    target_pout_mw, current_ma, self.wavelengths[0], self.temp_c)
+                    target_pout_mw, current_ma, wavelengths[0], temp_c)
                 if required_pin_mw is not None:
                     pin_median.append(10 * np.log10(required_pin_mw))
                 else:
                     pin_median.append(None)
             
-            if self.sigma_selected:
-                current_ma = soa_temp.calculate_current_mA_from_J(self.j_density_sigma)
-                target_pout_mw = 10**(self.pout_sigma / 10.0)
+            if sigma_selected:
+                current_ma = soa_temp.calculate_current_mA_from_J(j_density_sigma)
+                target_pout_mw = 10**(pout_sigma / 10.0)
                 required_pin_mw = soa_temp.find_Pin_for_target_Pout(
-                    target_pout_mw, current_ma, self.wavelengths[0], self.temp_c)
+                    target_pout_mw, current_ma, wavelengths[0], temp_c)
                 if required_pin_mw is not None:
                     pin_sigma.append(10 * np.log10(required_pin_mw))
                 else:
                     pin_sigma.append(None)
         
-        if self.median_selected:
+        if median_selected:
             fig.add_trace(
                 go.Scatter(x=l_active_range, y=pin_median, mode='lines', 
                           name='Median Loss', line=dict(color='blue'), showlegend=False),
                 row=row, col=col
             )
         
-        if self.sigma_selected:
+        if sigma_selected:
             fig.add_trace(
                 go.Scatter(x=l_active_range, y=pin_sigma, mode='lines', 
                           name='3σ Loss', line=dict(color='red'), showlegend=False),
@@ -1030,44 +1017,46 @@ class PlotWindow(tk.Toplevel):
         fig.update_xaxes(title_text="Active Length (µm)", row=row, col=col)
         fig.update_yaxes(title_text="Required P_in (dBm)", row=row, col=col)
     
-    def _plot_wpe_vs_wavelength(self, fig, soa, row, col):
+    def _plot_wpe_vs_wavelength(self, fig, soa, row, col, temp_c, wavelengths,
+                               median_selected, sigma_selected, pout_median, pout_sigma,
+                               j_density_median, j_density_sigma):
         """Plot WPE vs Wavelength"""
         wpe_median = []
         wpe_sigma = []
         
-        for wavelength in self.wavelengths:
-            if self.median_selected:
-                current_ma = soa.calculate_current_mA_from_J(self.j_density_median)
-                target_pout_mw = 10**(self.pout_median / 10.0)
+        for wavelength in wavelengths:
+            if median_selected:
+                current_ma = soa.calculate_current_mA_from_J(j_density_median)
+                target_pout_mw = 10**(pout_median / 10.0)
                 required_pin_mw = soa.find_Pin_for_target_Pout(
-                    target_pout_mw, current_ma, wavelength, self.temp_c)
+                    target_pout_mw, current_ma, wavelength, temp_c)
                 if required_pin_mw is not None:
-                    wpe = soa.calculate_wpe(current_ma, wavelength, self.temp_c, required_pin_mw)
+                    wpe = soa.calculate_wpe(current_ma, wavelength, temp_c, required_pin_mw)
                     wpe_median.append(wpe)
                 else:
                     wpe_median.append(None)
             
-            if self.sigma_selected:
-                current_ma = soa.calculate_current_mA_from_J(self.j_density_sigma)
-                target_pout_mw = 10**(self.pout_sigma / 10.0)
+            if sigma_selected:
+                current_ma = soa.calculate_current_mA_from_J(j_density_sigma)
+                target_pout_mw = 10**(pout_sigma / 10.0)
                 required_pin_mw = soa.find_Pin_for_target_Pout(
-                    target_pout_mw, current_ma, wavelength, self.temp_c)
+                    target_pout_mw, current_ma, wavelength, temp_c)
                 if required_pin_mw is not None:
-                    wpe = soa.calculate_wpe(current_ma, wavelength, self.temp_c, required_pin_mw)
+                    wpe = soa.calculate_wpe(current_ma, wavelength, temp_c, required_pin_mw)
                     wpe_sigma.append(wpe)
                 else:
                     wpe_sigma.append(None)
         
-        if self.median_selected:
+        if median_selected:
             fig.add_trace(
-                go.Scatter(x=self.wavelengths, y=wpe_median, mode='lines+markers', 
+                go.Scatter(x=wavelengths, y=wpe_median, mode='lines+markers', 
                           name='Median Loss', line=dict(color='blue'), showlegend=False),
                 row=row, col=col
             )
         
-        if self.sigma_selected:
+        if sigma_selected:
             fig.add_trace(
-                go.Scatter(x=self.wavelengths, y=wpe_sigma, mode='lines+markers', 
+                go.Scatter(x=wavelengths, y=wpe_sigma, mode='lines+markers', 
                           name='3σ Loss', line=dict(color='red'), showlegend=False),
                 row=row, col=col
             )
@@ -1075,46 +1064,48 @@ class PlotWindow(tk.Toplevel):
         fig.update_xaxes(title_text="Wavelength (nm)", row=row, col=col)
         fig.update_yaxes(title_text="Wall Plug Efficiency (%)", row=row, col=col)
     
-    def _plot_gain_vs_wavelength(self, fig, soa, row, col):
+    def _plot_gain_vs_wavelength(self, fig, soa, row, col, temp_c, wavelengths,
+                                median_selected, sigma_selected, pout_median, pout_sigma,
+                                j_density_median, j_density_sigma):
         """Plot SOA Gain vs Wavelength"""
         gain_median = []
         gain_sigma = []
         
-        for wavelength in self.wavelengths:
-            if self.median_selected:
-                current_ma = soa.calculate_current_mA_from_J(self.j_density_median)
-                target_pout_mw = 10**(self.pout_median / 10.0)
+        for wavelength in wavelengths:
+            if median_selected:
+                current_ma = soa.calculate_current_mA_from_J(j_density_median)
+                target_pout_mw = 10**(pout_median / 10.0)
                 required_pin_mw = soa.find_Pin_for_target_Pout(
-                    target_pout_mw, current_ma, wavelength, self.temp_c)
+                    target_pout_mw, current_ma, wavelength, temp_c)
                 if required_pin_mw is not None:
                     gain = soa.get_saturated_gain(
-                        wavelength, self.temp_c, self.j_density_median, required_pin_mw)
+                        wavelength, temp_c, j_density_median, required_pin_mw)
                     gain_median.append(gain)
                 else:
                     gain_median.append(None)
             
-            if self.sigma_selected:
-                current_ma = soa.calculate_current_mA_from_J(self.j_density_sigma)
-                target_pout_mw = 10**(self.pout_sigma / 10.0)
+            if sigma_selected:
+                current_ma = soa.calculate_current_mA_from_J(j_density_sigma)
+                target_pout_mw = 10**(pout_sigma / 10.0)
                 required_pin_mw = soa.find_Pin_for_target_Pout(
-                    target_pout_mw, current_ma, wavelength, self.temp_c)
+                    target_pout_mw, current_ma, wavelength, temp_c)
                 if required_pin_mw is not None:
                     gain = soa.get_saturated_gain(
-                        wavelength, self.temp_c, self.j_density_sigma, required_pin_mw)
+                        wavelength, temp_c, j_density_sigma, required_pin_mw)
                     gain_sigma.append(gain)
                 else:
                     gain_sigma.append(None)
         
-        if self.median_selected:
+        if median_selected:
             fig.add_trace(
-                go.Scatter(x=self.wavelengths, y=gain_median, mode='lines+markers', 
+                go.Scatter(x=wavelengths, y=gain_median, mode='lines+markers', 
                           name='Median Loss', line=dict(color='blue'), showlegend=False),
                 row=row, col=col
             )
         
-        if self.sigma_selected:
+        if sigma_selected:
             fig.add_trace(
-                go.Scatter(x=self.wavelengths, y=gain_sigma, mode='lines+markers', 
+                go.Scatter(x=wavelengths, y=gain_sigma, mode='lines+markers', 
                           name='3σ Loss', line=dict(color='red'), showlegend=False),
                 row=row, col=col
             )
@@ -1122,42 +1113,44 @@ class PlotWindow(tk.Toplevel):
         fig.update_xaxes(title_text="Wavelength (nm)", row=row, col=col)
         fig.update_yaxes(title_text="Gain (dB)", row=row, col=col)
     
-    def _plot_pin_vs_wavelength(self, fig, soa, row, col):
+    def _plot_pin_vs_wavelength(self, fig, soa, row, col, temp_c, wavelengths,
+                               median_selected, sigma_selected, pout_median, pout_sigma,
+                               j_density_median, j_density_sigma):
         """Plot P_in vs Wavelength"""
         pin_median = []
         pin_sigma = []
         
-        for wavelength in self.wavelengths:
-            if self.median_selected:
-                current_ma = soa.calculate_current_mA_from_J(self.j_density_median)
-                target_pout_mw = 10**(self.pout_median / 10.0)
+        for wavelength in wavelengths:
+            if median_selected:
+                current_ma = soa.calculate_current_mA_from_J(j_density_median)
+                target_pout_mw = 10**(pout_median / 10.0)
                 required_pin_mw = soa.find_Pin_for_target_Pout(
-                    target_pout_mw, current_ma, wavelength, self.temp_c)
+                    target_pout_mw, current_ma, wavelength, temp_c)
                 if required_pin_mw is not None:
                     pin_median.append(10 * np.log10(required_pin_mw))
                 else:
                     pin_median.append(None)
             
-            if self.sigma_selected:
-                current_ma = soa.calculate_current_mA_from_J(self.j_density_sigma)
-                target_pout_mw = 10**(self.pout_sigma / 10.0)
+            if sigma_selected:
+                current_ma = soa.calculate_current_mA_from_J(j_density_sigma)
+                target_pout_mw = 10**(pout_sigma / 10.0)
                 required_pin_mw = soa.find_Pin_for_target_Pout(
-                    target_pout_mw, current_ma, wavelength, self.temp_c)
+                    target_pout_mw, current_ma, wavelength, temp_c)
                 if required_pin_mw is not None:
                     pin_sigma.append(10 * np.log10(required_pin_mw))
                 else:
                     pin_sigma.append(None)
         
-        if self.median_selected:
+        if median_selected:
             fig.add_trace(
-                go.Scatter(x=self.wavelengths, y=pin_median, mode='lines+markers', 
+                go.Scatter(x=wavelengths, y=pin_median, mode='lines+markers', 
                           name='Median Loss', line=dict(color='blue'), showlegend=False),
                 row=row, col=col
             )
         
-        if self.sigma_selected:
+        if sigma_selected:
             fig.add_trace(
-                go.Scatter(x=self.wavelengths, y=pin_sigma, mode='lines+markers', 
+                go.Scatter(x=wavelengths, y=pin_sigma, mode='lines+markers', 
                           name='3σ Loss', line=dict(color='red'), showlegend=False),
                 row=row, col=col
             )
@@ -1165,32 +1158,33 @@ class PlotWindow(tk.Toplevel):
         fig.update_xaxes(title_text="Wavelength (nm)", row=row, col=col)
         fig.update_yaxes(title_text="Required P_in (dBm)", row=row, col=col)
     
-    def _plot_saturation_vs_wavelength(self, fig, soa, row, col):
+    def _plot_saturation_vs_wavelength(self, fig, soa, row, col, temp_c, wavelengths,
+                                      median_selected, sigma_selected, j_density_median, j_density_sigma):
         """Plot Saturation Power vs Wavelength"""
         saturation_median = []
         saturation_sigma = []
         
-        for wavelength in self.wavelengths:
-            if self.median_selected:
+        for wavelength in wavelengths:
+            if median_selected:
                 saturation = soa.get_output_saturation_power_dBm(
-                    wavelength, self.j_density_median, self.temp_c)
+                    wavelength, j_density_median, temp_c)
                 saturation_median.append(saturation)
             
-            if self.sigma_selected:
+            if sigma_selected:
                 saturation = soa.get_output_saturation_power_dBm(
-                    wavelength, self.j_density_sigma, self.temp_c)
+                    wavelength, j_density_sigma, temp_c)
                 saturation_sigma.append(saturation)
         
-        if self.median_selected:
+        if median_selected:
             fig.add_trace(
-                go.Scatter(x=self.wavelengths, y=saturation_median, mode='lines+markers', 
+                go.Scatter(x=wavelengths, y=saturation_median, mode='lines+markers', 
                           name='Median Loss', line=dict(color='blue'), showlegend=False),
                 row=row, col=col
             )
         
-        if self.sigma_selected:
+        if sigma_selected:
             fig.add_trace(
-                go.Scatter(x=self.wavelengths, y=saturation_sigma, mode='lines+markers', 
+                go.Scatter(x=wavelengths, y=saturation_sigma, mode='lines+markers', 
                           name='3σ Loss', line=dict(color='red'), showlegend=False),
                 row=row, col=col
             )
