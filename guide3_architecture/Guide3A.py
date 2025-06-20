@@ -762,36 +762,39 @@ Performance Metrics:
             if 'error' in pic_power_data or 'error' in pic_efficiency_data:
                 return {'error': 'PIC performance data not available'}
             
-            # PIC power consumption (from PIC performance)
+            # Get module configuration
+            module_config = self.get_module_configuration()
+            num_unit_cells = module_config['num_unit_cells']
+            num_soas_per_pic = 20  # Standard SOAs per PIC
+            
+            # Get PIC power and current data
             pic_power_w = pic_power_data['total_pic_power_mw'] / 1000.0
+            soa_current_ma = pic_power_data['current_ma']
+            soa_operating_voltage_v = pic_power_data['operating_voltage_v']
             
-            # Calculate digital core power (PIC power / digital core efficiency)
+            # Get heat load per PIC
+            heat_load_per_pic_w = pic_efficiency_data['heat_load_w']
+            
+            # 1. Digital Core Power Consumption = (Driver Peripheral power + MCU power consumption + MISC power consumption) * Number of Unit Cells / Digital Core Efficiency
             digital_core_efficiency = self.digital_core_efficiency / 100.0  # Convert to decimal
-            digital_core_power_w = pic_power_w / digital_core_efficiency
+            digital_core_power_w = ((self.driver_peripherals_power + self.mcu_power + self.misc_power) * 
+                                   num_unit_cells / digital_core_efficiency)
             
-            # Calculate total electrical power (digital core + peripherals + MCU + misc)
-            total_electrical_power_w = (digital_core_power_w + 
-                                       self.driver_peripherals_power + 
-                                       self.mcu_power + 
-                                       self.misc_power)
-            
-            # Calculate VRM input power (total electrical power / VRM efficiency)
+            # 2. Analog Core Power Consumption = (max(PIC operating voltage) + IDAC Voltage Overhead + IR drop) * max(SOA current) * number of SOA per PIC * number of unit cells / VRM Efficiency
+            # Use appropriate IR drop based on case
+            ir_drop = self.ir_drop_3sigma if case_name == "3σ" else self.ir_drop_nominal
             vrm_efficiency = self.vrm_efficiency / 100.0  # Convert to decimal
-            vrm_input_power_w = total_electrical_power_w / vrm_efficiency
+            analog_core_power_w = ((soa_operating_voltage_v + self.idac_voltage_overhead + ir_drop) * 
+                                  soa_current_ma * num_soas_per_pic * num_unit_cells / vrm_efficiency)
             
-            # Calculate TEC power based on heat load
-            heat_load_w = pic_efficiency_data['heat_load_w']
-            
+            # 3. Thermal Power Consumption = Heat load per PIC * number of unit cells / TEC COP / TEC Power Efficiency
             # Use appropriate TEC COP based on case
             tec_cop = self.tec_cop_3sigma if case_name == "3σ" else self.tec_cop_nominal
-            tec_power_w = heat_load_w / tec_cop if tec_cop > 0 else 0
-            
-            # Calculate TEC electrical power (TEC power / TEC power efficiency)
             tec_power_efficiency = self.tec_power_efficiency / 100.0  # Convert to decimal
-            tec_electrical_power_w = tec_power_w / tec_power_efficiency if tec_power_efficiency > 0 else 0
+            thermal_power_w = (heat_load_per_pic_w * num_unit_cells / tec_cop / tec_power_efficiency)
             
-            # Calculate total module power consumption
-            total_module_power_w = vrm_input_power_w + tec_electrical_power_w
+            # 4. Total Module Power Consumption = Digital Core Power Consumption + Analog Core Power Consumption + Thermal Power Consumption
+            total_module_power_w = digital_core_power_w + analog_core_power_w + thermal_power_w
             
             # Calculate module efficiency (optical power / total module power)
             total_optical_power_w = pic_efficiency_data['total_optical_power_mw'] / 1000.0
@@ -803,18 +806,18 @@ Performance Metrics:
             return {
                 'pic_power_w': pic_power_w,
                 'digital_core_power_w': digital_core_power_w,
+                'analog_core_power_w': analog_core_power_w,
+                'thermal_power_w': thermal_power_w,
                 'driver_peripherals_power_w': self.driver_peripherals_power,
                 'mcu_power_w': self.mcu_power,
                 'misc_power_w': self.misc_power,
-                'total_electrical_power_w': total_electrical_power_w,
-                'vrm_input_power_w': vrm_input_power_w,
-                'tec_power_w': tec_power_w,
-                'tec_electrical_power_w': tec_electrical_power_w,
                 'total_module_power_w': total_module_power_w,
                 'total_optical_power_w': total_optical_power_w,
                 'module_efficiency_percent': module_efficiency_percent,
                 'total_heat_load_w': total_heat_load_w,
-                'case_name': case_name
+                'case_name': case_name,
+                'num_unit_cells': num_unit_cells,
+                'num_soas_per_pic': num_soas_per_pic
             }
         except Exception as e:
             return {'error': str(e)}

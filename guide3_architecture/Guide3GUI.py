@@ -1972,17 +1972,17 @@ Module Performance:
             if median_module_performance and 'error' not in median_module_performance:
                 median_content += f"""- PIC Power: {median_module_performance['pic_power_w']:.3f} W
 - Digital Core Power: {median_module_performance['digital_core_power_w']:.3f} W
+- Analog Core Power: {median_module_performance['analog_core_power_w']:.3f} W
+- Thermal Power: {median_module_performance['thermal_power_w']:.3f} W
 - Driver Peripherals Power: {median_module_performance['driver_peripherals_power_w']:.3f} W
 - MCU Power: {median_module_performance['mcu_power_w']:.3f} W
 - Misc Power: {median_module_performance['misc_power_w']:.3f} W
-- Total Electrical Power: {median_module_performance['total_electrical_power_w']:.3f} W
-- VRM Input Power: {median_module_performance['vrm_input_power_w']:.3f} W
-- TEC Power: {median_module_performance['tec_power_w']:.3f} W
-- TEC Electrical Power: {median_module_performance['tec_electrical_power_w']:.3f} W
 - Total Module Power: {median_module_performance['total_module_power_w']:.3f} W
 - Total Optical Power: {median_module_performance['total_optical_power_w']:.3f} W
 - Module Efficiency: {median_module_performance['module_efficiency_percent']:.2f}%
 - Total Heat Load: {median_module_performance['total_heat_load_w']:.3f} W
+- Number of Unit Cells: {median_module_performance['num_unit_cells']}
+- SOAs per PIC: {median_module_performance['num_soas_per_pic']}
 """
             else:
                 median_content += f"- Error calculating module performance: {median_module_performance['error'] if median_module_performance else 'Not available'}\n"
@@ -2046,17 +2046,17 @@ Module Performance:
             if sigma_module_performance and 'error' not in sigma_module_performance:
                 sigma_content += f"""- PIC Power: {sigma_module_performance['pic_power_w']:.3f} W
 - Digital Core Power: {sigma_module_performance['digital_core_power_w']:.3f} W
+- Analog Core Power: {sigma_module_performance['analog_core_power_w']:.3f} W
+- Thermal Power: {sigma_module_performance['thermal_power_w']:.3f} W
 - Driver Peripherals Power: {sigma_module_performance['driver_peripherals_power_w']:.3f} W
 - MCU Power: {sigma_module_performance['mcu_power_w']:.3f} W
 - Misc Power: {sigma_module_performance['misc_power_w']:.3f} W
-- Total Electrical Power: {sigma_module_performance['total_electrical_power_w']:.3f} W
-- VRM Input Power: {sigma_module_performance['vrm_input_power_w']:.3f} W
-- TEC Power: {sigma_module_performance['tec_power_w']:.3f} W
-- TEC Electrical Power: {sigma_module_performance['tec_electrical_power_w']:.3f} W
 - Total Module Power: {sigma_module_performance['total_module_power_w']:.3f} W
 - Total Optical Power: {sigma_module_performance['total_optical_power_w']:.3f} W
 - Module Efficiency: {sigma_module_performance['module_efficiency_percent']:.2f}%
 - Total Heat Load: {sigma_module_performance['total_heat_load_w']:.3f} W
+- Number of Unit Cells: {sigma_module_performance['num_unit_cells']}
+- SOAs per PIC: {sigma_module_performance['num_soas_per_pic']}
 """
             else:
                 sigma_content += f"- Error calculating module performance: {sigma_module_performance['error'] if sigma_module_performance else 'Not available'}\n"
