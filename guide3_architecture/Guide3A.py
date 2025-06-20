@@ -673,3 +673,259 @@ Performance Metrics:
             result['sigma_case'] = sigma_result
         
         return result 
+
+    def calculate_pic_power_consumption(self, current_density_kA_cm2: float, soa_active_length_um: float, soa_width_um: float):
+        """
+        Calculate PIC power consumption for a given current density.
+        
+        Args:
+            current_density_kA_cm2 (float): Current density in kA/cm²
+            soa_active_length_um (float): SOA active length in µm
+            soa_width_um (float): SOA width in µm
+            
+        Returns:
+            dict: PIC power consumption details
+        """
+        try:
+            # Create SOA instance for power calculations
+            soa = EuropaSOA(L_active_um=soa_active_length_um, W_um=soa_width_um, verbose=False)
+            
+            # Calculate current and voltage for this current density
+            current_ma = soa.calculate_current_mA_from_J(current_density_kA_cm2)
+            operating_voltage_v = soa.get_operating_voltage(current_ma)
+            electrical_power_mw = current_ma * operating_voltage_v
+            
+            # Calculate total PIC power consumption
+            # Number of SOAs per PIC is typically 20, but we'll use the actual number from module config
+            soas_per_pic = 20  # Standard SOAs per PIC
+            total_pic_power_mw = soas_per_pic * electrical_power_mw
+            
+            return {
+                'current_ma': current_ma,
+                'operating_voltage_v': operating_voltage_v,
+                'electrical_power_mw': electrical_power_mw,
+                'soas_per_pic': soas_per_pic,
+                'total_pic_power_mw': total_pic_power_mw
+            }
+        except Exception as e:
+            return {'error': str(e)}
+
+    def calculate_pic_efficiency_and_heat_load(self, target_pout_db: float, total_pic_power_mw: float, fibers_per_pic: int = 20):
+        """
+        Calculate PIC efficiency and heat load.
+        
+        Args:
+            target_pout_db (float): Target Pout in dBm
+            total_pic_power_mw (float): Total PIC power consumption in mW
+            fibers_per_pic (int): Number of fibers per PIC (default: 20)
+            
+        Returns:
+            dict: PIC efficiency and heat load details
+        """
+        try:
+            # Convert target Pout from dBm to mW
+            target_pout_mw = 10**(target_pout_db / 10.0)
+            
+            # Calculate total optical output power (Target Pout * number of fibers per PIC)
+            total_optical_power_mw = target_pout_mw * fibers_per_pic
+            
+            # Calculate PIC efficiency as percentage
+            pic_efficiency_percent = (total_optical_power_mw / total_pic_power_mw) * 100 if total_pic_power_mw > 0 else 0
+            
+            # Calculate heat load (Total PIC Power - Total Optical Power)
+            heat_load_mw = total_pic_power_mw - total_optical_power_mw
+            heat_load_w = heat_load_mw / 1000.0
+            
+            return {
+                'target_pout_mw': target_pout_mw,
+                'total_optical_power_mw': total_optical_power_mw,
+                'pic_efficiency_percent': pic_efficiency_percent,
+                'heat_load_mw': heat_load_mw,
+                'heat_load_w': heat_load_w
+            }
+        except Exception as e:
+            return {'error': str(e)}
+
+    def calculate_module_performance(self, pic_power_data: dict, pic_efficiency_data: dict, case_name: str = "Median"):
+        """
+        Calculate comprehensive module performance including all power components.
+        
+        Args:
+            pic_power_data (dict): PIC power consumption data
+            pic_efficiency_data (dict): PIC efficiency and heat load data
+            case_name (str): Case name ("Median" or "3σ")
+            
+        Returns:
+            dict: Comprehensive module performance details
+        """
+        try:
+            if 'error' in pic_power_data or 'error' in pic_efficiency_data:
+                return {'error': 'PIC performance data not available'}
+            
+            # PIC power consumption (from PIC performance)
+            pic_power_w = pic_power_data['total_pic_power_mw'] / 1000.0
+            
+            # Calculate digital core power (PIC power / digital core efficiency)
+            digital_core_efficiency = self.digital_core_efficiency / 100.0  # Convert to decimal
+            digital_core_power_w = pic_power_w / digital_core_efficiency
+            
+            # Calculate total electrical power (digital core + peripherals + MCU + misc)
+            total_electrical_power_w = (digital_core_power_w + 
+                                       self.driver_peripherals_power + 
+                                       self.mcu_power + 
+                                       self.misc_power)
+            
+            # Calculate VRM input power (total electrical power / VRM efficiency)
+            vrm_efficiency = self.vrm_efficiency / 100.0  # Convert to decimal
+            vrm_input_power_w = total_electrical_power_w / vrm_efficiency
+            
+            # Calculate TEC power based on heat load
+            heat_load_w = pic_efficiency_data['heat_load_w']
+            
+            # Use appropriate TEC COP based on case
+            tec_cop = self.tec_cop_3sigma if case_name == "3σ" else self.tec_cop_nominal
+            tec_power_w = heat_load_w / tec_cop if tec_cop > 0 else 0
+            
+            # Calculate TEC electrical power (TEC power / TEC power efficiency)
+            tec_power_efficiency = self.tec_power_efficiency / 100.0  # Convert to decimal
+            tec_electrical_power_w = tec_power_w / tec_power_efficiency if tec_power_efficiency > 0 else 0
+            
+            # Calculate total module power consumption
+            total_module_power_w = vrm_input_power_w + tec_electrical_power_w
+            
+            # Calculate module efficiency (optical power / total module power)
+            total_optical_power_w = pic_efficiency_data['total_optical_power_mw'] / 1000.0
+            module_efficiency_percent = (total_optical_power_w / total_module_power_w) * 100 if total_module_power_w > 0 else 0
+            
+            # Calculate total heat load (total module power - optical power)
+            total_heat_load_w = total_module_power_w - total_optical_power_w
+            
+            return {
+                'pic_power_w': pic_power_w,
+                'digital_core_power_w': digital_core_power_w,
+                'driver_peripherals_power_w': self.driver_peripherals_power,
+                'mcu_power_w': self.mcu_power,
+                'misc_power_w': self.misc_power,
+                'total_electrical_power_w': total_electrical_power_w,
+                'vrm_input_power_w': vrm_input_power_w,
+                'tec_power_w': tec_power_w,
+                'tec_electrical_power_w': tec_electrical_power_w,
+                'total_module_power_w': total_module_power_w,
+                'total_optical_power_w': total_optical_power_w,
+                'module_efficiency_percent': module_efficiency_percent,
+                'total_heat_load_w': total_heat_load_w,
+                'case_name': case_name
+            }
+        except Exception as e:
+            return {'error': str(e)}
+
+    def calculate_comprehensive_performance(self, num_wavelengths: int, target_pout_3sigma: float | None = None, 
+                                          soa_penalty_3sigma: float | None = None, wavelengths: list[float] | None = None,
+                                          soa_active_length_um: float | None = None, soa_width_um: float | None = None):
+        """
+        Calculate comprehensive performance including PIC and module performance for both median and 3σ cases.
+        
+        Args:
+            num_wavelengths (int): Number of wavelengths
+            target_pout_3sigma (float): Target Pout for 3σ case (optional)
+            soa_penalty_3sigma (float): SOA penalty for 3σ case (optional)
+            wavelengths (list[float]): List of wavelengths in nm (optional)
+            soa_active_length_um (float): SOA active length in µm (optional, uses default if None)
+            soa_width_um (float): SOA width in µm (optional, uses default if None)
+            
+        Returns:
+            dict: Comprehensive performance analysis for both cases
+        """
+        # Use default SOA parameters if not provided
+        if soa_active_length_um is None:
+            soa_active_length_um = self.soa_active_length_um
+        if soa_width_um is None:
+            soa_width_um = self.soa_width_um
+        
+        # Ensure SOA parameters are valid
+        if soa_active_length_um is None or soa_width_um is None:
+            raise ValueError("SOA parameters must be provided or available in the Guide3A instance")
+        
+        # Get target Pout calculations
+        target_pout_calculation = self.calculate_target_pout_all_wavelengths(
+            num_wavelengths=num_wavelengths,
+            target_pout_3sigma=target_pout_3sigma,
+            soa_penalty_3sigma=soa_penalty_3sigma
+        )
+        
+        # Get optimum current density calculations
+        optimum_current_calculation = self.estimate_optimum_soa_current_density(
+            num_wavelengths=num_wavelengths,
+            target_pout_3sigma=target_pout_3sigma,
+            soa_penalty_3sigma=soa_penalty_3sigma,
+            wavelengths=wavelengths
+        )
+        
+        # Calculate PIC power consumption for median case
+        median_pic_power = self.calculate_pic_power_consumption(
+            optimum_current_calculation['median_case']['current_density_kA_cm2'],
+            soa_active_length_um,
+            soa_width_um
+        )
+        
+        # Calculate PIC efficiency for median case
+        median_pic_efficiency = None
+        if 'error' not in median_pic_power and 'total_pic_power_mw' in median_pic_power:
+            median_pic_efficiency = self.calculate_pic_efficiency_and_heat_load(
+                target_pout_calculation['median_case']['total_target_pout_db'],
+                float(median_pic_power['total_pic_power_mw'])
+            )
+        
+        # Calculate module performance for median case
+        median_module_performance = None
+        if median_pic_efficiency and 'error' not in median_pic_efficiency:
+            median_module_performance = self.calculate_module_performance(
+                median_pic_power, median_pic_efficiency, "Median"
+            )
+        
+        # Initialize result structure
+        result = {
+            'num_wavelengths': num_wavelengths,
+            'wavelengths_nm': wavelengths,
+            'target_pout_calculation': target_pout_calculation,
+            'optimum_current_calculation': optimum_current_calculation,
+            'median_case': {
+                'pic_power': median_pic_power,
+                'pic_efficiency': median_pic_efficiency,
+                'module_performance': median_module_performance
+            }
+        }
+        
+        # Calculate for 3σ case if available
+        if (target_pout_calculation['sigma_case'] is not None and 
+            optimum_current_calculation['sigma_case'] is not None):
+            
+            # Calculate PIC power consumption for 3σ case
+            sigma_pic_power = self.calculate_pic_power_consumption(
+                optimum_current_calculation['sigma_case']['current_density_kA_cm2'],
+                soa_active_length_um,
+                soa_width_um
+            )
+            
+            # Calculate PIC efficiency for 3σ case
+            sigma_pic_efficiency = None
+            if 'error' not in sigma_pic_power and 'total_pic_power_mw' in sigma_pic_power:
+                sigma_pic_efficiency = self.calculate_pic_efficiency_and_heat_load(
+                    target_pout_calculation['sigma_case']['total_target_pout_db'],
+                    float(sigma_pic_power['total_pic_power_mw'])
+                )
+            
+            # Calculate module performance for 3σ case
+            sigma_module_performance = None
+            if sigma_pic_efficiency and 'error' not in sigma_pic_efficiency:
+                sigma_module_performance = self.calculate_module_performance(
+                    sigma_pic_power, sigma_pic_efficiency, "3σ"
+                )
+            
+            result['sigma_case'] = {
+                'pic_power': sigma_pic_power,
+                'pic_efficiency': sigma_pic_efficiency,
+                'module_performance': sigma_module_performance
+            }
+        
+        return result 

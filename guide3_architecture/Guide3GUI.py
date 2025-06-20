@@ -1859,173 +1859,28 @@ Note: Results are based on Guide3A SOA output requirements.
                 wavelengths=wavelengths
             )
             
-            # Calculate PIC power consumption for median and 3σ cases
-            def calculate_pic_power_consumption(current_density_kA_cm2, case_name):
-                """Calculate PIC power consumption for a given current density"""
-                try:
-                    # Create SOA instance for power calculations
-                    soa = EuropaSOA(L_active_um=l_active, W_um=w_um, verbose=False)
-                    
-                    # Calculate current and voltage for this current density
-                    current_ma = soa.calculate_current_mA_from_J(current_density_kA_cm2)
-                    operating_voltage_v = soa.get_operating_voltage(current_ma)
-                    electrical_power_mw = current_ma * operating_voltage_v
-                    
-                    # Calculate total PIC power consumption
-                    # Number of SOAs per PIC is typically 20, but we'll use the actual number from module config
-                    soas_per_pic = 20  # Standard SOAs per PIC
-                    total_pic_power_mw = soas_per_pic * electrical_power_mw
-                    
-                    return {
-                        'current_ma': current_ma,
-                        'operating_voltage_v': operating_voltage_v,
-                        'electrical_power_mw': electrical_power_mw,
-                        'soas_per_pic': soas_per_pic,
-                        'total_pic_power_mw': total_pic_power_mw
-                    }
-                except Exception as e:
-                    return {'error': str(e)}
-            
-            def calculate_pic_efficiency_and_heat_load(target_pout_db, total_pic_power_mw, fibers_per_pic):
-                """Calculate PIC efficiency and heat load"""
-                try:
-                    # Convert target Pout from dBm to mW
-                    target_pout_mw = 10**(target_pout_db / 10.0)
-                    
-                    # Calculate total optical output power (Target Pout * number of fibers per PIC)
-                    total_optical_power_mw = target_pout_mw * fibers_per_pic
-                    
-                    # Calculate PIC efficiency as percentage
-                    pic_efficiency_percent = (total_optical_power_mw / total_pic_power_mw) * 100
-                    
-                    # Calculate heat load (Total PIC Power - Total Optical Power)
-                    heat_load_mw = total_pic_power_mw - total_optical_power_mw
-                    heat_load_w = heat_load_mw / 1000.0
-                    
-                    return {
-                        'target_pout_mw': target_pout_mw,
-                        'total_optical_power_mw': total_optical_power_mw,
-                        'pic_efficiency_percent': pic_efficiency_percent,
-                        'heat_load_mw': heat_load_mw,
-                        'heat_load_w': heat_load_w
-                    }
-                except Exception as e:
-                    return {'error': str(e)}
-            
-            def calculate_module_performance(pic_power_data, pic_efficiency_data, case_name):
-                """Calculate comprehensive module performance including all power components"""
-                try:
-                    if 'error' in pic_power_data or 'error' in pic_efficiency_data:
-                        return {'error': 'PIC performance data not available'}
-                    
-                    # Get module parameters
-                    idac_voltage_overhead = float(self.guide3a_idac_voltage_overhead_var.get())
-                    ir_drop_nominal = float(self.guide3a_ir_drop_nominal_var.get())
-                    ir_drop_3sigma = float(self.guide3a_ir_drop_3sigma_var.get())
-                    vrm_efficiency = float(self.guide3a_vrm_efficiency_var.get()) / 100.0  # Convert to decimal
-                    tec_cop_nominal = float(self.guide3a_tec_cop_nominal_var.get())
-                    tec_cop_3sigma = float(self.guide3a_tec_cop_3sigma_var.get())
-                    tec_power_efficiency = float(self.guide3a_tec_power_efficiency_var.get()) / 100.0  # Convert to decimal
-                    driver_peripherals_power = float(self.guide3a_driver_peripherals_power_var.get())
-                    mcu_power = float(self.guide3a_mcu_power_var.get())
-                    misc_power = float(self.guide3a_misc_power_var.get())
-                    digital_core_efficiency = float(self.guide3a_digital_core_efficiency_var.get()) / 100.0  # Convert to decimal
-                    
-                    # PIC power consumption (from PIC performance)
-                    pic_power_w = pic_power_data['total_pic_power_mw'] / 1000.0
-                    
-                    # Calculate digital core power (PIC power / digital core efficiency)
-                    digital_core_power_w = pic_power_w / digital_core_efficiency
-                    
-                    # Calculate total electrical power (digital core + peripherals + MCU + misc)
-                    total_electrical_power_w = digital_core_power_w + driver_peripherals_power + mcu_power + misc_power
-                    
-                    # Calculate VRM input power (total electrical power / VRM efficiency)
-                    vrm_input_power_w = total_electrical_power_w / vrm_efficiency
-                    
-                    # Calculate TEC power based on heat load
-                    heat_load_w = pic_efficiency_data['heat_load_w']
-                    
-                    # Use appropriate TEC COP based on case
-                    tec_cop = tec_cop_3sigma if case_name == "3σ" else tec_cop_nominal
-                    tec_power_w = heat_load_w / tec_cop if tec_cop > 0 else 0
-                    
-                    # Calculate TEC electrical power (TEC power / TEC power efficiency)
-                    tec_electrical_power_w = tec_power_w / tec_power_efficiency if tec_power_efficiency > 0 else 0
-                    
-                    # Calculate total module power consumption
-                    total_module_power_w = vrm_input_power_w + tec_electrical_power_w
-                    
-                    # Calculate module efficiency (optical power / total module power)
-                    total_optical_power_w = pic_efficiency_data['total_optical_power_mw'] / 1000.0
-                    module_efficiency_percent = (total_optical_power_w / total_module_power_w) * 100 if total_module_power_w > 0 else 0
-                    
-                    # Calculate total heat load (total module power - optical power)
-                    total_heat_load_w = total_module_power_w - total_optical_power_w
-                    
-                    return {
-                        'pic_power_w': pic_power_w,
-                        'digital_core_power_w': digital_core_power_w,
-                        'driver_peripherals_power_w': driver_peripherals_power,
-                        'mcu_power_w': mcu_power,
-                        'misc_power_w': misc_power,
-                        'total_electrical_power_w': total_electrical_power_w,
-                        'vrm_input_power_w': vrm_input_power_w,
-                        'tec_power_w': tec_power_w,
-                        'tec_electrical_power_w': tec_electrical_power_w,
-                        'total_module_power_w': total_module_power_w,
-                        'total_optical_power_w': total_optical_power_w,
-                        'module_efficiency_percent': module_efficiency_percent,
-                        'total_heat_load_w': total_heat_load_w,
-                        'case_name': case_name
-                    }
-                except Exception as e:
-                    return {'error': str(e)}
-            
-            # Calculate power consumption for both cases
-            median_power = calculate_pic_power_consumption(
-                optimum_current_calculation['median_case']['current_density_kA_cm2'], 
-                "Median"
+            # Calculate comprehensive performance including PIC and module performance
+            comprehensive_performance = guide3a.calculate_comprehensive_performance(
+                num_wavelengths=num_wavelengths,
+                target_pout_3sigma=float(self.guide3a_target_pout_3sigma_var.get()),
+                soa_penalty_3sigma=float(self.guide3a_soa_penalty_3sigma_var.get()),
+                wavelengths=wavelengths,
+                soa_active_length_um=l_active,
+                soa_width_um=w_um
             )
             
-            sigma_power = None
-            if optimum_current_calculation['sigma_case'] is not None:
-                sigma_power = calculate_pic_power_consumption(
-                    optimum_current_calculation['sigma_case']['current_density_kA_cm2'], 
-                    "3σ"
-                )
+            # Extract results for easier access
+            median_pic_power = comprehensive_performance['median_case']['pic_power']
+            median_pic_efficiency = comprehensive_performance['median_case']['pic_efficiency']
+            median_module_performance = comprehensive_performance['median_case']['module_performance']
             
-            # Calculate efficiency and heat load for median case
-            fibers_per_pic = 20  # Standard fibers per PIC
-            median_efficiency = None
-            if 'error' not in median_power:
-                median_efficiency = calculate_pic_efficiency_and_heat_load(
-                    target_pout_calculation['median_case']['total_target_pout_db'],
-                    median_power['total_pic_power_mw'],
-                    fibers_per_pic
-                )
-            
-            # Calculate efficiency and heat load for 3σ case
-            sigma_efficiency = None
-            if sigma_power and 'error' not in sigma_power and target_pout_calculation['sigma_case'] is not None:
-                sigma_efficiency = calculate_pic_efficiency_and_heat_load(
-                    target_pout_calculation['sigma_case']['total_target_pout_db'],
-                    sigma_power['total_pic_power_mw'],
-                    fibers_per_pic
-                )
-            
-            # Calculate module performance for both cases
-            median_module_performance = None
-            if 'error' not in median_power and median_efficiency and 'error' not in median_efficiency:
-                median_module_performance = calculate_module_performance(
-                    median_power, median_efficiency, "Median"
-                )
-            
+            sigma_pic_power = None
+            sigma_pic_efficiency = None
             sigma_module_performance = None
-            if sigma_power and 'error' not in sigma_power and sigma_efficiency and 'error' not in sigma_efficiency:
-                sigma_module_performance = calculate_module_performance(
-                    sigma_power, sigma_efficiency, "3σ"
-                )
+            if 'sigma_case' in comprehensive_performance:
+                sigma_pic_power = comprehensive_performance['sigma_case']['pic_power']
+                sigma_pic_efficiency = comprehensive_performance['sigma_case']['pic_efficiency']
+                sigma_module_performance = comprehensive_performance['sigma_case']['module_performance']
             
             # Clear results
             self.guide3a_median_results_text.delete(1.0, tk.END)
@@ -2091,24 +1946,24 @@ SOA Current Analysis:
 PIC Performance:
 """
             
-            if 'error' not in median_power:
-                median_content += f"""- SOA Current: {median_power['current_ma']:.1f} mA
-- Operating Voltage: {median_power['operating_voltage_v']:.2f} V
-- Electrical Power per SOA: {median_power['electrical_power_mw']:.1f} mW
-- SOAs per PIC: {median_power['soas_per_pic']}
-- Total PIC Power Consumption: {median_power['total_pic_power_mw']:.1f} mW ({float(median_power['total_pic_power_mw'])/1000:.3f} W)
+            if 'error' not in median_pic_power:
+                median_content += f"""- SOA Current: {median_pic_power['current_ma']:.1f} mA
+- Operating Voltage: {median_pic_power['operating_voltage_v']:.2f} V
+- Electrical Power per SOA: {median_pic_power['electrical_power_mw']:.1f} mW
+- SOAs per PIC: {median_pic_power['soas_per_pic']}
+- Total PIC Power Consumption: {median_pic_power['total_pic_power_mw']:.1f} mW ({float(median_pic_power['total_pic_power_mw'])/1000:.3f} W)
 """
                 
-                if median_efficiency and 'error' not in median_efficiency:
-                    median_content += f"""- Target Pout per Fiber: {median_efficiency['target_pout_mw']:.3f} mW
-- Total Optical Power: {median_efficiency['total_optical_power_mw']:.1f} mW
-- PIC Efficiency: {median_efficiency['pic_efficiency_percent']:.2f}%
-- Heat Load: {median_efficiency['heat_load_w']:.3f} W
+                if median_pic_efficiency and 'error' not in median_pic_efficiency:
+                    median_content += f"""- Target Pout per Fiber: {median_pic_efficiency['target_pout_mw']:.3f} mW
+- Total Optical Power: {median_pic_efficiency['total_optical_power_mw']:.1f} mW
+- PIC Efficiency: {median_pic_efficiency['pic_efficiency_percent']:.2f}%
+- Heat Load: {median_pic_efficiency['heat_load_w']:.3f} W
 """
                 else:
-                    median_content += f"- Error calculating efficiency and heat load: {median_efficiency['error'] if median_efficiency else 'Not available'}\n"
+                    median_content += f"- Error calculating efficiency and heat load: {median_pic_efficiency['error'] if median_pic_efficiency else 'Not available'}\n"
             else:
-                median_content += f"- Error calculating power consumption: {median_power['error']}\n"
+                median_content += f"- Error calculating power consumption: {median_pic_power['error']}\n"
             
             # Add Module Performance section for median case
             median_content += f"""
@@ -2163,24 +2018,24 @@ Performance Parameters:
 PIC Performance:
 """
                 
-                if sigma_power and 'error' not in sigma_power:
-                    sigma_content += f"""- SOA Current: {sigma_power['current_ma']:.1f} mA
-- Operating Voltage: {sigma_power['operating_voltage_v']:.2f} V
-- Electrical Power per SOA: {sigma_power['electrical_power_mw']:.1f} mW
-- SOAs per PIC: {sigma_power['soas_per_pic']}
-- Total PIC Power Consumption: {sigma_power['total_pic_power_mw']:.1f} mW ({float(sigma_power['total_pic_power_mw'])/1000:.3f} W)
+                if sigma_pic_power and 'error' not in sigma_pic_power:
+                    sigma_content += f"""- SOA Current: {sigma_pic_power['current_ma']:.1f} mA
+- Operating Voltage: {sigma_pic_power['operating_voltage_v']:.2f} V
+- Electrical Power per SOA: {sigma_pic_power['electrical_power_mw']:.1f} mW
+- SOAs per PIC: {sigma_pic_power['soas_per_pic']}
+- Total PIC Power Consumption: {sigma_pic_power['total_pic_power_mw']:.1f} mW ({float(sigma_pic_power['total_pic_power_mw'])/1000:.3f} W)
 """
                     
-                    if sigma_efficiency and 'error' not in sigma_efficiency:
-                        sigma_content += f"""- Target Pout per Fiber: {sigma_efficiency['target_pout_mw']:.3f} mW
-- Total Optical Power: {sigma_efficiency['total_optical_power_mw']:.1f} mW
-- PIC Efficiency: {sigma_efficiency['pic_efficiency_percent']:.2f}%
-- Heat Load: {sigma_efficiency['heat_load_w']:.3f} W
+                    if sigma_pic_efficiency and 'error' not in sigma_pic_efficiency:
+                        sigma_content += f"""- Target Pout per Fiber: {sigma_pic_efficiency['target_pout_mw']:.3f} mW
+- Total Optical Power: {sigma_pic_efficiency['total_optical_power_mw']:.1f} mW
+- PIC Efficiency: {sigma_pic_efficiency['pic_efficiency_percent']:.2f}%
+- Heat Load: {sigma_pic_efficiency['heat_load_w']:.3f} W
 """
                     else:
-                        sigma_content += f"- Error calculating efficiency and heat load: {sigma_efficiency['error'] if sigma_efficiency else 'Not available'}\n"
+                        sigma_content += f"- Error calculating efficiency and heat load: {sigma_pic_efficiency['error'] if sigma_pic_efficiency else 'Not available'}\n"
                 else:
-                    sigma_content += f"- Error calculating power consumption: {sigma_power['error'] if sigma_power else 'Not available'}\n"
+                    sigma_content += f"- Error calculating power consumption: {sigma_pic_power['error'] if sigma_pic_power else 'Not available'}\n"
             else:
                 sigma_content += "SOA Current Analysis: Not available\n\nPIC Performance: Not available"
             
