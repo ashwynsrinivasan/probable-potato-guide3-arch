@@ -1028,9 +1028,11 @@ Summary:
 - Electrical Power per SOA: {electrical_power_mw:.1f} mW
 - Series Resistance: {soa.calculate_series_resistance_ohm():.2f} Ω
 
-PIC Performance:
+PIC Power Consumption:
 - SOAs per PIC: {soas_per_pic}
 - Total PIC Power Consumption: {total_pic_power_mw:.1f} mW ({total_pic_power_mw/1000:.3f} W)
+
+PIC Efficiency and Heat Load:
 - Target Pout per Fiber: {target_pout_per_fiber_mw:.3f} mW ({target_pout_db:.2f} dBm)
 - Total Optical Power: {total_optical_power_mw:.1f} mW
 - PIC Efficiency: {pic_efficiency_percent:.2f}%
@@ -1835,7 +1837,7 @@ SOA Current Analysis:
 - Average Saturation Power: {optimum_current_calculation['median_case']['avg_saturation_power_mw']:.2f} mW ({optimum_current_calculation['median_case']['avg_saturation_power_db']:.2f} dBm)
 - Power Margin: {optimum_current_calculation['median_case']['margin_db']:.2f} dB
 
-PIC Power Consumption:
+PIC Performance:
 """
             
             if 'error' not in median_power:
@@ -1844,8 +1846,6 @@ PIC Power Consumption:
 - Electrical Power per SOA: {median_power['electrical_power_mw']:.1f} mW
 - SOAs per PIC: {median_power['soas_per_pic']}
 - Total PIC Power Consumption: {median_power['total_pic_power_mw']:.1f} mW ({float(median_power['total_pic_power_mw'])/1000:.3f} W)
-
-PIC Efficiency and Heat Load:
 """
                 
                 if median_efficiency and 'error' not in median_efficiency:
@@ -1887,7 +1887,7 @@ Performance Parameters:
 - Average Saturation Power: {optimum_current_calculation['sigma_case']['avg_saturation_power_mw']:.2f} mW ({optimum_current_calculation['sigma_case']['avg_saturation_power_db']:.2f} dBm)
 - Power Margin: {optimum_current_calculation['sigma_case']['margin_db']:.2f} dB
 
-PIC Power Consumption:
+PIC Performance:
 """
                 
                 if sigma_power and 'error' not in sigma_power:
@@ -1896,8 +1896,6 @@ PIC Power Consumption:
 - Electrical Power per SOA: {sigma_power['electrical_power_mw']:.1f} mW
 - SOAs per PIC: {sigma_power['soas_per_pic']}
 - Total PIC Power Consumption: {sigma_power['total_pic_power_mw']:.1f} mW ({float(sigma_power['total_pic_power_mw'])/1000:.3f} W)
-
-PIC Efficiency and Heat Load:
 """
                     
                     if sigma_efficiency and 'error' not in sigma_efficiency:
@@ -1911,7 +1909,7 @@ PIC Efficiency and Heat Load:
                 else:
                     sigma_content += f"- Error calculating power consumption: {sigma_power['error'] if sigma_power else 'Not available'}\n"
             else:
-                sigma_content += "SOA Current Analysis: Not available\n\nPIC Power Consumption: Not available\n\nPIC Efficiency and Heat Load: Not available"
+                sigma_content += "SOA Current Analysis: Not available\n\nPIC Performance: Not available"
             
             # Display results in respective text widgets
             self.guide3a_median_results_text.insert(1.0, median_content)
