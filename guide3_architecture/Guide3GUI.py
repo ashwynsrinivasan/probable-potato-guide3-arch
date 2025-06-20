@@ -2123,14 +2123,16 @@ Performance Parameters:
 - Target Pout - Median: {float(self.guide3a_target_pout_var.get()):.2f} dBm
 - SOA Penalty - Median: {float(self.guide3a_soa_penalty_var.get()):.1f} dB
 
-Target Pout Calculation:
+Target Pout Calculation for SOA:
 - Base Target Pout: {target_pout_calculation['median_case']['base_target_pout_db']:.2f} dBm
 - SOA Penalty: {target_pout_calculation['median_case']['soa_penalty_db']:.1f} dB
-- Total Target Pout: {target_pout_calculation['median_case']['total_target_pout_db']:.2f} dBm
+- Wavelength Penalty (10*log10({num_wavelengths})): {target_pout_calculation['median_case']['wavelength_penalty_db']:.2f} dB
+- Loss from SOA to Output: {target_pout_calculation['median_case']['soa_to_output_loss_db']:.2f} dB
+- Target Pout of SOA: {target_pout_calculation['median_case']['soa_output_requirement_db']:.2f} dBm
+  (Calculated as: Base Target Pout + SOA Penalty + Wavelength Penalty + Loss from SOA to Output)
 
 SOA Current Analysis:
-- Target Pout of SOA: {target_pout_calculation['median_case']['total_target_pout_db']:.2f} dBm
-  (Calculated as: Base Target Pout {target_pout_calculation['median_case']['base_target_pout_db']:.2f} dBm + SOA Penalty {target_pout_calculation['median_case']['soa_penalty_db']:.1f} dB)
+- Target Pout of SOA: {target_pout_calculation['median_case']['soa_output_requirement_db']:.2f} dBm
 - Optimum Current Density: {optimum_current_calculation['median_case']['current_density_kA_cm2']:.2f} kA/cm²
 - Optimum Current: {optimum_current_calculation['median_case']['current_ma']:.1f} mA
 - Target Saturation Power: {optimum_current_calculation['median_case']['target_saturation_power_mw']:.2f} mW (2dB above target Pout)
@@ -2185,19 +2187,21 @@ Performance Parameters:
 """
             
             if target_pout_calculation['sigma_case'] is not None:
-                sigma_content += f"""Target Pout Calculation:
+                sigma_content += f"""Target Pout Calculation for SOA:
 - Base Target Pout: {target_pout_calculation['sigma_case']['base_target_pout_db']:.2f} dBm
 - SOA Penalty: {target_pout_calculation['sigma_case']['soa_penalty_db']:.1f} dB
-- Total Target Pout: {target_pout_calculation['sigma_case']['total_target_pout_db']:.2f} dBm
+- Wavelength Penalty (10*log10({num_wavelengths})): {target_pout_calculation['sigma_case']['wavelength_penalty_db']:.2f} dB
+- Loss from SOA to Output: {target_pout_calculation['sigma_case']['soa_to_output_loss_db']:.2f} dB
+- Target Pout of SOA: {target_pout_calculation['sigma_case']['soa_output_requirement_db']:.2f} dBm
+  (Calculated as: Base Target Pout + SOA Penalty + Wavelength Penalty + Loss from SOA to Output)
 
 """
             else:
-                sigma_content += "Target Pout Calculation: Not available\n\n"
+                sigma_content += "Target Pout Calculation for SOA: Not available\n\n"
             
             if optimum_current_calculation['sigma_case'] is not None:
                 sigma_content += f"""SOA Current Analysis:
-- Target Pout of SOA: {target_pout_calculation['sigma_case']['total_target_pout_db']:.2f} dBm
-  (Calculated as: Base Target Pout {target_pout_calculation['sigma_case']['base_target_pout_db']:.2f} dBm + SOA Penalty {target_pout_calculation['sigma_case']['soa_penalty_db']:.1f} dB)
+- Target Pout of SOA: {target_pout_calculation['sigma_case']['soa_output_requirement_db']:.2f} dBm
 - Optimum Current Density: {optimum_current_calculation['sigma_case']['current_density_kA_cm2']:.2f} kA/cm²
 - Optimum Current: {optimum_current_calculation['sigma_case']['current_ma']:.1f} mA
 - Target Saturation Power: {optimum_current_calculation['sigma_case']['target_saturation_power_mw']:.2f} mW (2dB above target Pout)

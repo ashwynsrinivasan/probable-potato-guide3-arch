@@ -570,9 +570,8 @@ Performance Metrics:
 
     def calculate_target_pout_after_soa(self, num_wavelengths: int, target_pout_3sigma: float | None = None, soa_penalty_3sigma: float | None = None):
         """
-        Calculate the target Pout required from each SOA based on losses.
-        Works backwards from the final target Pout to determine SOA output requirements.
-        Only includes output component losses (not input losses).
+        Calculate the target Pout required from each SOA based on the correct formula:
+        Base Target Pout + SOA Penalty + Wavelength-margin (10*log10(num_wavelengths)) + Loss from SOA to output of Guide3A
         
         Args:
             num_wavelengths (int): Number of wavelengths
@@ -585,70 +584,82 @@ Performance Metrics:
         if num_wavelengths <= 0:
             raise ValueError("Number of wavelengths must be positive")
         
-        # Get the total target Pout for all wavelengths
-        total_target_calc = self.calculate_target_pout_all_wavelengths(
-            num_wavelengths, target_pout_3sigma, soa_penalty_3sigma
-        )
-        
         # Get loss breakdown
         loss_breakdown = self.get_loss_breakdown()
         
-        # Calculate output-only losses (exclude input losses)
-        output_losses = loss_breakdown['io_losses']['io_out_loss']
-        
-        # Add optical connector output loss
-        output_losses += loss_breakdown['connector_losses']['connector_out_loss']
+        # Calculate total loss from SOA to output of Guide3A
+        # This includes ALL losses that occur after the SOA
+        soa_to_output_loss = 0.0
         
         # Add waveguide routing output loss
-        output_losses += loss_breakdown['waveguide_routing_losses']['wg_out_loss']
+        soa_to_output_loss += loss_breakdown['waveguide_routing_losses']['wg_out_loss']
         
-        # Add architecture-specific output losses
+        # Add optical connector output loss
+        soa_to_output_loss += loss_breakdown['connector_losses']['connector_out_loss']
+        
+        # Add I/O output loss
+        soa_to_output_loss += loss_breakdown['io_losses']['io_out_loss']
+        
+        # Add architecture-specific losses that occur after the SOA
         arch_losses = loss_breakdown['architecture_specific']
         if self.effective_architecture == 'psr':
-            output_losses += arch_losses.get('total_psr_loss', 0) / 2  # Only output PSR
-            output_losses += arch_losses.get('total_tap_loss', 0) / 2  # Only output tap
+            # In PSR architecture, SOA is before PSR, so add PSR loss
+            soa_to_output_loss += arch_losses.get('total_psr_loss', 0)
+            # Add tap loss if present
+            soa_to_output_loss += arch_losses.get('total_tap_loss', 0)
         elif self.effective_architecture == 'pol_control':
-            output_losses += arch_losses.get('total_psr_loss', 0) / 2  # Only output PSR
-            output_losses += arch_losses.get('total_phase_shifter_loss', 0) / 2  # Only output phase shifter
-            output_losses += arch_losses.get('total_coupler_loss', 0) / 2  # Only output coupler
+            # In pol_control architecture, SOA is before PSR, phase shifter, and coupler
+            soa_to_output_loss += arch_losses.get('total_psr_loss', 0)
+            soa_to_output_loss += arch_losses.get('total_phase_shifter_loss', 0)
+            soa_to_output_loss += arch_losses.get('total_coupler_loss', 0)
         elif self.effective_architecture == 'psrless':
-            # No additional output losses in PSRless architecture
-            pass
+            # In PSRless architecture, SOA is before tap components
+            soa_to_output_loss += arch_losses.get('total_tap_loss', 0)
         
-        # Calculate SOA output requirements
-        # SOA output = Final target + Output losses only (working backwards)
-        median_soa_output = total_target_calc['median_case']['total_target_pout_db'] + output_losses
+        # Calculate wavelength penalty: 10*log10(number_of_wavelengths)
+        wavelength_penalty = 10 * math.log10(num_wavelengths)
+        
+        # Calculate SOA output requirements using the correct formula:
+        # Base Target Pout + SOA Penalty + Wavelength-margin + Loss from SOA to output
+        median_soa_output = self.target_pout + self.soa_penalty + wavelength_penalty + soa_to_output_loss
         
         result = {
             'num_wavelengths': num_wavelengths,
-            'total_output_loss_db': output_losses,
+            'wavelength_penalty_db': wavelength_penalty,
+            'soa_to_output_loss_db': soa_to_output_loss,
             'median_case': {
-                'final_target_pout_db': total_target_calc['median_case']['total_target_pout_db'],
+                'base_target_pout_db': self.target_pout,
+                'soa_penalty_db': self.soa_penalty,
+                'wavelength_penalty_db': wavelength_penalty,
+                'soa_to_output_loss_db': soa_to_output_loss,
                 'soa_output_requirement_db': median_soa_output,
                 'loss_breakdown': {
-                    'io_out_loss': loss_breakdown['io_losses']['io_out_loss'],
-                    'connector_out_loss': loss_breakdown['connector_losses']['connector_out_loss'],
                     'wg_out_loss': loss_breakdown['waveguide_routing_losses']['wg_out_loss'],
-                    'architecture_output_loss': output_losses - loss_breakdown['io_losses']['io_out_loss'] - loss_breakdown['connector_losses']['connector_out_loss'] - loss_breakdown['waveguide_routing_losses']['wg_out_loss']
+                    'connector_out_loss': loss_breakdown['connector_losses']['connector_out_loss'],
+                    'io_out_loss': loss_breakdown['io_losses']['io_out_loss'],
+                    'architecture_loss': soa_to_output_loss - loss_breakdown['waveguide_routing_losses']['wg_out_loss'] - loss_breakdown['connector_losses']['connector_out_loss'] - loss_breakdown['io_losses']['io_out_loss']
                 }
             }
         }
         
         # Add 3σ case if available
-        if total_target_calc['sigma_case'] is not None:
-            sigma_soa_output = total_target_calc['sigma_case']['total_target_pout_db'] + output_losses
+        if target_pout_3sigma is not None and soa_penalty_3sigma is not None:
+            sigma_soa_output = target_pout_3sigma + soa_penalty_3sigma + wavelength_penalty + soa_to_output_loss
             result['sigma_case'] = {
-                'final_target_pout_db': total_target_calc['sigma_case']['total_target_pout_db'],
+                'base_target_pout_db': target_pout_3sigma,
+                'soa_penalty_db': soa_penalty_3sigma,
+                'wavelength_penalty_db': wavelength_penalty,
+                'soa_to_output_loss_db': soa_to_output_loss,
                 'soa_output_requirement_db': sigma_soa_output,
                 'loss_breakdown': {
-                    'io_out_loss': loss_breakdown['io_losses']['io_out_loss'],
-                    'connector_out_loss': loss_breakdown['connector_losses']['connector_out_loss'],
                     'wg_out_loss': loss_breakdown['waveguide_routing_losses']['wg_out_loss'],
-                    'architecture_output_loss': output_losses - loss_breakdown['io_losses']['io_out_loss'] - loss_breakdown['connector_losses']['connector_out_loss'] - loss_breakdown['waveguide_routing_losses']['wg_out_loss']
+                    'connector_out_loss': loss_breakdown['connector_losses']['connector_out_loss'],
+                    'io_out_loss': loss_breakdown['io_losses']['io_out_loss'],
+                    'architecture_loss': soa_to_output_loss - loss_breakdown['waveguide_routing_losses']['wg_out_loss'] - loss_breakdown['connector_losses']['connector_out_loss'] - loss_breakdown['io_losses']['io_out_loss']
                 }
             }
         
-        return result 
+        return result
 
     def estimate_optimum_soa_current_density(self, num_wavelengths: int, target_pout_3sigma: float | None = None, soa_penalty_3sigma: float | None = None, wavelengths: list[float] | None = None):
         """
