@@ -72,6 +72,19 @@ class Guide3A:
         self.target_pout = kwargs.get('target_pout', -2.75)  # dBm
         self.soa_penalty = kwargs.get('soa_penalty', 2)  # dB
         
+        # Module parameters for power and efficiency calculations
+        self.idac_voltage_overhead = kwargs.get('idac_voltage_overhead', 0.4)  # V
+        self.ir_drop_nominal = kwargs.get('ir_drop_nominal', 0.1)  # V
+        self.ir_drop_3sigma = kwargs.get('ir_drop_3sigma', 0.2)  # V
+        self.vrm_efficiency = kwargs.get('vrm_efficiency', 80)  # %
+        self.tec_cop_nominal = kwargs.get('tec_cop_nominal', 2)
+        self.tec_cop_3sigma = kwargs.get('tec_cop_3sigma', 4)
+        self.tec_power_efficiency = kwargs.get('tec_power_efficiency', 80)  # %
+        self.driver_peripherals_power = kwargs.get('driver_peripherals_power', 1.0)  # W
+        self.mcu_power = kwargs.get('mcu_power', 0.5)  # W
+        self.misc_power = kwargs.get('misc_power', 0.25)  # W
+        self.digital_core_efficiency = kwargs.get('digital_core_efficiency', 80)  # %
+        
         # SOA parameters (for psr architecture)
         self.soa_width_um = kwargs.get('soa_width_um', 2.0)
         self.soa_active_length_um = kwargs.get('soa_active_length_um', 790)
@@ -116,6 +129,28 @@ class Guide3A:
         # Check SOA penalty range
         if self.soa_penalty < 0:
             raise ValueError(f"SOA penalty must be non-negative: {self.soa_penalty}")
+        
+        # Validate module parameters
+        if self.idac_voltage_overhead < 0:
+            raise ValueError(f"IDAC voltage overhead cannot be negative: {self.idac_voltage_overhead}")
+        
+        if self.ir_drop_nominal < 0 or self.ir_drop_3sigma < 0:
+            raise ValueError(f"IR drop values cannot be negative: nominal={self.ir_drop_nominal}, 3σ={self.ir_drop_3sigma}")
+        
+        if not (0 <= self.vrm_efficiency <= 100):
+            raise ValueError(f"VRM efficiency must be between 0 and 100%: {self.vrm_efficiency}")
+        
+        if self.tec_cop_nominal <= 0 or self.tec_cop_3sigma <= 0:
+            raise ValueError(f"TEC COP values must be positive: nominal={self.tec_cop_nominal}, 3σ={self.tec_cop_3sigma}")
+        
+        if not (0 <= self.tec_power_efficiency <= 100):
+            raise ValueError(f"TEC power efficiency must be between 0 and 100%: {self.tec_power_efficiency}")
+        
+        if self.driver_peripherals_power < 0 or self.mcu_power < 0 or self.misc_power < 0:
+            raise ValueError(f"Power consumption values cannot be negative: driver={self.driver_peripherals_power}, mcu={self.mcu_power}, misc={self.misc_power}")
+        
+        if not (0 <= self.digital_core_efficiency <= 100):
+            raise ValueError(f"Digital core efficiency must be between 0 and 100%: {self.digital_core_efficiency}")
     
     def get_total_loss(self):
         """
@@ -272,6 +307,27 @@ class Guide3A:
             'num_soas': self.num_soas,
             'num_pics': self.num_pics,
             'num_unit_cells': self.num_unit_cells
+        }
+    
+    def get_module_parameters(self):
+        """
+        Get module parameters for power and efficiency calculations.
+        
+        Returns:
+            dict: Module parameters
+        """
+        return {
+            'idac_voltage_overhead': self.idac_voltage_overhead,
+            'ir_drop_nominal': self.ir_drop_nominal,
+            'ir_drop_3sigma': self.ir_drop_3sigma,
+            'vrm_efficiency': self.vrm_efficiency,
+            'tec_cop_nominal': self.tec_cop_nominal,
+            'tec_cop_3sigma': self.tec_cop_3sigma,
+            'tec_power_efficiency': self.tec_power_efficiency,
+            'driver_peripherals_power': self.driver_peripherals_power,
+            'mcu_power': self.mcu_power,
+            'misc_power': self.misc_power,
+            'digital_core_efficiency': self.digital_core_efficiency
         }
     
     def set_custom_losses(self, **kwargs):

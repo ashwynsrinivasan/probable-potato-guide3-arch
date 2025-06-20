@@ -1042,7 +1042,19 @@ class Guide3GUI(tk.Tk):
                 coupler_loss=coupler_loss,
                 target_pout=target_pout,
                 soa_penalty=soa_penalty,
-                soa_penalty_3sigma=soa_penalty_3sigma
+                soa_penalty_3sigma=soa_penalty_3sigma,
+                # Module parameters
+                idac_voltage_overhead=float(self.guide3a_idac_voltage_overhead_var.get()),
+                ir_drop_nominal=float(self.guide3a_ir_drop_nominal_var.get()),
+                ir_drop_3sigma=float(self.guide3a_ir_drop_3sigma_var.get()),
+                vrm_efficiency=float(self.guide3a_vrm_efficiency_var.get()),
+                tec_cop_nominal=float(self.guide3a_tec_cop_nominal_var.get()),
+                tec_cop_3sigma=float(self.guide3a_tec_cop_3sigma_var.get()),
+                tec_power_efficiency=float(self.guide3a_tec_power_efficiency_var.get()),
+                driver_peripherals_power=float(self.guide3a_driver_peripherals_power_var.get()),
+                mcu_power=float(self.guide3a_mcu_power_var.get()),
+                misc_power=float(self.guide3a_misc_power_var.get()),
+                digital_core_efficiency=float(self.guide3a_digital_core_efficiency_var.get())
             )
             
             # Get SOA output requirements
@@ -1319,7 +1331,19 @@ Note: Results are based on Guide3A SOA output requirements.
                 coupler_loss=coupler_loss,
                 target_pout=target_pout,
                 soa_penalty=soa_penalty,
-                soa_penalty_3sigma=soa_penalty_3sigma
+                soa_penalty_3sigma=soa_penalty_3sigma,
+                # Module parameters
+                idac_voltage_overhead=float(self.guide3a_idac_voltage_overhead_var.get()),
+                ir_drop_nominal=float(self.guide3a_ir_drop_nominal_var.get()),
+                ir_drop_3sigma=float(self.guide3a_ir_drop_3sigma_var.get()),
+                vrm_efficiency=float(self.guide3a_vrm_efficiency_var.get()),
+                tec_cop_nominal=float(self.guide3a_tec_cop_nominal_var.get()),
+                tec_cop_3sigma=float(self.guide3a_tec_cop_3sigma_var.get()),
+                tec_power_efficiency=float(self.guide3a_tec_power_efficiency_var.get()),
+                driver_peripherals_power=float(self.guide3a_driver_peripherals_power_var.get()),
+                mcu_power=float(self.guide3a_mcu_power_var.get()),
+                misc_power=float(self.guide3a_misc_power_var.get()),
+                digital_core_efficiency=float(self.guide3a_digital_core_efficiency_var.get())
             )
             
             # Get SOA output requirements
@@ -1799,7 +1823,19 @@ Note: Results are based on Guide3A SOA output requirements.
                 coupler_loss=float(self.guide3a_coupler_loss_var.get()),
                 target_pout=float(self.guide3a_target_pout_var.get()),
                 soa_penalty=float(self.guide3a_soa_penalty_var.get()),
-                soa_penalty_3sigma=float(self.guide3a_soa_penalty_3sigma_var.get())
+                soa_penalty_3sigma=float(self.guide3a_soa_penalty_3sigma_var.get()),
+                # Module parameters
+                idac_voltage_overhead=float(self.guide3a_idac_voltage_overhead_var.get()),
+                ir_drop_nominal=float(self.guide3a_ir_drop_nominal_var.get()),
+                ir_drop_3sigma=float(self.guide3a_ir_drop_3sigma_var.get()),
+                vrm_efficiency=float(self.guide3a_vrm_efficiency_var.get()),
+                tec_cop_nominal=float(self.guide3a_tec_cop_nominal_var.get()),
+                tec_cop_3sigma=float(self.guide3a_tec_cop_3sigma_var.get()),
+                tec_power_efficiency=float(self.guide3a_tec_power_efficiency_var.get()),
+                driver_peripherals_power=float(self.guide3a_driver_peripherals_power_var.get()),
+                mcu_power=float(self.guide3a_mcu_power_var.get()),
+                misc_power=float(self.guide3a_misc_power_var.get()),
+                digital_core_efficiency=float(self.guide3a_digital_core_efficiency_var.get())
             )
             
             # Get comprehensive analysis
@@ -2111,99 +2147,19 @@ PIC Performance:
                 coupler_loss=float(self.guide3a_coupler_loss_var.get()),
                 target_pout=float(self.guide3a_target_pout_var.get()),
                 soa_penalty=float(self.guide3a_soa_penalty_var.get()),
-                soa_penalty_3sigma=float(self.guide3a_soa_penalty_3sigma_var.get())
-            )
-            
-            # Calculate SOA output requirements
-            num_wavelengths = int(self.num_wavelengths_var.get())
-            soa_output_calculation = guide3a.calculate_target_pout_after_soa(
-                num_wavelengths=num_wavelengths,
-                target_pout_3sigma=float(self.guide3a_target_pout_3sigma_var.get()),
-                soa_penalty_3sigma=float(self.guide3a_soa_penalty_3sigma_var.get())
-            )
-            
-            # Calculate optimum current density
-            wavelengths = []
-            for i in range(num_wavelengths):
-                try:
-                    wavelength = float(self.wavelength_vars[i].get())
-                    wavelengths.append(wavelength)
-                except ValueError:
-                    wavelengths.append(1310.0)  # Default if invalid
-            
-            optimum_current_calculation = guide3a.estimate_optimum_soa_current_density(
-                num_wavelengths=num_wavelengths,
-                target_pout_3sigma=float(self.guide3a_target_pout_3sigma_var.get()),
                 soa_penalty_3sigma=float(self.guide3a_soa_penalty_3sigma_var.get()),
-                wavelengths=wavelengths
-            )
-            
-            # Transfer median case SOA output requirement to EuropaSOA target Pout
-            median_soa_output = soa_output_calculation['median_case']['soa_output_requirement_db']
-            self.pout_median_var.set(f"{median_soa_output:.2f}")
-            
-            # Transfer median case current density to EuropaSOA
-            median_current_density = optimum_current_calculation['median_case']['current_density_kA_cm2']
-            self.j_density_median_var.set(f"{median_current_density:.2f}")
-            
-            # Transfer 3σ case SOA output requirement to EuropaSOA target Pout
-            sigma_soa_output = None
-            sigma_current_density = None
-            if soa_output_calculation['sigma_case'] is not None:
-                sigma_soa_output = soa_output_calculation['sigma_case']['soa_output_requirement_db']
-                self.pout_sigma_var.set(f"{sigma_soa_output:.2f}")
-            
-            # Transfer 3σ case current density to EuropaSOA
-            if optimum_current_calculation['sigma_case'] is not None:
-                sigma_current_density = optimum_current_calculation['sigma_case']['current_density_kA_cm2']
-                self.j_density_sigma_var.set(f"{sigma_current_density:.2f}")
-            
-            # Switch to EuropaSOA tab
-            for child in self.winfo_children():
-                if isinstance(child, ttk.Frame):
-                    for grandchild in child.winfo_children():
-                        if isinstance(grandchild, ttk.Notebook):
-                            grandchild.select(1)  # Switch to EuropaSOA tab (index 1)
-                            break
-                    break
-            
-            # Automatically update EuropaSOA results with new inputs
-            self.calculate_soa()
-            
-            # Create transfer message
-            transfer_msg = f"SOA output requirements and current density transferred to EuropaSOA tab:\n"
-            transfer_msg += f"Median: {median_soa_output:.2f} dBm, {median_current_density:.2f} kA/cm²\n"
-            if sigma_soa_output is not None and sigma_current_density is not None:
-                transfer_msg += f"3σ: {sigma_soa_output:.2f} dBm, {sigma_current_density:.2f} kA/cm²"
-            else:
-                transfer_msg += f"3σ: Not available"
-            
-            messagebox.showinfo("Transfer Complete", transfer_msg)
-            
-        except Exception as e:
-            messagebox.showerror("Transfer Error", f"Failed to transfer results: {e}")
-
-    def use_guide3a_results(self):
-        """Use the calculated SOA output requirements and current density from Guide3A as target Pout in EuropaSOA"""
-        try:
-            # Get current Guide3A parameters
-            from Guide3A import Guide3A
-            
-            # Create Guide3A instance with current parameters
-            guide3a = Guide3A(
-                pic_architecture=self.guide3a_architecture_var.get(),
-                fiber_input_type=self.fiber_input_type_var.get(),
-                num_fibers=int(self.num_fibers_var.get()),
-                operating_wavelength_nm=float(self.guide3a_wavelength_var.get()),
-                temperature_c=float(self.guide3a_temp_var.get()),
-                io_in_loss=float(self.guide3a_io_in_loss_var.get()),
-                io_out_loss=float(self.guide3a_io_out_loss_var.get()),
-                psr_loss=float(self.guide3a_psr_loss_var.get()),
-                phase_shifter_loss=float(self.guide3a_phase_shifter_loss_var.get()),
-                coupler_loss=float(self.guide3a_coupler_loss_var.get()),
-                target_pout=float(self.guide3a_target_pout_var.get()),
-                soa_penalty=float(self.guide3a_soa_penalty_var.get()),
-                soa_penalty_3sigma=float(self.guide3a_soa_penalty_3sigma_var.get())
+                # Module parameters
+                idac_voltage_overhead=float(self.guide3a_idac_voltage_overhead_var.get()),
+                ir_drop_nominal=float(self.guide3a_ir_drop_nominal_var.get()),
+                ir_drop_3sigma=float(self.guide3a_ir_drop_3sigma_var.get()),
+                vrm_efficiency=float(self.guide3a_vrm_efficiency_var.get()),
+                tec_cop_nominal=float(self.guide3a_tec_cop_nominal_var.get()),
+                tec_cop_3sigma=float(self.guide3a_tec_cop_3sigma_var.get()),
+                tec_power_efficiency=float(self.guide3a_tec_power_efficiency_var.get()),
+                driver_peripherals_power=float(self.guide3a_driver_peripherals_power_var.get()),
+                mcu_power=float(self.guide3a_mcu_power_var.get()),
+                misc_power=float(self.guide3a_misc_power_var.get()),
+                digital_core_efficiency=float(self.guide3a_digital_core_efficiency_var.get())
             )
             
             # Calculate SOA output requirements
@@ -2277,6 +2233,96 @@ PIC Performance:
             # Update combobox values to show psr and pol_control
             self.guide3a_architecture_combo['values'] = ["psr", "pol_control"]
             self.guide3a_architecture_combo['state'] = "readonly"
+
+    def use_guide3a_results(self):
+        """Use the calculated SOA output requirements and current density from Guide3A as target Pout in EuropaSOA"""
+        try:
+            # Get current Guide3A parameters
+            from Guide3A import Guide3A
+            
+            # Create Guide3A instance with current parameters
+            guide3a = Guide3A(
+                pic_architecture=self.guide3a_architecture_var.get(),
+                fiber_input_type=self.fiber_input_type_var.get(),
+                num_fibers=int(self.num_fibers_var.get()),
+                operating_wavelength_nm=float(self.guide3a_wavelength_var.get()),
+                temperature_c=float(self.guide3a_temp_var.get()),
+                io_in_loss=float(self.guide3a_io_in_loss_var.get()),
+                io_out_loss=float(self.guide3a_io_out_loss_var.get()),
+                psr_loss=float(self.guide3a_psr_loss_var.get()),
+                phase_shifter_loss=float(self.guide3a_phase_shifter_loss_var.get()),
+                coupler_loss=float(self.guide3a_coupler_loss_var.get()),
+                target_pout=float(self.guide3a_target_pout_var.get()),
+                soa_penalty=float(self.guide3a_soa_penalty_var.get()),
+                soa_penalty_3sigma=float(self.guide3a_soa_penalty_3sigma_var.get()),
+                # Module parameters
+                idac_voltage_overhead=float(self.guide3a_idac_voltage_overhead_var.get()),
+                ir_drop_nominal=float(self.guide3a_ir_drop_nominal_var.get()),
+                ir_drop_3sigma=float(self.guide3a_ir_drop_3sigma_var.get()),
+                vrm_efficiency=float(self.guide3a_vrm_efficiency_var.get()),
+                tec_cop_nominal=float(self.guide3a_tec_cop_nominal_var.get()),
+                tec_cop_3sigma=float(self.guide3a_tec_cop_3sigma_var.get()),
+                tec_power_efficiency=float(self.guide3a_tec_power_efficiency_var.get()),
+                driver_peripherals_power=float(self.guide3a_driver_peripherals_power_var.get()),
+                mcu_power=float(self.guide3a_mcu_power_var.get()),
+                misc_power=float(self.guide3a_misc_power_var.get()),
+                digital_core_efficiency=float(self.guide3a_digital_core_efficiency_var.get())
+            )
+            
+            # Calculate SOA output requirements
+            num_wavelengths = int(self.num_wavelengths_var.get())
+            soa_output_calculation = guide3a.calculate_target_pout_after_soa(
+                num_wavelengths=num_wavelengths,
+                target_pout_3sigma=float(self.guide3a_target_pout_3sigma_var.get()),
+                soa_penalty_3sigma=float(self.guide3a_soa_penalty_3sigma_var.get())
+            )
+            
+            # Calculate optimum current density
+            wavelengths = []
+            for i in range(num_wavelengths):
+                try:
+                    wavelength = float(self.wavelength_vars[i].get())
+                    wavelengths.append(wavelength)
+                except ValueError:
+                    wavelengths.append(1310.0)  # Default if invalid
+            
+            optimum_current_calculation = guide3a.estimate_optimum_soa_current_density(
+                num_wavelengths=num_wavelengths,
+                target_pout_3sigma=float(self.guide3a_target_pout_3sigma_var.get()),
+                soa_penalty_3sigma=float(self.guide3a_soa_penalty_3sigma_var.get()),
+                wavelengths=wavelengths
+            )
+            
+            # Update EuropaSOA target Pout values
+            median_soa_output = soa_output_calculation['median_case']['soa_output_requirement_db']
+            self.pout_median_var.set(f"{median_soa_output:.2f}")
+            
+            # Update EuropaSOA current density values
+            median_current_density = optimum_current_calculation['median_case']['current_density_kA_cm2']
+            self.j_density_median_var.set(f"{median_current_density:.2f}")
+            
+            sigma_soa_output = None
+            sigma_current_density = None
+            if soa_output_calculation['sigma_case'] is not None:
+                sigma_soa_output = soa_output_calculation['sigma_case']['soa_output_requirement_db']
+                self.pout_sigma_var.set(f"{sigma_soa_output:.2f}")
+            
+            if optimum_current_calculation['sigma_case'] is not None:
+                sigma_current_density = optimum_current_calculation['sigma_case']['current_density_kA_cm2']
+                self.j_density_sigma_var.set(f"{sigma_current_density:.2f}")
+            
+            # Create update message
+            update_msg = f"EuropaSOA target Pout and current density values updated:\n"
+            update_msg += f"Median: {median_soa_output:.2f} dBm, {median_current_density:.2f} kA/cm²\n"
+            if sigma_soa_output is not None and sigma_current_density is not None:
+                update_msg += f"3σ: {sigma_soa_output:.2f} dBm, {sigma_current_density:.2f} kA/cm²"
+            else:
+                update_msg += f"3σ: Not available"
+            
+            messagebox.showinfo("Updated", update_msg)
+            
+        except Exception as e:
+            messagebox.showerror("Update Error", f"Failed to update EuropaSOA values: {e}")
 
 if __name__ == "__main__":
     app = Guide3GUI()
