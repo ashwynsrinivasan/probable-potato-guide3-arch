@@ -328,6 +328,20 @@ class Guide3GUI(tk.Tk):
         self.guide3a_wg_out_loss_entry = ttk.Entry(waveguide_loss_frame, textvariable=self.guide3a_wg_out_loss_var, width=15)
         self.guide3a_wg_out_loss_entry.pack(anchor='w', padx=5, pady=(0, 5))
         
+        # Tap Loss Group
+        tap_loss_frame = ttk.LabelFrame(loss_components_frame, text="Tap Loss", padding="5")
+        tap_loss_frame.pack(fill=tk.X, pady=2)
+        
+        ttk.Label(tap_loss_frame, text="Input Loss:").pack(pady=(2, 0), anchor='w')
+        self.guide3a_tap_in_loss_var = tk.StringVar(value="0.3")
+        self.guide3a_tap_in_loss_entry = ttk.Entry(tap_loss_frame, textvariable=self.guide3a_tap_in_loss_var, width=15)
+        self.guide3a_tap_in_loss_entry.pack(anchor='w', padx=5, pady=(0, 5))
+        
+        ttk.Label(tap_loss_frame, text="Output Loss:").pack(pady=(2, 0), anchor='w')
+        self.guide3a_tap_out_loss_var = tk.StringVar(value="0.3")
+        self.guide3a_tap_out_loss_entry = ttk.Entry(tap_loss_frame, textvariable=self.guide3a_tap_out_loss_var, width=15)
+        self.guide3a_tap_out_loss_entry.pack(anchor='w', padx=5, pady=(0, 5))
+        
         # PSR Loss
         ttk.Label(loss_components_frame, text="PSR Loss:").pack(pady=(5, 2), anchor='w')
         self.guide3a_psr_loss_var = tk.StringVar(value="0.5")
@@ -1181,6 +1195,8 @@ class Guide3GUI(tk.Tk):
                 connector_out_loss=float(self.guide3a_connector_out_loss_var.get()),
                 wg_in_loss=float(self.guide3a_wg_in_loss_var.get()),
                 wg_out_loss=float(self.guide3a_wg_out_loss_var.get()),
+                tap_in_loss=float(self.guide3a_tap_in_loss_var.get()),
+                tap_out_loss=float(self.guide3a_tap_out_loss_var.get()),
                 psr_loss=psr_loss,
                 phase_shifter_loss=phase_shifter_loss,
                 coupler_loss=coupler_loss,
@@ -1474,6 +1490,8 @@ Note: Results are based on Guide3A SOA output requirements.
                 connector_out_loss=float(self.guide3a_connector_out_loss_var.get()),
                 wg_in_loss=float(self.guide3a_wg_in_loss_var.get()),
                 wg_out_loss=float(self.guide3a_wg_out_loss_var.get()),
+                tap_in_loss=float(self.guide3a_tap_in_loss_var.get()),
+                tap_out_loss=float(self.guide3a_tap_out_loss_var.get()),
                 psr_loss=psr_loss,
                 phase_shifter_loss=phase_shifter_loss,
                 coupler_loss=coupler_loss,
@@ -1970,6 +1988,8 @@ Note: Results are based on Guide3A SOA output requirements.
                 connector_out_loss=float(self.guide3a_connector_out_loss_var.get()),
                 wg_in_loss=float(self.guide3a_wg_in_loss_var.get()),
                 wg_out_loss=float(self.guide3a_wg_out_loss_var.get()),
+                tap_in_loss=float(self.guide3a_tap_in_loss_var.get()),
+                tap_out_loss=float(self.guide3a_tap_out_loss_var.get()),
                 psr_loss=float(self.guide3a_psr_loss_var.get()),
                 phase_shifter_loss=float(self.guide3a_phase_shifter_loss_var.get()),
                 coupler_loss=float(self.guide3a_coupler_loss_var.get()),
@@ -2078,9 +2098,26 @@ Loss Breakdown:
 - Waveguide Input Loss: {loss_breakdown['waveguide_routing_losses']['wg_in_loss']:.1f} dB
 - Waveguide Output Loss: {loss_breakdown['waveguide_routing_losses']['wg_out_loss']:.1f} dB
 - Total Waveguide Routing Loss: {loss_breakdown['waveguide_routing_losses']['total_wg_routing_loss']:.1f} dB
-- Total System Loss: {loss_breakdown['total_loss']:.1f} dB
-
 """
+            
+            # Add architecture-specific losses
+            if 'architecture_specific' in loss_breakdown and loss_breakdown['architecture_specific']:
+                arch_specific = loss_breakdown['architecture_specific']
+                if 'tap_in_loss' in arch_specific:
+                    common_header += f"- Tap Input Loss: {arch_specific['tap_in_loss']:.1f} dB\n"
+                    common_header += f"- Tap Output Loss: {arch_specific['tap_out_loss']:.1f} dB\n"
+                    common_header += f"- Total Tap Loss: {arch_specific['total_tap_loss']:.1f} dB\n"
+                if 'psr_loss' in arch_specific:
+                    common_header += f"- PSR Loss: {arch_specific['psr_loss']:.1f} dB\n"
+                    common_header += f"- Total PSR Loss: {arch_specific['total_psr_loss']:.1f} dB\n"
+                if 'phase_shifter_loss' in arch_specific:
+                    common_header += f"- Phase Shifter Loss: {arch_specific['phase_shifter_loss']:.1f} dB\n"
+                    common_header += f"- Total Phase Shifter Loss: {arch_specific['total_phase_shifter_loss']:.1f} dB\n"
+                if 'coupler_loss' in arch_specific:
+                    common_header += f"- Coupler Loss: {arch_specific['coupler_loss']:.1f} dB\n"
+                    common_header += f"- Total Coupler Loss: {arch_specific['total_coupler_loss']:.1f} dB\n"
+            
+            common_header += f"- Total System Loss: {loss_breakdown['total_loss']:.1f} dB\n\n"
             
             # Create median case content
             median_content = common_header + f"""MEDIAN LOSS CASE ANALYSIS
@@ -2232,6 +2269,8 @@ Module Performance:
         self.guide3a_connector_out_loss_var.set("0.25")
         self.guide3a_wg_in_loss_var.set("0.25")
         self.guide3a_wg_out_loss_var.set("0.25")
+        self.guide3a_tap_in_loss_var.set("0.3")
+        self.guide3a_tap_out_loss_var.set("0.3")
         self.guide3a_psr_loss_var.set("0.5")
         self.guide3a_phase_shifter_loss_var.set("0.5")
         self.guide3a_coupler_loss_var.set("0.2")
@@ -2277,6 +2316,8 @@ Module Performance:
                 connector_out_loss=float(self.guide3a_connector_out_loss_var.get()),
                 wg_in_loss=float(self.guide3a_wg_in_loss_var.get()),
                 wg_out_loss=float(self.guide3a_wg_out_loss_var.get()),
+                tap_in_loss=float(self.guide3a_tap_in_loss_var.get()),
+                tap_out_loss=float(self.guide3a_tap_out_loss_var.get()),
                 psr_loss=float(self.guide3a_psr_loss_var.get()),
                 phase_shifter_loss=float(self.guide3a_phase_shifter_loss_var.get()),
                 coupler_loss=float(self.guide3a_coupler_loss_var.get()),
@@ -2418,6 +2459,8 @@ Module Performance:
                 connector_out_loss=float(self.guide3a_connector_out_loss_var.get()),
                 wg_in_loss=float(self.guide3a_wg_in_loss_var.get()),
                 wg_out_loss=float(self.guide3a_wg_out_loss_var.get()),
+                tap_in_loss=float(self.guide3a_tap_in_loss_var.get()),
+                tap_out_loss=float(self.guide3a_tap_out_loss_var.get()),
                 psr_loss=float(self.guide3a_psr_loss_var.get()),
                 phase_shifter_loss=float(self.guide3a_phase_shifter_loss_var.get()),
                 coupler_loss=float(self.guide3a_coupler_loss_var.get()),

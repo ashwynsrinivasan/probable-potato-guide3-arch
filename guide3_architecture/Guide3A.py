@@ -74,6 +74,10 @@ class Guide3A:
         self.wg_in_loss = kwargs.get('wg_in_loss', 0.25)
         self.wg_out_loss = kwargs.get('wg_out_loss', 0.25)
         
+        # Tap components (0.3dB each)
+        self.tap_in_loss = kwargs.get('tap_in_loss', 0.3)
+        self.tap_out_loss = kwargs.get('tap_out_loss', 0.3)
+        
         # Performance parameters
         self.operating_wavelength_nm = kwargs.get('operating_wavelength_nm', 1310)
         self.temperature_c = kwargs.get('temperature_c', 25)
@@ -117,7 +121,8 @@ class Guide3A:
             self.io_in_loss, self.io_out_loss, self.psr_loss, 
             self.phase_shifter_loss, self.coupler_loss,
             self.connector_in_loss, self.connector_out_loss,
-            self.wg_in_loss, self.wg_out_loss
+            self.wg_in_loss, self.wg_out_loss,
+            self.tap_in_loss, self.tap_out_loss
         ]
         
         for param in loss_params:
@@ -181,7 +186,7 @@ class Guide3A:
         # Add architecture-specific losses
         if self.effective_architecture == 'psr':
             total_loss += 2 * self.psr_loss  # psr_in and psr_out
-            total_loss += 0.6  # tap_in and tap_out (0.3 dB each)
+            total_loss += self.tap_in_loss + self.tap_out_loss  # tap_in and tap_out
             
         elif self.effective_architecture == 'pol_control':
             total_loss += 2 * self.psr_loss  # psr_in and psr_out
@@ -190,7 +195,7 @@ class Guide3A:
             
         elif self.effective_architecture == 'psrless':
             # PSRless architecture has tap components
-            total_loss += 0.6  # tap_in and tap_out (0.3 dB each)
+            total_loss += self.tap_in_loss + self.tap_out_loss  # tap_in and tap_out
         
         return total_loss
     
@@ -225,9 +230,9 @@ class Guide3A:
             breakdown['architecture_specific'] = {
                 'psr_loss': self.psr_loss,
                 'total_psr_loss': 2 * self.psr_loss,
-                'tap_in_loss': 0.3,
-                'tap_out_loss': 0.3,
-                'total_tap_loss': 0.6
+                'tap_in_loss': self.tap_in_loss,
+                'tap_out_loss': self.tap_out_loss,
+                'total_tap_loss': self.tap_in_loss + self.tap_out_loss
             }
             
         elif self.effective_architecture == 'pol_control':
@@ -242,9 +247,9 @@ class Guide3A:
             
         elif self.effective_architecture == 'psrless':
             breakdown['architecture_specific'] = {
-                'tap_in_loss': 0.3,
-                'tap_out_loss': 0.3,
-                'total_tap_loss': 0.6
+                'tap_in_loss': self.tap_in_loss,
+                'tap_out_loss': self.tap_out_loss,
+                'total_tap_loss': self.tap_in_loss + self.tap_out_loss
             }
         
         breakdown['total_loss'] = self.get_total_loss()
