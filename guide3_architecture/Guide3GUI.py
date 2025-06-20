@@ -99,6 +99,7 @@ class Guide3GUI(tk.Tk):
         defaults_frame.pack(side=tk.LEFT, padx=(0, 10))
         ttk.Button(defaults_frame, text="Load Defaults", command=self.load_defaults).pack(side=tk.LEFT, padx=5, pady=2)
         ttk.Button(defaults_frame, text="Update Defaults", command=self.update_defaults).pack(side=tk.LEFT, padx=5, pady=2)
+        ttk.Button(defaults_frame, text="Export All Config", command=self.export_all_config).pack(side=tk.LEFT, padx=5, pady=2)
         # Configuration Files (right)
         config_file_frame = ttk.LabelFrame(config_management_frame, text="Configuration Files", padding="10")
         config_file_frame.pack(side=tk.LEFT)
@@ -887,54 +888,7 @@ class Guide3GUI(tk.Tk):
             )
             
             if filename:
-                config = {
-                    'device_parameters': {
-                        'width_um': float(self.w_um_var.get()),
-                        'active_length_um': float(self.l_active_var.get())
-                    },
-                    'operation_parameters': {
-                        'pout_median_dbm': float(self.pout_median_var.get()),
-                        'pout_sigma_dbm': float(self.pout_sigma_var.get()),
-                        'j_density_median': float(self.j_density_median_var.get()),
-                        'j_density_sigma': float(self.j_density_sigma_var.get()),
-                        'temperature_c': float(self.temp_var.get())
-                    },
-                    'wavelength_config': {
-                        'num_wavelengths': int(self.num_wavelengths_var.get()),
-                        'wavelengths': [wv.get().strip() for wv in self.wavelength_vars if wv.get().strip()]
-                    },
-                    'link_loss_modes': {
-                        'median_loss': self.link_loss_modes["median-loss"].get(),
-                        'sigma_loss': self.link_loss_modes["3-sigma-loss"].get()
-                    },
-                    'guide3a_parameters': {
-                        'fiber_input_type': self.fiber_input_type_var.get(),
-                        'pic_architecture': self.guide3a_architecture_var.get(),
-                        'num_fibers': int(self.num_fibers_var.get()),
-                        'operating_wavelength': float(self.guide3a_wavelength_var.get()),
-                        'temperature': float(self.guide3a_temp_var.get()),
-                        'io_in_loss': float(self.guide3a_io_in_loss_var.get()),
-                        'io_out_loss': float(self.guide3a_io_out_loss_var.get()),
-                        'psr_loss': float(self.guide3a_psr_loss_var.get()),
-                        'phase_shifter_loss': float(self.guide3a_phase_shifter_loss_var.get()),
-                        'coupler_loss': float(self.guide3a_coupler_loss_var.get()),
-                        'target_pout': float(self.guide3a_target_pout_var.get()),
-                        'soa_penalty': float(self.guide3a_soa_penalty_var.get()),
-                        'target_pout_3sigma': float(self.guide3a_target_pout_3sigma_var.get()),
-                        'soa_penalty_3sigma': float(self.guide3a_soa_penalty_3sigma_var.get()),
-                        'idac_voltage_overhead': float(self.guide3a_idac_voltage_overhead_var.get()),
-                        'ir_drop_nominal': float(self.guide3a_ir_drop_nominal_var.get()),
-                        'ir_drop_3sigma': float(self.guide3a_ir_drop_3sigma_var.get()),
-                        'vrm_efficiency': float(self.guide3a_vrm_efficiency_var.get()),
-                        'tec_cop_nominal': float(self.guide3a_tec_cop_nominal_var.get()),
-                        'tec_cop_3sigma': float(self.guide3a_tec_cop_3sigma_var.get()),
-                        'tec_power_efficiency': float(self.guide3a_tec_power_efficiency_var.get()),
-                        'driver_peripherals_power': float(self.guide3a_driver_peripherals_power_var.get()),
-                        'mcu_power': float(self.guide3a_mcu_power_var.get()),
-                        'misc_power': float(self.guide3a_misc_power_var.get()),
-                        'digital_core_efficiency': float(self.guide3a_digital_core_efficiency_var.get())
-                    }
-                }
+                config = self._get_current_config()
                 
                 with open(filename, 'w') as file:
                     yaml.dump(config, file, default_flow_style=False, indent=2)
@@ -943,6 +897,96 @@ class Guide3GUI(tk.Tk):
                 
         except Exception as e:
             messagebox.showerror("Error", f"Failed to save configuration: {e}")
+
+    def export_all_config(self):
+        """Export comprehensive configuration from all inputs in both Guide3A and EuropaSOA tabs"""
+        try:
+            # First, save all current values as defaults
+            self.update_defaults()
+            
+            # Then export the complete configuration
+            filename = filedialog.asksaveasfilename(
+                title="Export All Configuration",
+                defaultextension=".yaml",
+                filetypes=[("YAML files", "*.yaml"), ("YML files", "*.yml"), ("All files", "*.*")]
+            )
+            
+            if filename:
+                config = self._get_current_config()
+                
+                with open(filename, 'w') as file:
+                    yaml.dump(config, file, default_flow_style=False, indent=2)
+                
+                messagebox.showinfo("Export Complete", 
+                                  f"All configuration exported to {filename}\n"
+                                  f"Current values have also been saved as new defaults.")
+                
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to export configuration: {e}")
+
+    def _get_current_config(self):
+        """Get comprehensive configuration from all inputs in both tabs"""
+        try:
+            # Get wavelength values
+            wavelengths = []
+            for i, wavelength_var in enumerate(self.wavelength_vars):
+                wavelength_value = wavelength_var.get().strip()
+                if wavelength_value:
+                    wavelengths.append(wavelength_value)
+            
+            config = {
+                'device_parameters': {
+                    'width_um': float(self.w_um_var.get()),
+                    'active_length_um': float(self.l_active_var.get())
+                },
+                'operation_parameters': {
+                    'pout_median_dbm': float(self.pout_median_var.get()),
+                    'pout_sigma_dbm': float(self.pout_sigma_var.get()),
+                    'j_density_median': float(self.j_density_median_var.get()),
+                    'j_density_sigma': float(self.j_density_sigma_var.get()),
+                    'temperature_c': float(self.temp_var.get())
+                },
+                'wavelength_config': {
+                    'num_wavelengths': int(self.num_wavelengths_var.get()),
+                    'wavelengths': wavelengths
+                },
+                'link_loss_modes': {
+                    'median_loss': self.link_loss_modes["median-loss"].get(),
+                    'sigma_loss': self.link_loss_modes["3-sigma-loss"].get()
+                },
+                'guide3a_parameters': {
+                    'fiber_input_type': self.fiber_input_type_var.get(),
+                    'pic_architecture': self.guide3a_architecture_var.get(),
+                    'num_fibers': int(self.num_fibers_var.get()),
+                    'operating_wavelength': float(self.guide3a_wavelength_var.get()),
+                    'temperature': float(self.guide3a_temp_var.get()),
+                    'io_in_loss': float(self.guide3a_io_in_loss_var.get()),
+                    'io_out_loss': float(self.guide3a_io_out_loss_var.get()),
+                    'psr_loss': float(self.guide3a_psr_loss_var.get()),
+                    'phase_shifter_loss': float(self.guide3a_phase_shifter_loss_var.get()),
+                    'coupler_loss': float(self.guide3a_coupler_loss_var.get()),
+                    'target_pout': float(self.guide3a_target_pout_var.get()),
+                    'soa_penalty': float(self.guide3a_soa_penalty_var.get()),
+                    'target_pout_3sigma': float(self.guide3a_target_pout_3sigma_var.get()),
+                    'soa_penalty_3sigma': float(self.guide3a_soa_penalty_3sigma_var.get()),
+                    'idac_voltage_overhead': float(self.guide3a_idac_voltage_overhead_var.get()),
+                    'ir_drop_nominal': float(self.guide3a_ir_drop_nominal_var.get()),
+                    'ir_drop_3sigma': float(self.guide3a_ir_drop_3sigma_var.get()),
+                    'vrm_efficiency': float(self.guide3a_vrm_efficiency_var.get()),
+                    'tec_cop_nominal': float(self.guide3a_tec_cop_nominal_var.get()),
+                    'tec_cop_3sigma': float(self.guide3a_tec_cop_3sigma_var.get()),
+                    'tec_power_efficiency': float(self.guide3a_tec_power_efficiency_var.get()),
+                    'driver_peripherals_power': float(self.guide3a_driver_peripherals_power_var.get()),
+                    'mcu_power': float(self.guide3a_mcu_power_var.get()),
+                    'misc_power': float(self.guide3a_misc_power_var.get()),
+                    'digital_core_efficiency': float(self.guide3a_digital_core_efficiency_var.get())
+                }
+            }
+            
+            return config
+            
+        except Exception as e:
+            raise Exception(f"Error getting current configuration: {e}")
 
     def create_wavelength_table(self, wavelengths, results_data, case_name):
         """Create a formatted table for wavelength analysis results"""
