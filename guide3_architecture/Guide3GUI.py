@@ -998,13 +998,45 @@ Wavelength Analysis:
         
         results += "=" * 80 + "\n"
         
+        # Calculate PIC Power Consumption and related metrics
+        operating_voltage_v = soa.get_operating_voltage(current_ma)
+        electrical_power_mw = current_ma * operating_voltage_v
+        
+        # PIC Power Consumption (assuming 20 SOAs per PIC)
+        soas_per_pic = 20
+        total_pic_power_mw = soas_per_pic * electrical_power_mw
+        
+        # Target Pout per fiber (in mW)
+        target_pout_per_fiber_mw = target_pout_mw
+        
+        # Total optical power (assuming 20 fibers per PIC)
+        fibers_per_pic = 20
+        total_optical_power_mw = target_pout_per_fiber_mw * fibers_per_pic
+        
+        # PIC Efficiency calculation
+        pic_efficiency_percent = (total_optical_power_mw / total_pic_power_mw) * 100 if total_pic_power_mw > 0 else 0
+        
+        # Heat Load calculation
+        heat_load_mw = total_pic_power_mw - total_optical_power_mw
+        heat_load_w = heat_load_mw / 1000.0
+        
         # Add summary information
         results += f"""
 Summary:
 - Operating Current: {current_ma:.1f} mA
-- Operating Voltage: {soa.get_operating_voltage(current_ma):.2f} V
-- Electrical Power: {current_ma * soa.get_operating_voltage(current_ma):.1f} mW
+- Operating Voltage: {operating_voltage_v:.2f} V
+- Electrical Power per SOA: {electrical_power_mw:.1f} mW
 - Series Resistance: {soa.calculate_series_resistance_ohm():.2f} Ω
+
+PIC Power Consumption:
+- SOAs per PIC: {soas_per_pic}
+- Total PIC Power Consumption: {total_pic_power_mw:.1f} mW ({total_pic_power_mw/1000:.3f} W)
+
+PIC Efficiency and Heat Load:
+- Target Pout per Fiber: {target_pout_per_fiber_mw:.3f} mW ({target_pout_db:.2f} dBm)
+- Total Optical Power: {total_optical_power_mw:.1f} mW
+- PIC Efficiency: {pic_efficiency_percent:.2f}%
+- Heat Load: {heat_load_w:.3f} W
 
 Note: Results are based on Guide3A SOA output requirements.
 """
