@@ -189,8 +189,8 @@ class Guide3A:
             total_loss += 2 * self.coupler_loss  # coupler_in_1, coupler_in_2
             
         elif self.effective_architecture == 'psrless':
-            # PSRless architecture has no PSR components
-            pass
+            # PSRless architecture has tap components
+            total_loss += 0.6  # tap_in and tap_out (0.3 dB each)
         
         return total_loss
     
@@ -242,7 +242,9 @@ class Guide3A:
             
         elif self.effective_architecture == 'psrless':
             breakdown['architecture_specific'] = {
-                'note': 'No PSR components in PSRless architecture'
+                'tap_in_loss': 0.3,
+                'tap_out_loss': 0.3,
+                'total_tap_loss': 0.6
             }
         
         breakdown['total_loss'] = self.get_total_loss()
@@ -294,7 +296,7 @@ class Guide3A:
         descriptions = {
             'psr': "Polarization Splitter and Rotator (PSR) - Handles polarization diversity",
             'pol_control': "Polarization Control - Advanced polarization management with phase shifters",
-            'psrless': "PSRless - Simplified architecture without PSR components"
+            'psrless': "PSRless - Simplified architecture with tap components for monitoring"
         }
         return descriptions.get(self.effective_architecture, "Unknown architecture")
     
@@ -314,7 +316,7 @@ class Guide3A:
         architecture_components = {
             'psr': {'psr_devices': 2},
             'pol_control': {'psr_devices': 2, 'phase_shifters': 2, 'couplers': 2},
-            'psrless': {}
+            'psrless': {'tap_devices': 2}
         }
         
         components = base_components.copy()
