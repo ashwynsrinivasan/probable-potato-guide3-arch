@@ -66,6 +66,14 @@ class Guide3A:
         self.phase_shifter_loss = kwargs.get('phase_shifter_loss', 0.5)
         self.coupler_loss = kwargs.get('coupler_loss', 0.2)
         
+        # New optical connector components (0.25dB each)
+        self.connector_in_loss = kwargs.get('connector_in_loss', 0.25)
+        self.connector_out_loss = kwargs.get('connector_out_loss', 0.25)
+        
+        # New waveguide routing components (0.25dB each)
+        self.wg_in_loss = kwargs.get('wg_in_loss', 0.25)
+        self.wg_out_loss = kwargs.get('wg_out_loss', 0.25)
+        
         # Performance parameters
         self.operating_wavelength_nm = kwargs.get('operating_wavelength_nm', 1310)
         self.temperature_c = kwargs.get('temperature_c', 25)
@@ -107,7 +115,9 @@ class Guide3A:
         # Check for negative loss values
         loss_params = [
             self.io_in_loss, self.io_out_loss, self.psr_loss, 
-            self.phase_shifter_loss, self.coupler_loss
+            self.phase_shifter_loss, self.coupler_loss,
+            self.connector_in_loss, self.connector_out_loss,
+            self.wg_in_loss, self.wg_out_loss
         ]
         
         for param in loss_params:
@@ -159,7 +169,14 @@ class Guide3A:
         Returns:
             float: Total loss in dB
         """
-        total_loss = self.io_in_loss + self.io_out_loss
+        # Start with optical connector losses (present in all architectures)
+        total_loss = self.connector_in_loss + self.connector_out_loss
+        
+        # Add I/O losses
+        total_loss += self.io_in_loss + self.io_out_loss
+        
+        # Add waveguide routing losses (present in all architectures)
+        total_loss += self.wg_in_loss + self.wg_out_loss
         
         # Add architecture-specific losses
         if self.effective_architecture == 'psr':
@@ -185,10 +202,20 @@ class Guide3A:
             dict: Detailed loss breakdown
         """
         breakdown = {
+            'connector_losses': {
+                'connector_in_loss': self.connector_in_loss,
+                'connector_out_loss': self.connector_out_loss,
+                'total_connector_loss': self.connector_in_loss + self.connector_out_loss
+            },
             'io_losses': {
                 'io_in_loss': self.io_in_loss,
                 'io_out_loss': self.io_out_loss,
                 'total_io_loss': self.io_in_loss + self.io_out_loss
+            },
+            'waveguide_routing_losses': {
+                'wg_in_loss': self.wg_in_loss,
+                'wg_out_loss': self.wg_out_loss,
+                'total_wg_routing_loss': self.wg_in_loss + self.wg_out_loss
             },
             'architecture_specific': {}
         }
@@ -279,7 +306,9 @@ class Guide3A:
             dict: Component counts
         """
         base_components = {
-            'io_ports': 2
+            'io_ports': 2,
+            'optical_connectors': 2,  # connector_in and connector_out
+            'waveguide_routing': 2    # wg_in and wg_out
         }
         
         architecture_components = {
@@ -380,9 +409,15 @@ Component Count:
         
         report += f"""
 Loss Breakdown:
+  - Optical Connector Input Loss: {breakdown['connector_losses']['connector_in_loss']:.1f} dB
+  - Optical Connector Output Loss: {breakdown['connector_losses']['connector_out_loss']:.1f} dB
+  - Total Optical Connector Loss: {breakdown['connector_losses']['total_connector_loss']:.1f} dB
   - I/O Input Loss: {breakdown['io_losses']['io_in_loss']:.1f} dB
   - I/O Output Loss: {breakdown['io_losses']['io_out_loss']:.1f} dB
   - Total I/O Loss: {breakdown['io_losses']['total_io_loss']:.1f} dB
+  - Waveguide Routing Input Loss: {breakdown['waveguide_routing_losses']['wg_in_loss']:.1f} dB
+  - Waveguide Routing Output Loss: {breakdown['waveguide_routing_losses']['wg_out_loss']:.1f} dB
+  - Total Waveguide Routing Loss: {breakdown['waveguide_routing_losses']['total_wg_routing_loss']:.1f} dB
 """
         
         # Add architecture-specific losses
@@ -513,6 +548,12 @@ Performance Metrics:
         # Calculate output-only losses (exclude input losses)
         output_losses = loss_breakdown['io_losses']['io_out_loss']
         
+        # Add optical connector output loss
+        output_losses += loss_breakdown['connector_losses']['connector_out_loss']
+        
+        # Add waveguide routing output loss
+        output_losses += loss_breakdown['waveguide_routing_losses']['wg_out_loss']
+        
         # Add architecture-specific output losses
         arch_losses = loss_breakdown['architecture_specific']
         if self.effective_architecture == 'psr':
@@ -538,7 +579,9 @@ Performance Metrics:
                 'soa_output_requirement_db': median_soa_output,
                 'loss_breakdown': {
                     'io_out_loss': loss_breakdown['io_losses']['io_out_loss'],
-                    'architecture_output_loss': output_losses - loss_breakdown['io_losses']['io_out_loss']
+                    'connector_out_loss': loss_breakdown['connector_losses']['connector_out_loss'],
+                    'wg_out_loss': loss_breakdown['waveguide_routing_losses']['wg_out_loss'],
+                    'architecture_output_loss': output_losses - loss_breakdown['io_losses']['io_out_loss'] - loss_breakdown['connector_losses']['connector_out_loss'] - loss_breakdown['waveguide_routing_losses']['wg_out_loss']
                 }
             }
         }
@@ -551,7 +594,9 @@ Performance Metrics:
                 'soa_output_requirement_db': sigma_soa_output,
                 'loss_breakdown': {
                     'io_out_loss': loss_breakdown['io_losses']['io_out_loss'],
-                    'architecture_output_loss': output_losses - loss_breakdown['io_losses']['io_out_loss']
+                    'connector_out_loss': loss_breakdown['connector_losses']['connector_out_loss'],
+                    'wg_out_loss': loss_breakdown['waveguide_routing_losses']['wg_out_loss'],
+                    'architecture_output_loss': output_losses - loss_breakdown['io_losses']['io_out_loss'] - loss_breakdown['connector_losses']['connector_out_loss'] - loss_breakdown['waveguide_routing_losses']['wg_out_loss']
                 }
             }
         
