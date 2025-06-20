@@ -12,8 +12,8 @@ class Guide3GUI(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Guide3 GUI")
-        # Set window size to 1500x900 px and make it resizable
-        self.geometry("1500x900")
+        # Set window size to 1500x1400 px and make it resizable
+        self.geometry("1500x1400")
         self.resizable(True, True)
         self.link_loss_modes = {"median-loss": tk.BooleanVar(), "3-sigma-loss": tk.BooleanVar()}
         # Initialize default wavelengths
@@ -146,7 +146,7 @@ class Guide3GUI(tk.Tk):
         input_container.place(relx=0, rely=0, relwidth=0.4, relheight=1.0)
         
         # Create canvas with both scrollbars for input parameters
-        input_canvas = tk.Canvas(input_container, width=400, height=600)
+        input_canvas = tk.Canvas(input_container, width=600, height=1200)
         input_v_scrollbar = ttk.Scrollbar(input_container, orient="vertical", command=input_canvas.yview)
         input_h_scrollbar = ttk.Scrollbar(input_container, orient="horizontal", command=input_canvas.xview)
         input_scrollable_frame = ttk.Frame(input_canvas)
@@ -308,7 +308,7 @@ class Guide3GUI(tk.Tk):
         guide3a_median_canvas = tk.Canvas(median_results_frame)
         guide3a_median_v_scrollbar = ttk.Scrollbar(median_results_frame, orient="vertical", command=guide3a_median_canvas.yview)
         
-        self.guide3a_median_results_text = tk.Text(guide3a_median_canvas, wrap=tk.WORD)
+        self.guide3a_median_results_text = tk.Text(guide3a_median_canvas, wrap=tk.WORD, height=40)
         self.guide3a_median_results_text.configure(yscrollcommand=guide3a_median_v_scrollbar.set)
         
         guide3a_median_canvas.create_window((0, 0), window=self.guide3a_median_results_text, anchor="nw")
@@ -326,7 +326,7 @@ class Guide3GUI(tk.Tk):
         guide3a_sigma_canvas = tk.Canvas(sigma_results_frame)
         guide3a_sigma_v_scrollbar = ttk.Scrollbar(sigma_results_frame, orient="vertical", command=guide3a_sigma_canvas.yview)
         
-        self.guide3a_sigma_results_text = tk.Text(guide3a_sigma_canvas, wrap=tk.WORD)
+        self.guide3a_sigma_results_text = tk.Text(guide3a_sigma_canvas, wrap=tk.WORD, height=40)
         self.guide3a_sigma_results_text.configure(yscrollcommand=guide3a_sigma_v_scrollbar.set)
         
         guide3a_sigma_canvas.create_window((0, 0), window=self.guide3a_sigma_results_text, anchor="nw")
@@ -342,6 +342,22 @@ class Guide3GUI(tk.Tk):
         
         def configure_guide3a_sigma_scroll_region(event):
             guide3a_sigma_canvas.configure(scrollregion=guide3a_sigma_canvas.bbox("all"))
+        
+        def resize_guide3a_median_canvas(event):
+            # Update the text widget width to match canvas width
+            guide3a_median_canvas.itemconfig(1, width=event.width-10)  # Subtract some padding
+        
+        def resize_guide3a_sigma_canvas(event):
+            # Update the text widget width to match canvas width
+            guide3a_sigma_canvas.itemconfig(1, width=event.width-10)  # Subtract some padding
+        
+        # Create text windows
+        guide3a_median_canvas.create_window((0, 0), window=self.guide3a_median_results_text, anchor="nw")
+        guide3a_sigma_canvas.create_window((0, 0), window=self.guide3a_sigma_results_text, anchor="nw")
+        
+        # Bind resize events
+        guide3a_median_canvas.bind("<Configure>", resize_guide3a_median_canvas)
+        guide3a_sigma_canvas.bind("<Configure>", resize_guide3a_sigma_canvas)
         
         self.guide3a_median_results_text.bind("<Configure>", configure_guide3a_median_scroll_region)
         self.guide3a_sigma_results_text.bind("<Configure>", configure_guide3a_sigma_scroll_region)
@@ -359,7 +375,7 @@ class Guide3GUI(tk.Tk):
         input_container.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
         
         # Create canvas with both scrollbars for input parameters
-        input_canvas = tk.Canvas(input_container, width=400, height=600)
+        input_canvas = tk.Canvas(input_container, width=600, height=1200)
         input_v_scrollbar = ttk.Scrollbar(input_container, orient="vertical", command=input_canvas.yview)
         input_h_scrollbar = ttk.Scrollbar(input_container, orient="horizontal", command=input_canvas.xview)
         input_scrollable_frame = ttk.Frame(input_canvas)
@@ -518,7 +534,7 @@ class Guide3GUI(tk.Tk):
         median_canvas = tk.Canvas(median_results_frame)
         median_v_scrollbar = ttk.Scrollbar(median_results_frame, orient="vertical", command=median_canvas.yview)
         
-        self.median_results_text = tk.Text(median_canvas, wrap=tk.WORD)
+        self.median_results_text = tk.Text(median_canvas, wrap=tk.WORD, height=40)
         self.median_results_text.configure(yscrollcommand=median_v_scrollbar.set)
         
         median_canvas.create_window((0, 0), window=self.median_results_text, anchor="nw")
@@ -539,7 +555,7 @@ class Guide3GUI(tk.Tk):
         sigma_canvas = tk.Canvas(sigma_results_frame)
         sigma_v_scrollbar = ttk.Scrollbar(sigma_results_frame, orient="vertical", command=sigma_canvas.yview)
         
-        self.sigma_results_text = tk.Text(sigma_canvas, wrap=tk.WORD)
+        self.sigma_results_text = tk.Text(sigma_canvas, wrap=tk.WORD, height=40)
         self.sigma_results_text.configure(yscrollcommand=sigma_v_scrollbar.set)
         
         sigma_canvas.create_window((0, 0), window=self.sigma_results_text, anchor="nw")
@@ -558,6 +574,18 @@ class Guide3GUI(tk.Tk):
         
         def configure_soa_sigma_scroll_region(event):
             sigma_canvas.configure(scrollregion=sigma_canvas.bbox("all"))
+        
+        def resize_soa_median_canvas(event):
+            # Update the text widget width to match canvas width
+            median_canvas.itemconfig(1, width=event.width-10)  # Subtract some padding
+        
+        def resize_soa_sigma_canvas(event):
+            # Update the text widget width to match canvas width
+            sigma_canvas.itemconfig(1, width=event.width-10)  # Subtract some padding
+        
+        # Bind resize events
+        median_canvas.bind("<Configure>", resize_soa_median_canvas)
+        sigma_canvas.bind("<Configure>", resize_soa_sigma_canvas)
         
         self.median_results_text.bind("<Configure>", configure_soa_median_scroll_region)
         self.sigma_results_text.bind("<Configure>", configure_soa_sigma_scroll_region)
@@ -1615,41 +1643,108 @@ Note: Results are based on Guide3A SOA output requirements.
             # Get comprehensive analysis
             total_loss = guide3a.get_total_loss()
             loss_breakdown = guide3a.get_loss_breakdown()
-            performance_metrics = guide3a.get_performance_metrics()
             component_count = guide3a.get_component_count()
-            architecture_description = guide3a.get_architecture_description()
             module_config = guide3a.get_module_configuration()
             
             # Calculate target Pout for all wavelengths
-            num_wavelengths = int(self.num_wavelengths_var.get())
             target_pout_calculation = guide3a.calculate_target_pout_all_wavelengths(
                 num_wavelengths=num_wavelengths,
                 target_pout_3sigma=float(self.guide3a_target_pout_3sigma_var.get()),
                 soa_penalty_3sigma=float(self.guide3a_soa_penalty_3sigma_var.get())
             )
             
-            # Calculate SOA output requirements
-            soa_output_calculation = guide3a.calculate_target_pout_after_soa(
-                num_wavelengths=num_wavelengths,
-                target_pout_3sigma=float(self.guide3a_target_pout_3sigma_var.get()),
-                soa_penalty_3sigma=float(self.guide3a_soa_penalty_3sigma_var.get())
-            )
-            
             # Calculate optimum SOA current density
-            wavelengths = []
-            for i in range(num_wavelengths):
-                try:
-                    wavelength = float(self.wavelength_vars[i].get())
-                    wavelengths.append(wavelength)
-                except ValueError:
-                    wavelengths.append(1310.0)  # Default if invalid
-            
             optimum_current_calculation = guide3a.estimate_optimum_soa_current_density(
                 num_wavelengths=num_wavelengths,
                 target_pout_3sigma=float(self.guide3a_target_pout_3sigma_var.get()),
                 soa_penalty_3sigma=float(self.guide3a_soa_penalty_3sigma_var.get()),
                 wavelengths=wavelengths
             )
+            
+            # Calculate PIC power consumption for median and 3σ cases
+            def calculate_pic_power_consumption(current_density_kA_cm2, case_name):
+                """Calculate PIC power consumption for a given current density"""
+                try:
+                    # Create SOA instance for power calculations
+                    soa = EuropaSOA(L_active_um=l_active, W_um=w_um, verbose=False)
+                    
+                    # Calculate current and voltage for this current density
+                    current_ma = soa.calculate_current_mA_from_J(current_density_kA_cm2)
+                    operating_voltage_v = soa.get_operating_voltage(current_ma)
+                    electrical_power_mw = current_ma * operating_voltage_v
+                    
+                    # Calculate total PIC power consumption
+                    # Number of SOAs per PIC is typically 20, but we'll use the actual number from module config
+                    soas_per_pic = 20  # Standard SOAs per PIC
+                    total_pic_power_mw = soas_per_pic * electrical_power_mw
+                    
+                    return {
+                        'current_ma': current_ma,
+                        'operating_voltage_v': operating_voltage_v,
+                        'electrical_power_mw': electrical_power_mw,
+                        'soas_per_pic': soas_per_pic,
+                        'total_pic_power_mw': total_pic_power_mw
+                    }
+                except Exception as e:
+                    return {'error': str(e)}
+            
+            def calculate_pic_efficiency_and_heat_load(target_pout_db, total_pic_power_mw, fibers_per_pic):
+                """Calculate PIC efficiency and heat load"""
+                try:
+                    # Convert target Pout from dBm to mW
+                    target_pout_mw = 10**(target_pout_db / 10.0)
+                    
+                    # Calculate total optical output power (Target Pout * number of fibers per PIC)
+                    total_optical_power_mw = target_pout_mw * fibers_per_pic
+                    
+                    # Calculate PIC efficiency as percentage
+                    pic_efficiency_percent = (total_optical_power_mw / total_pic_power_mw) * 100
+                    
+                    # Calculate heat load (Total PIC Power - Total Optical Power)
+                    heat_load_mw = total_pic_power_mw - total_optical_power_mw
+                    heat_load_w = heat_load_mw / 1000.0
+                    
+                    return {
+                        'target_pout_mw': target_pout_mw,
+                        'total_optical_power_mw': total_optical_power_mw,
+                        'pic_efficiency_percent': pic_efficiency_percent,
+                        'heat_load_mw': heat_load_mw,
+                        'heat_load_w': heat_load_w
+                    }
+                except Exception as e:
+                    return {'error': str(e)}
+            
+            # Calculate power consumption for both cases
+            median_power = calculate_pic_power_consumption(
+                optimum_current_calculation['median_case']['current_density_kA_cm2'], 
+                "Median"
+            )
+            
+            sigma_power = None
+            if optimum_current_calculation['sigma_case'] is not None:
+                sigma_power = calculate_pic_power_consumption(
+                    optimum_current_calculation['sigma_case']['current_density_kA_cm2'], 
+                    "3σ"
+                )
+            
+            # Calculate efficiency and heat load for median case
+            fibers_per_pic = 20  # Standard fibers per PIC
+            median_efficiency = None
+            if 'error' not in median_power:
+                median_efficiency = calculate_pic_efficiency_and_heat_load(
+                    target_pout_calculation['median_case']['total_target_pout_db'],
+                    median_power['total_pic_power_mw'],
+                    fibers_per_pic
+                )
+            
+            # Calculate efficiency and heat load for 3σ case
+            sigma_efficiency = None
+            if sigma_power and 'error' not in sigma_power and target_pout_calculation['sigma_case'] is not None:
+                sigma_efficiency = calculate_pic_efficiency_and_heat_load(
+                    target_pout_calculation['sigma_case']['total_target_pout_db'],
+                    sigma_power['total_pic_power_mw'],
+                    fibers_per_pic
+                )
             
             # Clear results
             self.guide3a_median_results_text.delete(1.0, tk.END)
@@ -1665,17 +1760,18 @@ Note: Results are based on Guide3A SOA output requirements.
 - Number of PICs: {module_config['num_pics']}
 - Number of Unit Cells: {module_config['num_unit_cells']}
 
-Performance Parameters:
+Operating Parameters:
 - Operating Wavelength: {float(self.guide3a_wavelength_var.get()):.0f} nm
 - Temperature: {float(self.guide3a_temp_var.get()):.0f} °C
 
-Target Pout for All Wavelengths:
-- Number of Wavelengths: {target_pout_calculation['num_wavelengths']}
-- Wavelength Penalty: {target_pout_calculation['wavelength_penalty_db']:.2f} dB (10*log10({target_pout_calculation['num_wavelengths']}))
-
-SOA Output Requirements (After Output Losses Only):
-- Total Output Loss: {soa_output_calculation['total_output_loss_db']:.2f} dB
-
+Operating Wavelengths:
+"""
+            
+            # Add operating wavelengths
+            for i, wavelength in enumerate(wavelengths):
+                common_header += f"- λ{i+1}: {wavelength:.2f} nm\n"
+            
+            common_header += f"""
 Component Count:
 """
             
@@ -1687,43 +1783,6 @@ Loss Breakdown:
 - I/O Input Loss: {loss_breakdown['io_losses']['io_in_loss']:.1f} dB
 - I/O Output Loss: {loss_breakdown['io_losses']['io_out_loss']:.1f} dB
 - Total I/O Loss: {loss_breakdown['io_losses']['total_io_loss']:.1f} dB
-"""
-            
-            # Add architecture-specific losses
-            arch_losses = loss_breakdown['architecture_specific']
-            for loss_type, value in arch_losses.items():
-                if 'total' in loss_type:
-                    common_header += f"- {loss_type.replace('_', ' ').title()}: {value:.1f} dB\n"
-                elif loss_type == 'note':
-                    common_header += f"- {value}\n"
-            
-            common_header += f"""
-Performance Metrics:
-- Total Loss: {loss_breakdown['total_loss']:.1f} dB
-- Power Penalty: {performance_metrics['power_budget']['power_penalty_db']:.1f} dB
-- Link Margin: {performance_metrics['power_budget']['link_margin_db']:.1f} dB
-- Required TX Power: {performance_metrics['power_budget']['required_tx_power_db']:.1f} dBm
-- Optical Efficiency: {performance_metrics['efficiency_metrics']['optical_efficiency_percent']:.1f}%
-- Insertion Loss: {performance_metrics['efficiency_metrics']['insertion_loss_db']:.1f} dB
-- Return Loss: {performance_metrics['efficiency_metrics']['return_loss_db']:.1f} dB
-
-Architecture-Specific Analysis:
-"""
-            
-            effective_arch = module_config['effective_architecture']
-            if effective_arch == 'psr':
-                common_header += f"- PSR Components: 2 × {float(self.guide3a_psr_loss_var.get()):.1f} dB = {2*float(self.guide3a_psr_loss_var.get()):.1f} dB (PSR in/out)\n"
-            elif effective_arch == 'pol_control':
-                common_header += f"- PSR Components: 2 × {float(self.guide3a_psr_loss_var.get()):.1f} dB = {2*float(self.guide3a_psr_loss_var.get()):.1f} dB (PSR in/out)\n"
-                common_header += f"- Phase Shifter Components: 2 × {float(self.guide3a_phase_shifter_loss_var.get()):.1f} dB = {2*float(self.guide3a_phase_shifter_loss_var.get()):.1f} dB (Phase shifter in/out)\n"
-                common_header += f"- Coupler Components: 2 × {float(self.guide3a_coupler_loss_var.get()):.1f} dB = {2*float(self.guide3a_coupler_loss_var.get()):.1f} dB (Coupler in/out)\n"
-            elif effective_arch == 'psrless':
-                common_header += f"- No additional components beyond I/O in PSRless architecture\n"
-            
-            common_header += f"""
-Summary:
-- Base I/O Loss: {loss_breakdown['io_losses']['total_io_loss']:.1f} dB
-- Architecture-Specific Loss: {loss_breakdown['total_loss'] - loss_breakdown['io_losses']['total_io_loss']:.1f} dB
 - Total System Loss: {loss_breakdown['total_loss']:.1f} dB
 
 """
@@ -1747,7 +1806,30 @@ SOA Current Analysis:
 - Target Saturation Power: {optimum_current_calculation['median_case']['target_saturation_power_mw']:.2f} mW (2dB above target Pout)
 - Average Saturation Power: {optimum_current_calculation['median_case']['avg_saturation_power_mw']:.2f} mW ({optimum_current_calculation['median_case']['avg_saturation_power_db']:.2f} dBm)
 - Power Margin: {optimum_current_calculation['median_case']['margin_db']:.2f} dB
+
+PIC Power Consumption:
 """
+            
+            if 'error' not in median_power:
+                median_content += f"""- SOA Current: {median_power['current_ma']:.1f} mA
+- Operating Voltage: {median_power['operating_voltage_v']:.2f} V
+- Electrical Power per SOA: {median_power['electrical_power_mw']:.1f} mW
+- SOAs per PIC: {median_power['soas_per_pic']}
+- Total PIC Power Consumption: {median_power['total_pic_power_mw']:.1f} mW ({float(median_power['total_pic_power_mw'])/1000:.3f} W)
+
+PIC Efficiency and Heat Load:
+"""
+                
+                if median_efficiency and 'error' not in median_efficiency:
+                    median_content += f"""- Target Pout per Fiber: {median_efficiency['target_pout_mw']:.3f} mW
+- Total Optical Power: {median_efficiency['total_optical_power_mw']:.1f} mW
+- PIC Efficiency: {median_efficiency['pic_efficiency_percent']:.2f}%
+- Heat Load: {median_efficiency['heat_load_w']:.3f} W
+"""
+                else:
+                    median_content += f"- Error calculating efficiency and heat load: {median_efficiency['error'] if median_efficiency else 'Not available'}\n"
+            else:
+                median_content += f"- Error calculating power consumption: {median_power['error']}\n"
             
             # Create 3σ case content
             sigma_content = common_header + f"""3σ LOSS CASE ANALYSIS
@@ -1769,17 +1851,6 @@ Performance Parameters:
             else:
                 sigma_content += "Target Pout Calculation: Not available\n\n"
             
-            if soa_output_calculation['sigma_case'] is not None:
-                sigma_content += f"""SOA Requirements (Output Losses Only):
-- Final Target Pout: {soa_output_calculation['sigma_case']['final_target_pout_db']:.2f} dBm
-- Required SOA Output: {soa_output_calculation['sigma_case']['soa_output_requirement_db']:.2f} dBm
-- Loss Breakdown:
-  * I/O Output Loss: {soa_output_calculation['sigma_case']['loss_breakdown']['io_out_loss']:.1f} dB
-
-"""
-            else:
-                sigma_content += "SOA Requirements: Not available\n\n"
-            
             if optimum_current_calculation['sigma_case'] is not None:
                 sigma_content += f"""SOA Current Analysis:
 - Optimum Current Density: {optimum_current_calculation['sigma_case']['current_density_kA_cm2']:.2f} kA/cm²
@@ -1787,9 +1858,32 @@ Performance Parameters:
 - Target Saturation Power: {optimum_current_calculation['sigma_case']['target_saturation_power_mw']:.2f} mW (2dB above target Pout)
 - Average Saturation Power: {optimum_current_calculation['sigma_case']['avg_saturation_power_mw']:.2f} mW ({optimum_current_calculation['sigma_case']['avg_saturation_power_db']:.2f} dBm)
 - Power Margin: {optimum_current_calculation['sigma_case']['margin_db']:.2f} dB
+
+PIC Power Consumption:
 """
+                
+                if sigma_power and 'error' not in sigma_power:
+                    sigma_content += f"""- SOA Current: {sigma_power['current_ma']:.1f} mA
+- Operating Voltage: {sigma_power['operating_voltage_v']:.2f} V
+- Electrical Power per SOA: {sigma_power['electrical_power_mw']:.1f} mW
+- SOAs per PIC: {sigma_power['soas_per_pic']}
+- Total PIC Power Consumption: {sigma_power['total_pic_power_mw']:.1f} mW ({float(sigma_power['total_pic_power_mw'])/1000:.3f} W)
+
+PIC Efficiency and Heat Load:
+"""
+                    
+                    if sigma_efficiency and 'error' not in sigma_efficiency:
+                        sigma_content += f"""- Target Pout per Fiber: {sigma_efficiency['target_pout_mw']:.3f} mW
+- Total Optical Power: {sigma_efficiency['total_optical_power_mw']:.1f} mW
+- PIC Efficiency: {sigma_efficiency['pic_efficiency_percent']:.2f}%
+- Heat Load: {sigma_efficiency['heat_load_w']:.3f} W
+"""
+                    else:
+                        sigma_content += f"- Error calculating efficiency and heat load: {sigma_efficiency['error'] if sigma_efficiency else 'Not available'}\n"
+                else:
+                    sigma_content += f"- Error calculating power consumption: {sigma_power['error'] if sigma_power else 'Not available'}\n"
             else:
-                sigma_content += "SOA Current Analysis: Not available"
+                sigma_content += "SOA Current Analysis: Not available\n\nPIC Power Consumption: Not available\n\nPIC Efficiency and Heat Load: Not available"
             
             # Display results in respective text widgets
             self.guide3a_median_results_text.insert(1.0, median_content)
