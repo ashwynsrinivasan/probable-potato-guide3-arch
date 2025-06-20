@@ -286,38 +286,47 @@ class Guide3GUI(tk.Tk):
         loss_components_frame = ttk.LabelFrame(top_left_frame, text="Loss Components (dB)", padding="10")
         loss_components_frame.pack(fill=tk.X, pady=5)
         
-        # I/O Loss
-        ttk.Label(loss_components_frame, text="I/O Input Loss:").pack(pady=(5, 2), anchor='w')
+        # IO Loss Group
+        io_loss_frame = ttk.LabelFrame(loss_components_frame, text="IO Loss", padding="5")
+        io_loss_frame.pack(fill=tk.X, pady=2)
+        
+        ttk.Label(io_loss_frame, text="Input Loss:").pack(pady=(2, 0), anchor='w')
         self.guide3a_io_in_loss_var = tk.StringVar(value="1.5")
-        self.guide3a_io_in_loss_entry = ttk.Entry(loss_components_frame, textvariable=self.guide3a_io_in_loss_var, width=15)
-        self.guide3a_io_in_loss_entry.pack(anchor='w', padx=5)
+        self.guide3a_io_in_loss_entry = ttk.Entry(io_loss_frame, textvariable=self.guide3a_io_in_loss_var, width=15)
+        self.guide3a_io_in_loss_entry.pack(anchor='w', padx=5, pady=(0, 5))
         
-        ttk.Label(loss_components_frame, text="I/O Output Loss:").pack(pady=(5, 2), anchor='w')
+        ttk.Label(io_loss_frame, text="Output Loss:").pack(pady=(2, 0), anchor='w')
         self.guide3a_io_out_loss_var = tk.StringVar(value="1.5")
-        self.guide3a_io_out_loss_entry = ttk.Entry(loss_components_frame, textvariable=self.guide3a_io_out_loss_var, width=15)
-        self.guide3a_io_out_loss_entry.pack(anchor='w', padx=5)
+        self.guide3a_io_out_loss_entry = ttk.Entry(io_loss_frame, textvariable=self.guide3a_io_out_loss_var, width=15)
+        self.guide3a_io_out_loss_entry.pack(anchor='w', padx=5, pady=(0, 5))
         
-        # Connector Loss
-        ttk.Label(loss_components_frame, text="Connector Input Loss:").pack(pady=(5, 2), anchor='w')
+        # Connector Loss Group
+        connector_loss_frame = ttk.LabelFrame(loss_components_frame, text="Connector Loss", padding="5")
+        connector_loss_frame.pack(fill=tk.X, pady=2)
+        
+        ttk.Label(connector_loss_frame, text="Input Loss:").pack(pady=(2, 0), anchor='w')
         self.guide3a_connector_in_loss_var = tk.StringVar(value="0.25")
-        self.guide3a_connector_in_loss_entry = ttk.Entry(loss_components_frame, textvariable=self.guide3a_connector_in_loss_var, width=15)
-        self.guide3a_connector_in_loss_entry.pack(anchor='w', padx=5)
+        self.guide3a_connector_in_loss_entry = ttk.Entry(connector_loss_frame, textvariable=self.guide3a_connector_in_loss_var, width=15)
+        self.guide3a_connector_in_loss_entry.pack(anchor='w', padx=5, pady=(0, 5))
         
-        ttk.Label(loss_components_frame, text="Connector Output Loss:").pack(pady=(5, 2), anchor='w')
+        ttk.Label(connector_loss_frame, text="Output Loss:").pack(pady=(2, 0), anchor='w')
         self.guide3a_connector_out_loss_var = tk.StringVar(value="0.25")
-        self.guide3a_connector_out_loss_entry = ttk.Entry(loss_components_frame, textvariable=self.guide3a_connector_out_loss_var, width=15)
-        self.guide3a_connector_out_loss_entry.pack(anchor='w', padx=5)
+        self.guide3a_connector_out_loss_entry = ttk.Entry(connector_loss_frame, textvariable=self.guide3a_connector_out_loss_var, width=15)
+        self.guide3a_connector_out_loss_entry.pack(anchor='w', padx=5, pady=(0, 5))
         
-        # Waveguide Routing Loss
-        ttk.Label(loss_components_frame, text="Waveguide Input Loss:").pack(pady=(5, 2), anchor='w')
+        # Waveguide Routing Loss Group
+        waveguide_loss_frame = ttk.LabelFrame(loss_components_frame, text="Waveguide Routing Loss", padding="5")
+        waveguide_loss_frame.pack(fill=tk.X, pady=2)
+        
+        ttk.Label(waveguide_loss_frame, text="Input Loss:").pack(pady=(2, 0), anchor='w')
         self.guide3a_wg_in_loss_var = tk.StringVar(value="0.25")
-        self.guide3a_wg_in_loss_entry = ttk.Entry(loss_components_frame, textvariable=self.guide3a_wg_in_loss_var, width=15)
-        self.guide3a_wg_in_loss_entry.pack(anchor='w', padx=5)
+        self.guide3a_wg_in_loss_entry = ttk.Entry(waveguide_loss_frame, textvariable=self.guide3a_wg_in_loss_var, width=15)
+        self.guide3a_wg_in_loss_entry.pack(anchor='w', padx=5, pady=(0, 5))
         
-        ttk.Label(loss_components_frame, text="Waveguide Output Loss:").pack(pady=(5, 2), anchor='w')
+        ttk.Label(waveguide_loss_frame, text="Output Loss:").pack(pady=(2, 0), anchor='w')
         self.guide3a_wg_out_loss_var = tk.StringVar(value="0.25")
-        self.guide3a_wg_out_loss_entry = ttk.Entry(loss_components_frame, textvariable=self.guide3a_wg_out_loss_var, width=15)
-        self.guide3a_wg_out_loss_entry.pack(anchor='w', padx=5)
+        self.guide3a_wg_out_loss_entry = ttk.Entry(waveguide_loss_frame, textvariable=self.guide3a_wg_out_loss_var, width=15)
+        self.guide3a_wg_out_loss_entry.pack(anchor='w', padx=5, pady=(0, 5))
         
         # PSR Loss
         ttk.Label(loss_components_frame, text="PSR Loss:").pack(pady=(5, 2), anchor='w')
