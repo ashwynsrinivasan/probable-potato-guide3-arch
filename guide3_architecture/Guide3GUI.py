@@ -63,8 +63,8 @@ class Guide3GUI(tk.Tk):
                 'ir_drop_nominal': 0.1,
                 'ir_drop_3sigma': 0.2,
                 'vrm_efficiency': 80,
-                'tec_cop_nominal': 2,
-                'tec_cop_3sigma': 4,
+                'tec_cop_nominal': 4,
+                'tec_cop_3sigma': 2,
                 'tec_power_efficiency': 80,
                 'driver_peripherals_power': 1.0,
                 'mcu_power': 0.5,
@@ -385,13 +385,13 @@ class Guide3GUI(tk.Tk):
         
         # TEC COP - Nominal
         ttk.Label(thermal_specs_frame, text="TEC COP - Nominal:").pack(pady=(5, 2), anchor='w')
-        self.guide3a_tec_cop_nominal_var = tk.StringVar(value="2")
+        self.guide3a_tec_cop_nominal_var = tk.StringVar(value="4")
         self.guide3a_tec_cop_nominal_entry = ttk.Entry(thermal_specs_frame, textvariable=self.guide3a_tec_cop_nominal_var, width=15)
         self.guide3a_tec_cop_nominal_entry.pack(anchor='w', padx=5)
         
         # TEC COP - 3σ
         ttk.Label(thermal_specs_frame, text="TEC COP - 3σ:").pack(pady=(5, 2), anchor='w')
-        self.guide3a_tec_cop_3sigma_var = tk.StringVar(value="4")
+        self.guide3a_tec_cop_3sigma_var = tk.StringVar(value="2")
         self.guide3a_tec_cop_3sigma_entry = ttk.Entry(thermal_specs_frame, textvariable=self.guide3a_tec_cop_3sigma_var, width=15)
         self.guide3a_tec_cop_3sigma_entry.pack(anchor='w', padx=5)
         
@@ -431,13 +431,13 @@ class Guide3GUI(tk.Tk):
         
         # TEC COP - Nominal
         ttk.Label(module_parameters_frame, text="TEC COP - Nominal:").pack(pady=(5, 2), anchor='w')
-        self.guide3a_tec_cop_nominal_var = tk.StringVar(value="2")
+        self.guide3a_tec_cop_nominal_var = tk.StringVar(value="4")
         self.guide3a_tec_cop_nominal_entry = ttk.Entry(module_parameters_frame, textvariable=self.guide3a_tec_cop_nominal_var, width=15)
         self.guide3a_tec_cop_nominal_entry.pack(anchor='w', padx=5)
         
         # TEC COP - 3σ
         ttk.Label(module_parameters_frame, text="TEC COP - 3σ:").pack(pady=(5, 2), anchor='w')
-        self.guide3a_tec_cop_3sigma_var = tk.StringVar(value="4")
+        self.guide3a_tec_cop_3sigma_var = tk.StringVar(value="2")
         self.guide3a_tec_cop_3sigma_entry = ttk.Entry(module_parameters_frame, textvariable=self.guide3a_tec_cop_3sigma_var, width=15)
         self.guide3a_tec_cop_3sigma_entry.pack(anchor='w', padx=5)
         
@@ -1019,8 +1019,8 @@ class Guide3GUI(tk.Tk):
                     self.guide3a_ir_drop_nominal_var.set(str(config['guide3a_parameters'].get('ir_drop_nominal', 0.1)))
                     self.guide3a_ir_drop_3sigma_var.set(str(config['guide3a_parameters'].get('ir_drop_3sigma', 0.2)))
                     self.guide3a_vrm_efficiency_var.set(str(config['guide3a_parameters'].get('vrm_efficiency', 80)))
-                    self.guide3a_tec_cop_nominal_var.set(str(config['guide3a_parameters'].get('tec_cop_nominal', 2)))
-                    self.guide3a_tec_cop_3sigma_var.set(str(config['guide3a_parameters'].get('tec_cop_3sigma', 4)))
+                    self.guide3a_tec_cop_nominal_var.set(str(config['guide3a_parameters'].get('tec_cop_nominal', 4)))
+                    self.guide3a_tec_cop_3sigma_var.set(str(config['guide3a_parameters'].get('tec_cop_3sigma', 2)))
                     self.guide3a_tec_power_efficiency_var.set(str(config['guide3a_parameters'].get('tec_power_efficiency', 80)))
                     self.guide3a_driver_peripherals_power_var.set(str(config['guide3a_parameters'].get('driver_peripherals_power', 1.0)))
                     self.guide3a_mcu_power_var.set(str(config['guide3a_parameters'].get('mcu_power', 0.5)))
@@ -1041,8 +1041,8 @@ class Guide3GUI(tk.Tk):
                     self.guide3a_digital_core_efficiency_var.set(str(config['guide3a_parameters'].get('digital_core_efficiency', 80)))
                     
                     # Thermal Specifications
-                    self.guide3a_tec_cop_nominal_var.set(str(config['guide3a_parameters'].get('tec_cop_nominal', 2)))
-                    self.guide3a_tec_cop_3sigma_var.set(str(config['guide3a_parameters'].get('tec_cop_3sigma', 4)))
+                    self.guide3a_tec_cop_nominal_var.set(str(config['guide3a_parameters'].get('tec_cop_nominal', 4)))
+                    self.guide3a_tec_cop_3sigma_var.set(str(config['guide3a_parameters'].get('tec_cop_3sigma', 2)))
                     self.guide3a_tec_power_efficiency_var.set(str(config['guide3a_parameters'].get('tec_power_efficiency', 80)))
                 
                 messagebox.showinfo("Config Loaded", f"Configuration loaded from {filename}")
@@ -2284,8 +2284,8 @@ Module Performance:
         self.guide3a_ir_drop_nominal_var.set("0.1")
         self.guide3a_ir_drop_3sigma_var.set("0.2")
         self.guide3a_vrm_efficiency_var.set("80")
-        self.guide3a_tec_cop_nominal_var.set("2")
-        self.guide3a_tec_cop_3sigma_var.set("4")
+        self.guide3a_tec_cop_nominal_var.set("4")
+        self.guide3a_tec_cop_3sigma_var.set("2")
         self.guide3a_tec_power_efficiency_var.set("80")
         self.guide3a_driver_peripherals_power_var.set("1.0")
         self.guide3a_mcu_power_var.set("0.5")
