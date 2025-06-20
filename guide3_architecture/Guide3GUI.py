@@ -261,8 +261,8 @@ class Guide3GUI(tk.Tk):
         self.guide3a_soa_penalty_3sigma_entry = ttk.Entry(link_requirements_frame, textvariable=self.guide3a_soa_penalty_3sigma_var, width=15)
         self.guide3a_soa_penalty_3sigma_entry.pack(anchor='w', padx=5)
         
-        # Loss Components Frame (Bottom-right quadrant)
-        loss_components_frame = ttk.LabelFrame(bottom_right_frame, text="Loss Components (dB)", padding="10")
+        # Loss Components Frame (moved below Link Requirements)
+        loss_components_frame = ttk.LabelFrame(top_left_frame, text="Loss Components (dB)", padding="10")
         loss_components_frame.pack(fill=tk.X, pady=5)
         
         # I/O Loss
@@ -1912,6 +1912,76 @@ Note: Results are based on Guide3A SOA output requirements.
                 except Exception as e:
                     return {'error': str(e)}
             
+            def calculate_module_performance(pic_power_data, pic_efficiency_data, case_name):
+                """Calculate comprehensive module performance including all power components"""
+                try:
+                    if 'error' in pic_power_data or 'error' in pic_efficiency_data:
+                        return {'error': 'PIC performance data not available'}
+                    
+                    # Get module parameters
+                    idac_voltage_overhead = float(self.guide3a_idac_voltage_overhead_var.get())
+                    ir_drop_nominal = float(self.guide3a_ir_drop_nominal_var.get())
+                    ir_drop_3sigma = float(self.guide3a_ir_drop_3sigma_var.get())
+                    vrm_efficiency = float(self.guide3a_vrm_efficiency_var.get()) / 100.0  # Convert to decimal
+                    tec_cop_nominal = float(self.guide3a_tec_cop_nominal_var.get())
+                    tec_cop_3sigma = float(self.guide3a_tec_cop_3sigma_var.get())
+                    tec_power_efficiency = float(self.guide3a_tec_power_efficiency_var.get()) / 100.0  # Convert to decimal
+                    driver_peripherals_power = float(self.guide3a_driver_peripherals_power_var.get())
+                    mcu_power = float(self.guide3a_mcu_power_var.get())
+                    misc_power = float(self.guide3a_misc_power_var.get())
+                    digital_core_efficiency = float(self.guide3a_digital_core_efficiency_var.get()) / 100.0  # Convert to decimal
+                    
+                    # PIC power consumption (from PIC performance)
+                    pic_power_w = pic_power_data['total_pic_power_mw'] / 1000.0
+                    
+                    # Calculate digital core power (PIC power / digital core efficiency)
+                    digital_core_power_w = pic_power_w / digital_core_efficiency
+                    
+                    # Calculate total electrical power (digital core + peripherals + MCU + misc)
+                    total_electrical_power_w = digital_core_power_w + driver_peripherals_power + mcu_power + misc_power
+                    
+                    # Calculate VRM input power (total electrical power / VRM efficiency)
+                    vrm_input_power_w = total_electrical_power_w / vrm_efficiency
+                    
+                    # Calculate TEC power based on heat load
+                    heat_load_w = pic_efficiency_data['heat_load_w']
+                    
+                    # Use appropriate TEC COP based on case
+                    tec_cop = tec_cop_3sigma if case_name == "3σ" else tec_cop_nominal
+                    tec_power_w = heat_load_w / tec_cop if tec_cop > 0 else 0
+                    
+                    # Calculate TEC electrical power (TEC power / TEC power efficiency)
+                    tec_electrical_power_w = tec_power_w / tec_power_efficiency if tec_power_efficiency > 0 else 0
+                    
+                    # Calculate total module power consumption
+                    total_module_power_w = vrm_input_power_w + tec_electrical_power_w
+                    
+                    # Calculate module efficiency (optical power / total module power)
+                    total_optical_power_w = pic_efficiency_data['total_optical_power_mw'] / 1000.0
+                    module_efficiency_percent = (total_optical_power_w / total_module_power_w) * 100 if total_module_power_w > 0 else 0
+                    
+                    # Calculate total heat load (total module power - optical power)
+                    total_heat_load_w = total_module_power_w - total_optical_power_w
+                    
+                    return {
+                        'pic_power_w': pic_power_w,
+                        'digital_core_power_w': digital_core_power_w,
+                        'driver_peripherals_power_w': driver_peripherals_power,
+                        'mcu_power_w': mcu_power,
+                        'misc_power_w': misc_power,
+                        'total_electrical_power_w': total_electrical_power_w,
+                        'vrm_input_power_w': vrm_input_power_w,
+                        'tec_power_w': tec_power_w,
+                        'tec_electrical_power_w': tec_electrical_power_w,
+                        'total_module_power_w': total_module_power_w,
+                        'total_optical_power_w': total_optical_power_w,
+                        'module_efficiency_percent': module_efficiency_percent,
+                        'total_heat_load_w': total_heat_load_w,
+                        'case_name': case_name
+                    }
+                except Exception as e:
+                    return {'error': str(e)}
+            
             # Calculate power consumption for both cases
             median_power = calculate_pic_power_consumption(
                 optimum_current_calculation['median_case']['current_density_kA_cm2'], 
@@ -1942,6 +2012,19 @@ Note: Results are based on Guide3A SOA output requirements.
                     target_pout_calculation['sigma_case']['total_target_pout_db'],
                     sigma_power['total_pic_power_mw'],
                     fibers_per_pic
+                )
+            
+            # Calculate module performance for both cases
+            median_module_performance = None
+            if 'error' not in median_power and median_efficiency and 'error' not in median_efficiency:
+                median_module_performance = calculate_module_performance(
+                    median_power, median_efficiency, "Median"
+                )
+            
+            sigma_module_performance = None
+            if sigma_power and 'error' not in sigma_power and sigma_efficiency and 'error' not in sigma_efficiency:
+                sigma_module_performance = calculate_module_performance(
+                    sigma_power, sigma_efficiency, "3σ"
                 )
             
             # Clear results
@@ -2027,6 +2110,28 @@ PIC Performance:
             else:
                 median_content += f"- Error calculating power consumption: {median_power['error']}\n"
             
+            # Add Module Performance section for median case
+            median_content += f"""
+Module Performance:
+"""
+            if median_module_performance and 'error' not in median_module_performance:
+                median_content += f"""- PIC Power: {median_module_performance['pic_power_w']:.3f} W
+- Digital Core Power: {median_module_performance['digital_core_power_w']:.3f} W
+- Driver Peripherals Power: {median_module_performance['driver_peripherals_power_w']:.3f} W
+- MCU Power: {median_module_performance['mcu_power_w']:.3f} W
+- Misc Power: {median_module_performance['misc_power_w']:.3f} W
+- Total Electrical Power: {median_module_performance['total_electrical_power_w']:.3f} W
+- VRM Input Power: {median_module_performance['vrm_input_power_w']:.3f} W
+- TEC Power: {median_module_performance['tec_power_w']:.3f} W
+- TEC Electrical Power: {median_module_performance['tec_electrical_power_w']:.3f} W
+- Total Module Power: {median_module_performance['total_module_power_w']:.3f} W
+- Total Optical Power: {median_module_performance['total_optical_power_w']:.3f} W
+- Module Efficiency: {median_module_performance['module_efficiency_percent']:.2f}%
+- Total Heat Load: {median_module_performance['total_heat_load_w']:.3f} W
+"""
+            else:
+                median_content += f"- Error calculating module performance: {median_module_performance['error'] if median_module_performance else 'Not available'}\n"
+            
             # Create 3σ case content
             sigma_content = common_header + f"""3σ LOSS CASE ANALYSIS
 {'='*30}
@@ -2078,6 +2183,28 @@ PIC Performance:
                     sigma_content += f"- Error calculating power consumption: {sigma_power['error'] if sigma_power else 'Not available'}\n"
             else:
                 sigma_content += "SOA Current Analysis: Not available\n\nPIC Performance: Not available"
+            
+            # Add Module Performance section for sigma case
+            sigma_content += f"""
+Module Performance:
+"""
+            if sigma_module_performance and 'error' not in sigma_module_performance:
+                sigma_content += f"""- PIC Power: {sigma_module_performance['pic_power_w']:.3f} W
+- Digital Core Power: {sigma_module_performance['digital_core_power_w']:.3f} W
+- Driver Peripherals Power: {sigma_module_performance['driver_peripherals_power_w']:.3f} W
+- MCU Power: {sigma_module_performance['mcu_power_w']:.3f} W
+- Misc Power: {sigma_module_performance['misc_power_w']:.3f} W
+- Total Electrical Power: {sigma_module_performance['total_electrical_power_w']:.3f} W
+- VRM Input Power: {sigma_module_performance['vrm_input_power_w']:.3f} W
+- TEC Power: {sigma_module_performance['tec_power_w']:.3f} W
+- TEC Electrical Power: {sigma_module_performance['tec_electrical_power_w']:.3f} W
+- Total Module Power: {sigma_module_performance['total_module_power_w']:.3f} W
+- Total Optical Power: {sigma_module_performance['total_optical_power_w']:.3f} W
+- Module Efficiency: {sigma_module_performance['module_efficiency_percent']:.2f}%
+- Total Heat Load: {sigma_module_performance['total_heat_load_w']:.3f} W
+"""
+            else:
+                sigma_content += f"- Error calculating module performance: {sigma_module_performance['error'] if sigma_module_performance else 'Not available'}\n"
             
             # Display results in respective text widgets
             self.guide3a_median_results_text.insert(1.0, median_content)
