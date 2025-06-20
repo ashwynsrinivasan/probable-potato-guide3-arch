@@ -785,7 +785,7 @@ Performance Metrics:
             ir_drop = self.ir_drop_3sigma if case_name == "3σ" else self.ir_drop_nominal
             vrm_efficiency = self.vrm_efficiency / 100.0  # Convert to decimal
             analog_core_power_w = ((soa_operating_voltage_v + self.idac_voltage_overhead + ir_drop) * 
-                                  soa_current_ma * num_soas_per_pic * num_unit_cells / vrm_efficiency)
+                                  soa_current_ma * num_soas_per_pic * num_unit_cells / vrm_efficiency/1000)
             
             # 3. Thermal Power Consumption = Heat load per PIC * number of unit cells / TEC COP / TEC Power Efficiency
             # Use appropriate TEC COP based on case
@@ -816,8 +816,7 @@ Performance Metrics:
                 'module_efficiency_percent': module_efficiency_percent,
                 'total_heat_load_w': total_heat_load_w,
                 'case_name': case_name,
-                'num_unit_cells': num_unit_cells,
-                'num_soas_per_pic': num_soas_per_pic
+                'num_unit_cells': num_unit_cells
             }
         except Exception as e:
             return {'error': str(e)}
