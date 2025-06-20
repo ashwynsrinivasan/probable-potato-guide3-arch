@@ -844,6 +844,24 @@ class Guide3GUI(tk.Tk):
                 self.guide3a_mcu_power_var.set(str(self.default_config['guide3a_parameters']['mcu_power']))
                 self.guide3a_misc_power_var.set(str(self.default_config['guide3a_parameters']['misc_power']))
                 self.guide3a_digital_core_efficiency_var.set(str(self.default_config['guide3a_parameters']['digital_core_efficiency']))
+                
+                # Copy module parameters to Analog, Digital, and Thermal specifications
+                # Analog Specifications
+                self.guide3a_idac_voltage_overhead_var.set(str(self.default_config['guide3a_parameters']['idac_voltage_overhead']))
+                self.guide3a_ir_drop_nominal_var.set(str(self.default_config['guide3a_parameters']['ir_drop_nominal']))
+                self.guide3a_ir_drop_3sigma_var.set(str(self.default_config['guide3a_parameters']['ir_drop_3sigma']))
+                self.guide3a_vrm_efficiency_var.set(str(self.default_config['guide3a_parameters']['vrm_efficiency']))
+                
+                # Digital Specifications
+                self.guide3a_driver_peripherals_power_var.set(str(self.default_config['guide3a_parameters']['driver_peripherals_power']))
+                self.guide3a_mcu_power_var.set(str(self.default_config['guide3a_parameters']['mcu_power']))
+                self.guide3a_misc_power_var.set(str(self.default_config['guide3a_parameters']['misc_power']))
+                self.guide3a_digital_core_efficiency_var.set(str(self.default_config['guide3a_parameters']['digital_core_efficiency']))
+                
+                # Thermal Specifications
+                self.guide3a_tec_cop_nominal_var.set(str(self.default_config['guide3a_parameters']['tec_cop_nominal']))
+                self.guide3a_tec_cop_3sigma_var.set(str(self.default_config['guide3a_parameters']['tec_cop_3sigma']))
+                self.guide3a_tec_power_efficiency_var.set(str(self.default_config['guide3a_parameters']['tec_power_efficiency']))
             
             messagebox.showinfo("Defaults Loaded", "Default configuration has been loaded successfully.")
             
@@ -910,6 +928,24 @@ class Guide3GUI(tk.Tk):
                 self.default_config['guide3a_parameters']['mcu_power'] = float(self.guide3a_mcu_power_var.get())
                 self.default_config['guide3a_parameters']['misc_power'] = float(self.guide3a_misc_power_var.get())
                 self.default_config['guide3a_parameters']['digital_core_efficiency'] = float(self.guide3a_digital_core_efficiency_var.get())
+                
+                # Update from Analog, Digital, and Thermal specifications
+                # Analog Specifications
+                self.default_config['guide3a_parameters']['idac_voltage_overhead'] = float(self.guide3a_idac_voltage_overhead_var.get())
+                self.default_config['guide3a_parameters']['ir_drop_nominal'] = float(self.guide3a_ir_drop_nominal_var.get())
+                self.default_config['guide3a_parameters']['ir_drop_3sigma'] = float(self.guide3a_ir_drop_3sigma_var.get())
+                self.default_config['guide3a_parameters']['vrm_efficiency'] = float(self.guide3a_vrm_efficiency_var.get())
+                
+                # Digital Specifications
+                self.default_config['guide3a_parameters']['driver_peripherals_power'] = float(self.guide3a_driver_peripherals_power_var.get())
+                self.default_config['guide3a_parameters']['mcu_power'] = float(self.guide3a_mcu_power_var.get())
+                self.default_config['guide3a_parameters']['misc_power'] = float(self.guide3a_misc_power_var.get())
+                self.default_config['guide3a_parameters']['digital_core_efficiency'] = float(self.guide3a_digital_core_efficiency_var.get())
+                
+                # Thermal Specifications
+                self.default_config['guide3a_parameters']['tec_cop_nominal'] = float(self.guide3a_tec_cop_nominal_var.get())
+                self.default_config['guide3a_parameters']['tec_cop_3sigma'] = float(self.guide3a_tec_cop_3sigma_var.get())
+                self.default_config['guide3a_parameters']['tec_power_efficiency'] = float(self.guide3a_tec_power_efficiency_var.get())
             
             messagebox.showinfo("Defaults Updated", "Default configuration has been updated with current values.")
             
@@ -990,6 +1026,24 @@ class Guide3GUI(tk.Tk):
                     self.guide3a_mcu_power_var.set(str(config['guide3a_parameters'].get('mcu_power', 0.5)))
                     self.guide3a_misc_power_var.set(str(config['guide3a_parameters'].get('misc_power', 0.25)))
                     self.guide3a_digital_core_efficiency_var.set(str(config['guide3a_parameters'].get('digital_core_efficiency', 80)))
+                    
+                    # Copy module parameters to Analog, Digital, and Thermal specifications
+                    # Analog Specifications
+                    self.guide3a_idac_voltage_overhead_var.set(str(config['guide3a_parameters'].get('idac_voltage_overhead', 0.4)))
+                    self.guide3a_ir_drop_nominal_var.set(str(config['guide3a_parameters'].get('ir_drop_nominal', 0.1)))
+                    self.guide3a_ir_drop_3sigma_var.set(str(config['guide3a_parameters'].get('ir_drop_3sigma', 0.2)))
+                    self.guide3a_vrm_efficiency_var.set(str(config['guide3a_parameters'].get('vrm_efficiency', 80)))
+                    
+                    # Digital Specifications
+                    self.guide3a_driver_peripherals_power_var.set(str(config['guide3a_parameters'].get('driver_peripherals_power', 1.0)))
+                    self.guide3a_mcu_power_var.set(str(config['guide3a_parameters'].get('mcu_power', 0.5)))
+                    self.guide3a_misc_power_var.set(str(config['guide3a_parameters'].get('misc_power', 0.25)))
+                    self.guide3a_digital_core_efficiency_var.set(str(config['guide3a_parameters'].get('digital_core_efficiency', 80)))
+                    
+                    # Thermal Specifications
+                    self.guide3a_tec_cop_nominal_var.set(str(config['guide3a_parameters'].get('tec_cop_nominal', 2)))
+                    self.guide3a_tec_cop_3sigma_var.set(str(config['guide3a_parameters'].get('tec_cop_3sigma', 4)))
+                    self.guide3a_tec_power_efficiency_var.set(str(config['guide3a_parameters'].get('tec_power_efficiency', 80)))
                 
                 messagebox.showinfo("Config Loaded", f"Configuration loaded from {filename}")
                 
