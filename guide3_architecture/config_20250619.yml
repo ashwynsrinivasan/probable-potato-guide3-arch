@@ -1,0 +1,49 @@
+device_parameters:
+  active_length_um: 790.0
+  width_um: 2.0
+guide3a_parameters:
+  coupler_loss: 0.2
+  digital_core_efficiency: 80.0
+  driver_peripherals_power: 1.0
+  fiber_input_type: pm
+  idac_voltage_overhead: 0.4
+  io_in_loss: 1.5
+  io_out_loss: 1.5
+  ir_drop_3sigma: 0.2
+  ir_drop_nominal: 0.1
+  mcu_power: 0.5
+  misc_power: 0.25
+  num_fibers: 40
+  operating_wavelength: 1310.0
+  phase_shifter_loss: 0.5
+  pic_architecture: psrless
+  psr_loss: 0.5
+  soa_penalty: 2.0
+  soa_penalty_3sigma: 2.0
+  target_pout: -3.3
+  target_pout_3sigma: -0.3
+  tec_cop_3sigma: 4.0
+  tec_cop_nominal: 2.0
+  tec_power_efficiency: 80.0
+  temperature: 40.0
+  vrm_efficiency: 80.0
+link_loss_modes:
+  median_loss: true
+  sigma_loss: true
+operation_parameters:
+  j_density_median: 3.76
+  j_density_sigma: 7.15
+  pout_median_dbm: 9.23
+  pout_sigma_dbm: 12.23
+  temperature_c: 40.0
+wavelength_config:
+  num_wavelengths: 8
+  wavelengths:
+  - '1301.47'
+  - '1303.73'
+  - '1306.01'
+  - '1308.28'
+  - '1310.57'
+  - '1312.87'
+  - '1315.17'
+  - '1317.48'
