@@ -2123,13 +2123,13 @@ Loss Breakdown:
             arch_details = ""
             if module_config['effective_architecture'] == 'psr':
                 arch_details = f"PSR Loss ({arch_specific.get('total_psr_loss', 0):.2f} dB)"
-                if 'total_tap_loss' in arch_specific and arch_specific['total_tap_loss'] > 0:
-                    arch_details += f" + Tap Loss ({arch_specific['total_tap_loss']:.2f} dB)"
+                if 'tap_out_loss' in arch_specific and arch_specific['tap_out_loss'] > 0:
+                    arch_details += f" + Tap Output Loss ({arch_specific['tap_out_loss']:.2f} dB)"
             elif module_config['effective_architecture'] == 'pol_control':
                 arch_details = f"PSR Loss ({arch_specific.get('total_psr_loss', 0):.2f} dB) + Phase Shifter Loss ({arch_specific.get('total_phase_shifter_loss', 0):.2f} dB) + Coupler Loss ({arch_specific.get('total_coupler_loss', 0):.2f} dB)"
             elif module_config['effective_architecture'] == 'psrless':
-                if 'total_tap_loss' in arch_specific and arch_specific['total_tap_loss'] > 0:
-                    arch_details = f"Tap Loss ({arch_specific['total_tap_loss']:.2f} dB)"
+                if 'tap_out_loss' in arch_specific and arch_specific['tap_out_loss'] > 0:
+                    arch_details = f"Tap Output Loss ({arch_specific['tap_out_loss']:.2f} dB)"
                 else:
                     arch_details = "No additional architecture-specific losses"
             

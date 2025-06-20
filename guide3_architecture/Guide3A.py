@@ -605,8 +605,8 @@ Performance Metrics:
         if self.effective_architecture == 'psr':
             # In PSR architecture, SOA is before PSR, so add PSR loss
             soa_to_output_loss += arch_losses.get('total_psr_loss', 0)
-            # Add tap loss if present
-            soa_to_output_loss += arch_losses.get('total_tap_loss', 0)
+            # Add only tap_out_loss (not total tap loss) since tap_in_loss occurs before SOA
+            soa_to_output_loss += arch_losses.get('tap_out_loss', 0)
         elif self.effective_architecture == 'pol_control':
             # In pol_control architecture, SOA is before PSR, phase shifter, and coupler
             soa_to_output_loss += arch_losses.get('total_psr_loss', 0)
@@ -614,7 +614,8 @@ Performance Metrics:
             soa_to_output_loss += arch_losses.get('total_coupler_loss', 0)
         elif self.effective_architecture == 'psrless':
             # In PSRless architecture, SOA is before tap components
-            soa_to_output_loss += arch_losses.get('total_tap_loss', 0)
+            # Add only tap_out_loss (not total tap loss) since tap_in_loss occurs before SOA
+            soa_to_output_loss += arch_losses.get('tap_out_loss', 0)
         
         # Calculate wavelength penalty: 10*log10(number_of_wavelengths)
         wavelength_penalty = 10 * math.log10(num_wavelengths)
