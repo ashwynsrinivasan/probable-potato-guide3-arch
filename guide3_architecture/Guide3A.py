@@ -338,6 +338,47 @@ class Guide3A:
             'num_unit_cells': self.num_unit_cells
         }
     
+    def get_analog_specifications(self):
+        """
+        Get Analog Specifications for power and efficiency calculations.
+        
+        Returns:
+            dict: Analog specifications
+        """
+        return {
+            'idac_voltage_overhead': self.idac_voltage_overhead,
+            'ir_drop_nominal': self.ir_drop_nominal,
+            'ir_drop_3sigma': self.ir_drop_3sigma,
+            'analog_supply_efficiency': self.vrm_efficiency
+        }
+    
+    def get_digital_specifications(self):
+        """
+        Get Digital Specifications for power and efficiency calculations.
+        
+        Returns:
+            dict: Digital specifications
+        """
+        return {
+            'driver_peripherals_power': self.driver_peripherals_power,
+            'mcu_power': self.mcu_power,
+            'misc_power': self.misc_power,
+            'digital_supply_efficiency': self.digital_core_efficiency
+        }
+    
+    def get_thermal_specifications(self):
+        """
+        Get Thermal Specifications for power and efficiency calculations.
+        
+        Returns:
+            dict: Thermal specifications
+        """
+        return {
+            'tec_cop_nominal': self.tec_cop_nominal,
+            'tec_cop_3sigma': self.tec_cop_3sigma,
+            'tec_supply_efficiency': self.tec_power_efficiency
+        }
+    
     def get_module_parameters(self):
         """
         Get module parameters for power and efficiency calculations.
