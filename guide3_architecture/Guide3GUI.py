@@ -28,8 +28,8 @@ class Guide3GUI(tk.Tk):
             'operation_parameters': {
                 'pout_median_dbm': 9,
                 'pout_sigma_dbm': 13,
-                'j_density_median': 4,
-                'j_density_sigma': 7,
+                'j_density_median': 4.00,
+                'j_density_sigma': 7.00,
                 'temperature_c': 40
             },
             'wavelength_config': {
@@ -344,12 +344,12 @@ class Guide3GUI(tk.Tk):
             guide3a_sigma_canvas.configure(scrollregion=guide3a_sigma_canvas.bbox("all"))
         
         def resize_guide3a_median_canvas(event):
-            # Update the text widget width to match canvas width
-            guide3a_median_canvas.itemconfig(1, width=event.width-10)  # Subtract some padding
+            # Update the text widget width and height to match canvas dimensions
+            guide3a_median_canvas.itemconfig(1, width=event.width-10, height=event.height-10)  # Subtract some padding
         
         def resize_guide3a_sigma_canvas(event):
-            # Update the text widget width to match canvas width
-            guide3a_sigma_canvas.itemconfig(1, width=event.width-10)  # Subtract some padding
+            # Update the text widget width and height to match canvas dimensions
+            guide3a_sigma_canvas.itemconfig(1, width=event.width-10, height=event.height-10)  # Subtract some padding
         
         # Create text windows
         guide3a_median_canvas.create_window((0, 0), window=self.guide3a_median_results_text, anchor="nw")
@@ -452,19 +452,17 @@ class Guide3GUI(tk.Tk):
         self.median_current_frame = ttk.Frame(operation_frame)
         self.median_current_frame.pack(fill=tk.X, pady=5)
         ttk.Label(self.median_current_frame, text="Current Density - Median (kA/cm²):").pack(pady=(5, 2), anchor='w')
-        self.j_density_median_var = tk.StringVar(value="4")
-        self.j_density_median_combo = ttk.Combobox(self.median_current_frame, textvariable=self.j_density_median_var,
-                                                   values=["3", "4", "5", "6", "7"], width=12)
-        self.j_density_median_combo.pack(anchor='w', padx=5)
+        self.j_density_median_var = tk.StringVar(value="4.00")
+        self.j_density_median_entry = ttk.Entry(self.median_current_frame, textvariable=self.j_density_median_var, width=15)
+        self.j_density_median_entry.pack(anchor='w', padx=5)
 
         # Current Density for 3-Sigma Loss
         self.sigma_current_frame = ttk.Frame(operation_frame)
         self.sigma_current_frame.pack(fill=tk.X, pady=5)
         ttk.Label(self.sigma_current_frame, text="Current Density - 3σ (kA/cm²):").pack(pady=(5, 2), anchor='w')
-        self.j_density_sigma_var = tk.StringVar(value="7")
-        self.j_density_sigma_combo = ttk.Combobox(self.sigma_current_frame, textvariable=self.j_density_sigma_var,
-                                                  values=["3", "4", "5", "6", "7"], width=12)
-        self.j_density_sigma_combo.pack(anchor='w', padx=5)
+        self.j_density_sigma_var = tk.StringVar(value="7.00")
+        self.j_density_sigma_entry = ttk.Entry(self.sigma_current_frame, textvariable=self.j_density_sigma_var, width=15)
+        self.j_density_sigma_entry.pack(anchor='w', padx=5)
 
         ttk.Label(operation_frame, text="Temperature (°C) [25-80]:").pack(pady=(5, 2), anchor='w')
         self.temp_var = tk.StringVar(value="40")
@@ -1019,8 +1017,8 @@ Note: Results are based on Guide3A SOA output requirements.
         self.l_active_var.set("790")
         self.pout_median_var.set("9")
         self.pout_sigma_var.set("13")
-        self.j_density_median_var.set("4")
-        self.j_density_sigma_var.set("7")
+        self.j_density_median_var.set("4.00")
+        self.j_density_sigma_var.set("7.00")
         self.num_wavelengths_var.set("8")
         
         # Reset wavelength values to defaults (first 8)
@@ -1973,7 +1971,7 @@ PIC Efficiency and Heat Load:
             
             # Transfer median case current density to EuropaSOA
             median_current_density = optimum_current_calculation['median_case']['current_density_kA_cm2']
-            self.j_density_median_var.set(f"{median_current_density:.1f}")
+            self.j_density_median_var.set(f"{median_current_density:.2f}")
             
             # Transfer 3σ case SOA output requirement to EuropaSOA target Pout
             sigma_soa_output = None
@@ -1985,7 +1983,7 @@ PIC Efficiency and Heat Load:
             # Transfer 3σ case current density to EuropaSOA
             if optimum_current_calculation['sigma_case'] is not None:
                 sigma_current_density = optimum_current_calculation['sigma_case']['current_density_kA_cm2']
-                self.j_density_sigma_var.set(f"{sigma_current_density:.1f}")
+                self.j_density_sigma_var.set(f"{sigma_current_density:.2f}")
             
             # Switch to EuropaSOA tab
             for child in self.winfo_children():
@@ -1996,11 +1994,14 @@ PIC Efficiency and Heat Load:
                             break
                     break
             
+            # Automatically update EuropaSOA results with new inputs
+            self.calculate_soa()
+            
             # Create transfer message
             transfer_msg = f"SOA output requirements and current density transferred to EuropaSOA tab:\n"
-            transfer_msg += f"Median: {median_soa_output:.2f} dBm, {median_current_density:.1f} kA/cm²\n"
+            transfer_msg += f"Median: {median_soa_output:.2f} dBm, {median_current_density:.2f} kA/cm²\n"
             if sigma_soa_output is not None and sigma_current_density is not None:
-                transfer_msg += f"3σ: {sigma_soa_output:.2f} dBm, {sigma_current_density:.1f} kA/cm²"
+                transfer_msg += f"3σ: {sigma_soa_output:.2f} dBm, {sigma_current_density:.2f} kA/cm²"
             else:
                 transfer_msg += f"3σ: Not available"
             
@@ -2062,7 +2063,7 @@ PIC Efficiency and Heat Load:
             
             # Update EuropaSOA current density values
             median_current_density = optimum_current_calculation['median_case']['current_density_kA_cm2']
-            self.j_density_median_var.set(f"{median_current_density:.1f}")
+            self.j_density_median_var.set(f"{median_current_density:.2f}")
             
             sigma_soa_output = None
             sigma_current_density = None
@@ -2072,13 +2073,13 @@ PIC Efficiency and Heat Load:
             
             if optimum_current_calculation['sigma_case'] is not None:
                 sigma_current_density = optimum_current_calculation['sigma_case']['current_density_kA_cm2']
-                self.j_density_sigma_var.set(f"{sigma_current_density:.1f}")
+                self.j_density_sigma_var.set(f"{sigma_current_density:.2f}")
             
             # Create update message
             update_msg = f"EuropaSOA target Pout and current density values updated:\n"
-            update_msg += f"Median: {median_soa_output:.2f} dBm, {median_current_density:.1f} kA/cm²\n"
+            update_msg += f"Median: {median_soa_output:.2f} dBm, {median_current_density:.2f} kA/cm²\n"
             if sigma_soa_output is not None and sigma_current_density is not None:
-                update_msg += f"3σ: {sigma_soa_output:.2f} dBm, {sigma_current_density:.1f} kA/cm²"
+                update_msg += f"3σ: {sigma_soa_output:.2f} dBm, {sigma_current_density:.2f} kA/cm²"
             else:
                 update_msg += f"3σ: Not available"
             
