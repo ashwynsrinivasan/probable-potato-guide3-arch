@@ -2017,7 +2017,7 @@ Note: Results are based on Guide3A SOA output requirements.
             module_config = guide3a.get_module_configuration()
             
             # Calculate target Pout for all wavelengths
-            target_pout_calculation = guide3a.calculate_target_pout_all_wavelengths(
+            target_pout_calculation = guide3a.calculate_target_pout_after_soa(
                 num_wavelengths=num_wavelengths,
                 target_pout_3sigma=float(self.guide3a_target_pout_3sigma_var.get()),
                 soa_penalty_3sigma=float(self.guide3a_soa_penalty_3sigma_var.get())
