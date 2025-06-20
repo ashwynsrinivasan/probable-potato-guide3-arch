@@ -1974,7 +1974,6 @@ Module Performance:
                 median_content += f"""- Digital Core Power: {median_module_performance['digital_core_power_w']:.3f} W
 - Analog Core Power: {median_module_performance['analog_core_power_w']:.3f} W
 - Thermal Power: {median_module_performance['thermal_power_w']:.3f} W
-- MCU Power: {median_module_performance['mcu_power_w']:.3f} W
 - Total Module Power: {median_module_performance['total_module_power_w']:.3f} W
 - Total Optical Power: {median_module_performance['total_optical_power_w']:.3f} W
 - Module Efficiency: {median_module_performance['module_efficiency_percent']:.2f}%
@@ -2042,7 +2041,6 @@ Module Performance:
                 sigma_content += f"""- Digital Core Power: {sigma_module_performance['digital_core_power_w']:.3f} W
 - Analog Core Power: {sigma_module_performance['analog_core_power_w']:.3f} W
 - Thermal Power: {sigma_module_performance['thermal_power_w']:.3f} W
-- MCU Power: {sigma_module_performance['mcu_power_w']:.3f} W
 - Total Module Power: {sigma_module_performance['total_module_power_w']:.3f} W
 - Total Optical Power: {sigma_module_performance['total_optical_power_w']:.3f} W
 - Module Efficiency: {sigma_module_performance['module_efficiency_percent']:.2f}%
