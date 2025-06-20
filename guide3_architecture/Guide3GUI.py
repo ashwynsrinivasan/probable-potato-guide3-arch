@@ -54,7 +54,18 @@ class Guide3GUI(tk.Tk):
                 'target_pout': -3.3,
                 'target_pout_3sigma': -0.3,
                 'soa_penalty': 2,
-                'soa_penalty_3sigma': 2
+                'soa_penalty_3sigma': 2,
+                'idac_voltage_overhead': 0.4,
+                'ir_drop_nominal': 0.1,
+                'ir_drop_3sigma': 0.2,
+                'vrm_efficiency': 80,
+                'tec_cop_nominal': 2,
+                'tec_cop_3sigma': 4,
+                'tec_power_efficiency': 80,
+                'driver_peripherals_power': 1.0,
+                'mcu_power': 0.5,
+                'misc_power': 0.25,
+                'digital_core_efficiency': 80
             }
         }
         
@@ -282,6 +293,76 @@ class Guide3GUI(tk.Tk):
         self.guide3a_coupler_loss_var = tk.StringVar(value="0.2")
         self.guide3a_coupler_loss_entry = ttk.Entry(loss_components_frame, textvariable=self.guide3a_coupler_loss_var, width=15)
         self.guide3a_coupler_loss_entry.pack(anchor='w', padx=5)
+        
+        # Module Parameters Frame (Bottom-left quadrant)
+        module_parameters_frame = ttk.LabelFrame(bottom_left_frame, text="Module Parameters", padding="10")
+        module_parameters_frame.pack(fill=tk.X, pady=5)
+        
+        # IDAC Voltage Overhead
+        ttk.Label(module_parameters_frame, text="IDAC Voltage Overhead (V):").pack(pady=(5, 2), anchor='w')
+        self.guide3a_idac_voltage_overhead_var = tk.StringVar(value="0.4")
+        self.guide3a_idac_voltage_overhead_entry = ttk.Entry(module_parameters_frame, textvariable=self.guide3a_idac_voltage_overhead_var, width=15)
+        self.guide3a_idac_voltage_overhead_entry.pack(anchor='w', padx=5)
+        
+        # IR Drop - Nominal
+        ttk.Label(module_parameters_frame, text="IR Drop - Nominal (V):").pack(pady=(5, 2), anchor='w')
+        self.guide3a_ir_drop_nominal_var = tk.StringVar(value="0.1")
+        self.guide3a_ir_drop_nominal_entry = ttk.Entry(module_parameters_frame, textvariable=self.guide3a_ir_drop_nominal_var, width=15)
+        self.guide3a_ir_drop_nominal_entry.pack(anchor='w', padx=5)
+        
+        # IR Drop - 3σ
+        ttk.Label(module_parameters_frame, text="IR Drop - 3σ (V):").pack(pady=(5, 2), anchor='w')
+        self.guide3a_ir_drop_3sigma_var = tk.StringVar(value="0.2")
+        self.guide3a_ir_drop_3sigma_entry = ttk.Entry(module_parameters_frame, textvariable=self.guide3a_ir_drop_3sigma_var, width=15)
+        self.guide3a_ir_drop_3sigma_entry.pack(anchor='w', padx=5)
+        
+        # VRM Efficiency
+        ttk.Label(module_parameters_frame, text="VRM Efficiency (%):").pack(pady=(5, 2), anchor='w')
+        self.guide3a_vrm_efficiency_var = tk.StringVar(value="80")
+        self.guide3a_vrm_efficiency_entry = ttk.Entry(module_parameters_frame, textvariable=self.guide3a_vrm_efficiency_var, width=15)
+        self.guide3a_vrm_efficiency_entry.pack(anchor='w', padx=5)
+        
+        # TEC COP - Nominal
+        ttk.Label(module_parameters_frame, text="TEC COP - Nominal:").pack(pady=(5, 2), anchor='w')
+        self.guide3a_tec_cop_nominal_var = tk.StringVar(value="2")
+        self.guide3a_tec_cop_nominal_entry = ttk.Entry(module_parameters_frame, textvariable=self.guide3a_tec_cop_nominal_var, width=15)
+        self.guide3a_tec_cop_nominal_entry.pack(anchor='w', padx=5)
+        
+        # TEC COP - 3σ
+        ttk.Label(module_parameters_frame, text="TEC COP - 3σ:").pack(pady=(5, 2), anchor='w')
+        self.guide3a_tec_cop_3sigma_var = tk.StringVar(value="4")
+        self.guide3a_tec_cop_3sigma_entry = ttk.Entry(module_parameters_frame, textvariable=self.guide3a_tec_cop_3sigma_var, width=15)
+        self.guide3a_tec_cop_3sigma_entry.pack(anchor='w', padx=5)
+        
+        # TEC Power Efficiency
+        ttk.Label(module_parameters_frame, text="TEC Power Efficiency (%):").pack(pady=(5, 2), anchor='w')
+        self.guide3a_tec_power_efficiency_var = tk.StringVar(value="80")
+        self.guide3a_tec_power_efficiency_entry = ttk.Entry(module_parameters_frame, textvariable=self.guide3a_tec_power_efficiency_var, width=15)
+        self.guide3a_tec_power_efficiency_entry.pack(anchor='w', padx=5)
+        
+        # Driver Peripherals Power Consumption
+        ttk.Label(module_parameters_frame, text="Driver Peripherals Power (W):").pack(pady=(5, 2), anchor='w')
+        self.guide3a_driver_peripherals_power_var = tk.StringVar(value="1.0")
+        self.guide3a_driver_peripherals_power_entry = ttk.Entry(module_parameters_frame, textvariable=self.guide3a_driver_peripherals_power_var, width=15)
+        self.guide3a_driver_peripherals_power_entry.pack(anchor='w', padx=5)
+        
+        # MCU Power Consumption
+        ttk.Label(module_parameters_frame, text="MCU Power Consumption (W):").pack(pady=(5, 2), anchor='w')
+        self.guide3a_mcu_power_var = tk.StringVar(value="0.5")
+        self.guide3a_mcu_power_entry = ttk.Entry(module_parameters_frame, textvariable=self.guide3a_mcu_power_var, width=15)
+        self.guide3a_mcu_power_entry.pack(anchor='w', padx=5)
+        
+        # MISC Power Consumption
+        ttk.Label(module_parameters_frame, text="MISC Power Consumption (W):").pack(pady=(5, 2), anchor='w')
+        self.guide3a_misc_power_var = tk.StringVar(value="0.25")
+        self.guide3a_misc_power_entry = ttk.Entry(module_parameters_frame, textvariable=self.guide3a_misc_power_var, width=15)
+        self.guide3a_misc_power_entry.pack(anchor='w', padx=5)
+        
+        # Digital Core Driver Efficiency
+        ttk.Label(module_parameters_frame, text="Digital Core Driver Efficiency (%):").pack(pady=(5, 2), anchor='w')
+        self.guide3a_digital_core_efficiency_var = tk.StringVar(value="80")
+        self.guide3a_digital_core_efficiency_entry = ttk.Entry(module_parameters_frame, textvariable=self.guide3a_digital_core_efficiency_var, width=15)
+        self.guide3a_digital_core_efficiency_entry.pack(anchor='w', padx=5)
         
         # Action buttons will be placed under the results section
         
@@ -639,6 +720,19 @@ class Guide3GUI(tk.Tk):
                 self.guide3a_soa_penalty_var.set(str(self.default_config['guide3a_parameters']['soa_penalty']))
                 self.guide3a_target_pout_3sigma_var.set(str(self.default_config['guide3a_parameters']['target_pout_3sigma']))
                 self.guide3a_soa_penalty_3sigma_var.set(str(self.default_config['guide3a_parameters']['soa_penalty_3sigma']))
+                
+                # Load module parameters
+                self.guide3a_idac_voltage_overhead_var.set(str(self.default_config['guide3a_parameters']['idac_voltage_overhead']))
+                self.guide3a_ir_drop_nominal_var.set(str(self.default_config['guide3a_parameters']['ir_drop_nominal']))
+                self.guide3a_ir_drop_3sigma_var.set(str(self.default_config['guide3a_parameters']['ir_drop_3sigma']))
+                self.guide3a_vrm_efficiency_var.set(str(self.default_config['guide3a_parameters']['vrm_efficiency']))
+                self.guide3a_tec_cop_nominal_var.set(str(self.default_config['guide3a_parameters']['tec_cop_nominal']))
+                self.guide3a_tec_cop_3sigma_var.set(str(self.default_config['guide3a_parameters']['tec_cop_3sigma']))
+                self.guide3a_tec_power_efficiency_var.set(str(self.default_config['guide3a_parameters']['tec_power_efficiency']))
+                self.guide3a_driver_peripherals_power_var.set(str(self.default_config['guide3a_parameters']['driver_peripherals_power']))
+                self.guide3a_mcu_power_var.set(str(self.default_config['guide3a_parameters']['mcu_power']))
+                self.guide3a_misc_power_var.set(str(self.default_config['guide3a_parameters']['misc_power']))
+                self.guide3a_digital_core_efficiency_var.set(str(self.default_config['guide3a_parameters']['digital_core_efficiency']))
             
             messagebox.showinfo("Defaults Loaded", "Default configuration has been loaded successfully.")
             
@@ -688,6 +782,19 @@ class Guide3GUI(tk.Tk):
                 self.default_config['guide3a_parameters']['soa_penalty'] = float(self.guide3a_soa_penalty_var.get())
                 self.default_config['guide3a_parameters']['target_pout_3sigma'] = float(self.guide3a_target_pout_3sigma_var.get())
                 self.default_config['guide3a_parameters']['soa_penalty_3sigma'] = float(self.guide3a_soa_penalty_3sigma_var.get())
+                
+                # Update module parameters
+                self.default_config['guide3a_parameters']['idac_voltage_overhead'] = float(self.guide3a_idac_voltage_overhead_var.get())
+                self.default_config['guide3a_parameters']['ir_drop_nominal'] = float(self.guide3a_ir_drop_nominal_var.get())
+                self.default_config['guide3a_parameters']['ir_drop_3sigma'] = float(self.guide3a_ir_drop_3sigma_var.get())
+                self.default_config['guide3a_parameters']['vrm_efficiency'] = float(self.guide3a_vrm_efficiency_var.get())
+                self.default_config['guide3a_parameters']['tec_cop_nominal'] = float(self.guide3a_tec_cop_nominal_var.get())
+                self.default_config['guide3a_parameters']['tec_cop_3sigma'] = float(self.guide3a_tec_cop_3sigma_var.get())
+                self.default_config['guide3a_parameters']['tec_power_efficiency'] = float(self.guide3a_tec_power_efficiency_var.get())
+                self.default_config['guide3a_parameters']['driver_peripherals_power'] = float(self.guide3a_driver_peripherals_power_var.get())
+                self.default_config['guide3a_parameters']['mcu_power'] = float(self.guide3a_mcu_power_var.get())
+                self.default_config['guide3a_parameters']['misc_power'] = float(self.guide3a_misc_power_var.get())
+                self.default_config['guide3a_parameters']['digital_core_efficiency'] = float(self.guide3a_digital_core_efficiency_var.get())
             
             messagebox.showinfo("Defaults Updated", "Default configuration has been updated with current values.")
             
@@ -751,6 +858,20 @@ class Guide3GUI(tk.Tk):
                     self.guide3a_target_pout_3sigma_var.set(str(config['guide3a_parameters'].get('target_pout_3sigma', -0.3)))
                     self.guide3a_soa_penalty_3sigma_var.set(str(config['guide3a_parameters'].get('soa_penalty_3sigma', 2)))
                 
+                # Load module parameters
+                if 'guide3a_parameters' in config:
+                    self.guide3a_idac_voltage_overhead_var.set(str(config['guide3a_parameters'].get('idac_voltage_overhead', 0.4)))
+                    self.guide3a_ir_drop_nominal_var.set(str(config['guide3a_parameters'].get('ir_drop_nominal', 0.1)))
+                    self.guide3a_ir_drop_3sigma_var.set(str(config['guide3a_parameters'].get('ir_drop_3sigma', 0.2)))
+                    self.guide3a_vrm_efficiency_var.set(str(config['guide3a_parameters'].get('vrm_efficiency', 80)))
+                    self.guide3a_tec_cop_nominal_var.set(str(config['guide3a_parameters'].get('tec_cop_nominal', 2)))
+                    self.guide3a_tec_cop_3sigma_var.set(str(config['guide3a_parameters'].get('tec_cop_3sigma', 4)))
+                    self.guide3a_tec_power_efficiency_var.set(str(config['guide3a_parameters'].get('tec_power_efficiency', 80)))
+                    self.guide3a_driver_peripherals_power_var.set(str(config['guide3a_parameters'].get('driver_peripherals_power', 1.0)))
+                    self.guide3a_mcu_power_var.set(str(config['guide3a_parameters'].get('mcu_power', 0.5)))
+                    self.guide3a_misc_power_var.set(str(config['guide3a_parameters'].get('misc_power', 0.25)))
+                    self.guide3a_digital_core_efficiency_var.set(str(config['guide3a_parameters'].get('digital_core_efficiency', 80)))
+                
                 messagebox.showinfo("Config Loaded", f"Configuration loaded from {filename}")
                 
         except Exception as e:
@@ -800,7 +921,18 @@ class Guide3GUI(tk.Tk):
                         'target_pout': float(self.guide3a_target_pout_var.get()),
                         'soa_penalty': float(self.guide3a_soa_penalty_var.get()),
                         'target_pout_3sigma': float(self.guide3a_target_pout_3sigma_var.get()),
-                        'soa_penalty_3sigma': float(self.guide3a_soa_penalty_3sigma_var.get())
+                        'soa_penalty_3sigma': float(self.guide3a_soa_penalty_3sigma_var.get()),
+                        'idac_voltage_overhead': float(self.guide3a_idac_voltage_overhead_var.get()),
+                        'ir_drop_nominal': float(self.guide3a_ir_drop_nominal_var.get()),
+                        'ir_drop_3sigma': float(self.guide3a_ir_drop_3sigma_var.get()),
+                        'vrm_efficiency': float(self.guide3a_vrm_efficiency_var.get()),
+                        'tec_cop_nominal': float(self.guide3a_tec_cop_nominal_var.get()),
+                        'tec_cop_3sigma': float(self.guide3a_tec_cop_3sigma_var.get()),
+                        'tec_power_efficiency': float(self.guide3a_tec_power_efficiency_var.get()),
+                        'driver_peripherals_power': float(self.guide3a_driver_peripherals_power_var.get()),
+                        'mcu_power': float(self.guide3a_mcu_power_var.get()),
+                        'misc_power': float(self.guide3a_misc_power_var.get()),
+                        'digital_core_efficiency': float(self.guide3a_digital_core_efficiency_var.get())
                     }
                 }
                 
@@ -1942,6 +2074,19 @@ PIC Performance:
         self.guide3a_target_pout_3sigma_var.set("-0.3")
         self.guide3a_soa_penalty_var.set("2")
         self.guide3a_soa_penalty_3sigma_var.set("2")
+        
+        # Reset module parameters
+        self.guide3a_idac_voltage_overhead_var.set("0.4")
+        self.guide3a_ir_drop_nominal_var.set("0.1")
+        self.guide3a_ir_drop_3sigma_var.set("0.2")
+        self.guide3a_vrm_efficiency_var.set("80")
+        self.guide3a_tec_cop_nominal_var.set("2")
+        self.guide3a_tec_cop_3sigma_var.set("4")
+        self.guide3a_tec_power_efficiency_var.set("80")
+        self.guide3a_driver_peripherals_power_var.set("1.0")
+        self.guide3a_mcu_power_var.set("0.5")
+        self.guide3a_misc_power_var.set("0.25")
+        self.guide3a_digital_core_efficiency_var.set("80")
         
         self.guide3a_median_results_text.delete(1.0, tk.END)
         self.guide3a_sigma_results_text.delete(1.0, tk.END)
