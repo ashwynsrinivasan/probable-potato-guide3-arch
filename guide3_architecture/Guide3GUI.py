@@ -1028,11 +1028,9 @@ Summary:
 - Electrical Power per SOA: {electrical_power_mw:.1f} mW
 - Series Resistance: {soa.calculate_series_resistance_ohm():.2f} Ω
 
-PIC Power Consumption:
+PIC Performance:
 - SOAs per PIC: {soas_per_pic}
 - Total PIC Power Consumption: {total_pic_power_mw:.1f} mW ({total_pic_power_mw/1000:.3f} W)
-
-PIC Efficiency and Heat Load:
 - Target Pout per Fiber: {target_pout_per_fiber_mw:.3f} mW ({target_pout_db:.2f} dBm)
 - Total Optical Power: {total_optical_power_mw:.1f} mW
 - PIC Efficiency: {pic_efficiency_percent:.2f}%
