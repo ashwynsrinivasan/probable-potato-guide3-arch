@@ -422,6 +422,9 @@ class Guide3GUI(tk.Tk):
         input_canvas.update_idletasks()
         update_input_scroll_region()
         
+        # Initialize field states for default PM fiber type
+        self._update_architecture_dependent_fields()
+        
         # Action buttons will be placed under the results section
         
         # Right side - Results Display (60% width)
