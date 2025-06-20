@@ -2115,6 +2115,43 @@ Loss Breakdown:
             
             common_header += f"- Total System Loss: {loss_breakdown['total_loss']:.2f} dB\n\n"
             
+            # Add detailed SOA to output loss calculation breakdown
+            soa_to_output_breakdown = target_pout_calculation['median_case']['loss_breakdown']
+            
+            # Get architecture-specific details
+            arch_specific = loss_breakdown['architecture_specific']
+            arch_details = ""
+            if module_config['effective_architecture'] == 'psr':
+                arch_details = f"PSR Loss ({arch_specific.get('total_psr_loss', 0):.2f} dB)"
+                if 'total_tap_loss' in arch_specific and arch_specific['total_tap_loss'] > 0:
+                    arch_details += f" + Tap Loss ({arch_specific['total_tap_loss']:.2f} dB)"
+            elif module_config['effective_architecture'] == 'pol_control':
+                arch_details = f"PSR Loss ({arch_specific.get('total_psr_loss', 0):.2f} dB) + Phase Shifter Loss ({arch_specific.get('total_phase_shifter_loss', 0):.2f} dB) + Coupler Loss ({arch_specific.get('total_coupler_loss', 0):.2f} dB)"
+            elif module_config['effective_architecture'] == 'psrless':
+                if 'total_tap_loss' in arch_specific and arch_specific['total_tap_loss'] > 0:
+                    arch_details = f"Tap Loss ({arch_specific['total_tap_loss']:.2f} dB)"
+                else:
+                    arch_details = "No additional architecture-specific losses"
+            
+            common_header += f"""SOA to Output Loss Calculation:
+The loss from SOA to output of Guide3A is calculated by summing all losses that occur after the SOA in the signal path:
+
+Signal Path: Input → [Input Losses] → SOA → [Output Losses] → Output
+
+Losses AFTER SOA (included in calculation):
+1. Waveguide Routing Output Loss: {soa_to_output_breakdown['wg_out_loss']:.2f} dB
+2. Connector Output Loss: {soa_to_output_breakdown['connector_out_loss']:.2f} dB  
+3. I/O Output Loss: {soa_to_output_breakdown['io_out_loss']:.2f} dB
+4. Architecture-Specific Loss: {soa_to_output_breakdown['architecture_loss']:.2f} dB
+   ({arch_details})
+
+Total Loss from SOA to Output: {target_pout_calculation['median_case']['soa_to_output_loss_db']:.2f} dB
+
+Note: This calculation includes only losses that occur AFTER the SOA in the signal path.
+Input losses (before SOA) are not included as they don't affect the SOA output requirement.
+
+"""
+            
             # Create median case content
             median_content = common_header + f"""MEDIAN LOSS CASE ANALYSIS
 {'='*30}
