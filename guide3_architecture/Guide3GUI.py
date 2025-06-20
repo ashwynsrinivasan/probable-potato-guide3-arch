@@ -26,10 +26,10 @@ class Guide3GUI(tk.Tk):
                 'active_length_um': 790
             },
             'operation_parameters': {
-                'pout_median_dbm': 9,
-                'pout_sigma_dbm': 13,
-                'j_density_median': 4.00,
-                'j_density_sigma': 7.00,
+                'pout_median_dbm': 9.23,
+                'pout_sigma_dbm': 12.23,
+                'j_density_median': 3.76,
+                'j_density_sigma': 7.15,
                 'temperature_c': 40
             },
             'wavelength_config': {
@@ -513,11 +513,11 @@ class Guide3GUI(tk.Tk):
         operation_frame = ttk.LabelFrame(top_left_frame, text="Operation Parameters", padding="10")
         operation_frame.pack(fill=tk.X, pady=5)
 
-        # Target P_out for Median Loss
+        # Target Pout for Median Loss
         self.median_pout_frame = ttk.Frame(operation_frame)
         self.median_pout_frame.pack(fill=tk.X, pady=5)
         ttk.Label(self.median_pout_frame, text="Target P_out - Median (dBm) [0-20]:").pack(pady=(5, 2), anchor='w')
-        self.pout_median_var = tk.StringVar(value="9")
+        self.pout_median_var = tk.StringVar(value="9.23")
         self.pout_median_entry = ttk.Entry(self.median_pout_frame, textvariable=self.pout_median_var, width=15)
         self.pout_median_entry.pack(anchor='w', padx=5)
 
@@ -525,7 +525,7 @@ class Guide3GUI(tk.Tk):
         self.sigma_pout_frame = ttk.Frame(operation_frame)
         self.sigma_pout_frame.pack(fill=tk.X, pady=5)
         ttk.Label(self.sigma_pout_frame, text="Target P_out - 3σ (dBm) [0-20]:").pack(pady=(5, 2), anchor='w')
-        self.pout_sigma_var = tk.StringVar(value="13")
+        self.pout_sigma_var = tk.StringVar(value="12.23")
         self.pout_sigma_entry = ttk.Entry(self.sigma_pout_frame, textvariable=self.pout_sigma_var, width=15)
         self.pout_sigma_entry.pack(anchor='w', padx=5)
 
@@ -533,7 +533,7 @@ class Guide3GUI(tk.Tk):
         self.median_current_frame = ttk.Frame(operation_frame)
         self.median_current_frame.pack(fill=tk.X, pady=5)
         ttk.Label(self.median_current_frame, text="Current Density - Median (kA/cm²):").pack(pady=(5, 2), anchor='w')
-        self.j_density_median_var = tk.StringVar(value="4.00")
+        self.j_density_median_var = tk.StringVar(value="3.76")
         self.j_density_median_entry = ttk.Entry(self.median_current_frame, textvariable=self.j_density_median_var, width=15)
         self.j_density_median_entry.pack(anchor='w', padx=5)
 
@@ -541,7 +541,7 @@ class Guide3GUI(tk.Tk):
         self.sigma_current_frame = ttk.Frame(operation_frame)
         self.sigma_current_frame.pack(fill=tk.X, pady=5)
         ttk.Label(self.sigma_current_frame, text="Current Density - 3σ (kA/cm²):").pack(pady=(5, 2), anchor='w')
-        self.j_density_sigma_var = tk.StringVar(value="7.00")
+        self.j_density_sigma_var = tk.StringVar(value="7.15")
         self.j_density_sigma_entry = ttk.Entry(self.sigma_current_frame, textvariable=self.j_density_sigma_var, width=15)
         self.j_density_sigma_entry.pack(anchor='w', padx=5)
 
@@ -1191,10 +1191,10 @@ Note: Results are based on Guide3A SOA output requirements.
         """Reset all SOA inputs to default values"""
         self.w_um_var.set("2.0")
         self.l_active_var.set("790")
-        self.pout_median_var.set("9")
-        self.pout_sigma_var.set("13")
-        self.j_density_median_var.set("4.00")
-        self.j_density_sigma_var.set("7.00")
+        self.pout_median_var.set("9.23")
+        self.pout_sigma_var.set("12.23")
+        self.j_density_median_var.set("3.76")
+        self.j_density_sigma_var.set("7.15")
         self.num_wavelengths_var.set("8")
         
         # Reset wavelength values to defaults (first 8)
