@@ -161,18 +161,26 @@ class Guide3GUI(tk.Tk):
         input_container.place(relx=0, rely=0, relwidth=0.4, relheight=1.0)
         
         # Create canvas with both scrollbars for input parameters
-        input_canvas = tk.Canvas(input_container, width=600, height=1200)
+        input_canvas = tk.Canvas(input_container)
         input_v_scrollbar = ttk.Scrollbar(input_container, orient="vertical", command=input_canvas.yview)
         input_h_scrollbar = ttk.Scrollbar(input_container, orient="horizontal", command=input_canvas.xview)
         input_scrollable_frame = ttk.Frame(input_canvas)
 
-        input_scrollable_frame.bind(
-            "<Configure>",
-            lambda e: input_canvas.configure(scrollregion=input_canvas.bbox("all"))
-        )
+        # Function to update scroll region
+        def update_input_scroll_region(event=None):
+            input_canvas.configure(scrollregion=input_canvas.bbox("all"))
+
+        input_scrollable_frame.bind("<Configure>", update_input_scroll_region)
 
         input_canvas.create_window((0, 0), window=input_scrollable_frame, anchor="nw")
         input_canvas.configure(yscrollcommand=input_v_scrollbar.set, xscrollcommand=input_h_scrollbar.set)
+
+        # Function to handle canvas resize
+        def on_canvas_configure(event):
+            # Update the scrollable frame width to match canvas width
+            input_canvas.itemconfig(1, width=event.width)
+
+        input_canvas.bind("<Configure>", on_canvas_configure)
 
         # Pack the canvas and scrollbars
         input_canvas.pack(side="left", fill="both", expand=True)
@@ -182,6 +190,12 @@ class Guide3GUI(tk.Tk):
         # Bind mouse wheel scrolling
         input_canvas.bind_all("<MouseWheel>", lambda event: input_canvas.yview_scroll(int(-1*(event.delta/120)), "units"))
         input_canvas.bind_all("<Shift-MouseWheel>", lambda event: input_canvas.xview_scroll(int(-1*(event.delta/120)), "units"))
+        
+        # Bind scroll region updates to all child widgets
+        def bind_scroll_updates(widget):
+            widget.bind("<Configure>", update_input_scroll_region)
+            for child in widget.winfo_children():
+                bind_scroll_updates(child)
 
         # Create 4 quadrants
         # Top-left quadrant
@@ -401,6 +415,13 @@ class Guide3GUI(tk.Tk):
         self.guide3a_tec_power_efficiency_entry = ttk.Entry(thermal_specs_frame, textvariable=self.guide3a_tec_power_efficiency_var, width=15)
         self.guide3a_tec_power_efficiency_entry.pack(anchor='w', padx=5)
         
+        # Bind scroll updates to all input widgets for proper vertical scrolling
+        bind_scroll_updates(input_scrollable_frame)
+        
+        # Update scroll region after all widgets are created
+        input_canvas.update_idletasks()
+        update_input_scroll_region()
+        
         # Action buttons will be placed under the results section
         
         # Right side - Results Display (60% width)
@@ -493,7 +514,7 @@ class Guide3GUI(tk.Tk):
         input_container.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
         
         # Create canvas with both scrollbars for input parameters
-        input_canvas = tk.Canvas(input_container, width=600, height=1200)
+        input_canvas = tk.Canvas(input_container)
         input_v_scrollbar = ttk.Scrollbar(input_container, orient="vertical", command=input_canvas.yview)
         input_h_scrollbar = ttk.Scrollbar(input_container, orient="horizontal", command=input_canvas.xview)
         input_scrollable_frame = ttk.Frame(input_canvas)
