@@ -1,5 +1,5 @@
 import math
-from EuropaSOA import EuropaSOA
+from .EuropaSOA import EuropaSOA
 
 class Guide3A:
     """
