@@ -227,9 +227,38 @@ class Guide3A:
             # Note: SOAs don't contribute to loss (amplification), but are present in both paths
             
         elif self.effective_architecture == 'pol_control':
-            total_loss += 2 * self.psr_loss  # psr_in and psr_out
-            total_loss += 2 * self.phase_shifter_loss  # phase_shifter_in_1, phase_shifter_in_2
-            total_loss += 2 * self.coupler_loss  # coupler_in_1, coupler_in_2
+            # Pol-control architecture should be identical to PSR
+            # Calculate polarization-dependent PSR loss based on TE fraction
+            te_fraction = self.te_polarization_fraction
+            tm_fraction = 1.0 - self.te_polarization_fraction
+            
+            # PSR_in: Each path has its own loss based on the actual path taken
+            # - TE/TE path: psr_in_tetm → psr_in_te2te (TE loss)
+            # - TM/TE path: psr_in_tetm → psr_in_tm2te (TM loss)
+            te2te_psr_in_loss = self.psr_loss_te  # TE path through PSR_in
+            tm2te_psr_in_loss = self.psr_loss_tm  # TM path through PSR_in
+            
+            # PSR_out: With connection swap:
+            # - psr_out_tm2te connects to tap_out_te2te (TE path)
+            # - psr_out_te2te connects to tap_out_tm2te (TM path)
+            # Each path has different PSR_out loss based on the connection
+            te2te_psr_out_loss = self.psr_loss_tm  # TM2TE port connects to TE2TE path
+            tm2te_psr_out_loss = self.psr_loss_te  # TE2TE port connects to TM2TE path
+            
+            # Total PSR loss: weighted average of both paths
+            te2te_total_psr_loss = te2te_psr_in_loss + te2te_psr_out_loss
+            tm2te_total_psr_loss = tm2te_psr_in_loss + tm2te_psr_out_loss
+            total_psr_loss = (te_fraction * te2te_total_psr_loss) + (tm_fraction * tm2te_total_psr_loss)
+            total_loss += total_psr_loss
+            
+            # Dual path components - only tap losses (waveguide routing is already included above)
+            # TE/TE path components
+            total_loss += self.tap_in_loss + self.tap_out_loss  # taps for TE/TE path
+            
+            # TM/TE path components  
+            total_loss += self.tap_in_loss + self.tap_out_loss  # taps for TM/TE path
+            
+            # Note: SOAs don't contribute to loss (amplification), but are present in both paths
             
         elif self.effective_architecture == 'psrless':
             # PSRless architecture has tap components
@@ -334,13 +363,73 @@ class Guide3A:
             }
             
         elif self.effective_architecture == 'pol_control':
+            total_loss = 0.0  # Initialize total_loss for breakdown calculation
+            # Pol-control architecture should be identical to PSR
+            # Calculate polarization-dependent PSR loss based on TE fraction
+            te_fraction = self.te_polarization_fraction
+            tm_fraction = 1.0 - self.te_polarization_fraction
+            
+            # PSR_in: Each path has its own loss based on the actual path taken
+            # - TE/TE path: psr_in_tetm → psr_in_te2te (TE loss)
+            # - TM/TE path: psr_in_tetm → psr_in_tm2te (TM loss)
+            te2te_psr_in_loss = self.psr_loss_te  # TE path through PSR_in
+            tm2te_psr_in_loss = self.psr_loss_tm  # TM path through PSR_in
+            
+            # PSR_out: With connection swap:
+            # - psr_out_tm2te connects to tap_out_te2te (TE path)
+            # - psr_out_te2te connects to tap_out_tm2te (TM path)
+            # Each path has different PSR_out loss based on the connection
+            te2te_psr_out_loss = self.psr_loss_tm  # TM2TE port connects to TE2TE path
+            tm2te_psr_out_loss = self.psr_loss_te  # TE2TE port connects to TM2TE path
+            
+            # Total PSR loss: weighted average of both paths
+            te2te_total_psr_loss = te2te_psr_in_loss + te2te_psr_out_loss
+            tm2te_total_psr_loss = tm2te_psr_in_loss + tm2te_psr_out_loss
+            total_psr_loss = (te_fraction * te2te_total_psr_loss) + (tm_fraction * tm2te_total_psr_loss)
+            total_loss += total_psr_loss
+            
+            # Dual path components - only tap losses (waveguide routing is already included above)
+            # TE/TE path components
+            total_loss += self.tap_in_loss + self.tap_out_loss  # taps for TE/TE path
+            
+            # TM/TE path components  
+            total_loss += self.tap_in_loss + self.tap_out_loss  # taps for TM/TE path
+            
+            # Note: SOAs don't contribute to loss (amplification), but are present in both paths
+            
             breakdown['architecture_specific'] = {
-                'psr_loss': self.psr_loss,
-                'total_psr_loss': 2 * self.psr_loss,
-                'phase_shifter_loss': self.phase_shifter_loss,
-                'total_phase_shifter_loss': 2 * self.phase_shifter_loss,
-                'coupler_loss': self.coupler_loss,
-                'total_coupler_loss': 2 * self.coupler_loss
+                'psr_loss_te': self.psr_loss_te,
+                'psr_loss_tm': self.psr_loss_tm,
+                'te_polarization_fraction': self.te_polarization_fraction,
+                'tm_polarization_fraction': tm_fraction,
+                'psr_in_loss': te2te_psr_in_loss + tm2te_psr_in_loss,
+                'psr_out_loss': te2te_psr_out_loss + tm2te_psr_out_loss,
+                'te2te_psr_in_loss': te2te_psr_in_loss,
+                'tm2te_psr_in_loss': tm2te_psr_in_loss,
+                'te2te_psr_out_loss': te2te_psr_out_loss,
+                'tm2te_psr_out_loss': tm2te_psr_out_loss,
+                'te2te_total_psr_loss': te2te_total_psr_loss,
+                'tm2te_total_psr_loss': tm2te_total_psr_loss,
+                'total_psr_loss': total_psr_loss,
+                'dual_path_components': {
+                    'te2te_path': {
+                        'tap_loss': self.tap_in_loss + self.tap_out_loss,
+                        'psr_in_loss': te2te_psr_in_loss,
+                        'psr_out_loss': te2te_psr_out_loss,
+                        'total_path_loss': te2te_total_psr_loss + self.tap_in_loss + self.tap_out_loss
+                    },
+                    'tm2te_path': {
+                        'tap_loss': self.tap_in_loss + self.tap_out_loss,
+                        'psr_in_loss': tm2te_psr_in_loss,
+                        'psr_out_loss': tm2te_psr_out_loss,
+                        'total_path_loss': tm2te_total_psr_loss + self.tap_in_loss + self.tap_out_loss
+                    }
+                },
+                'total_dual_path_loss': 2 * (self.tap_in_loss + self.tap_out_loss),
+                'tap_in_loss': self.tap_in_loss,
+                'tap_out_loss': self.tap_out_loss,
+                'total_tap_loss': 2 * (self.tap_in_loss + self.tap_out_loss),  # Both paths
+                'note': 'total_path_loss now includes psr_in_loss, psr_out_loss (for that path), and tap losses; updated for swapped connections.'
             }
             
         elif self.effective_architecture == 'psrless':
@@ -426,7 +515,15 @@ class Guide3A:
                 'soas': 2,  # SOA_te2te and SOA_tm2te
                 'total_dual_path_components': 12  # 2 PSR + 4 waveguide routing + 4 taps + 2 SOAs
             },
-            'pol_control': {'psr_devices': 2, 'phase_shifters': 2, 'couplers': 2},
+            'pol_control': {
+                'psr_devices': 2,  # PSR_in and PSR_out
+                'waveguide_routing_te2te': 2,  # wg_in_te2te and wg_out_te2te
+                'waveguide_routing_tm2te': 2,  # wg_in_tm2te and wg_out_tm2te
+                'taps_te2te': 2,  # tap_in_te2te and tap_out_te2te
+                'taps_tm2te': 2,  # tap_in_tm2te and tap_out_tm2te
+                'soas': 2,  # SOA_te2te and SOA_tm2te
+                'total_dual_path_components': 12  # 2 PSR + 4 waveguide routing + 4 taps + 2 SOAs
+            },
             'psrless': {'tap_devices': 2}
         }
         
@@ -585,8 +682,8 @@ Loss Breakdown:
             elif loss_type == 'note':
                 report += f"  - {value}\n"
         
-        # Add special handling for PSR dual paths
-        if self.effective_architecture == 'psr' and 'dual_path_components' in arch_losses:
+        # Add special handling for PSR and pol-control dual paths (they are identical)
+        if self.effective_architecture in ['psr', 'pol_control'] and 'dual_path_components' in arch_losses:
             report += f"\nDual Path Architecture Details:\n"
             dual_paths = arch_losses['dual_path_components']
             report += f"  - TE/TE Path Loss: {dual_paths['te2te_path']['total_path_loss']:.2f} dB (psr_in + psr_out + tap losses)\n"
@@ -1582,3 +1679,370 @@ Performance Metrics:
             }
         
         return result
+
+    # Pol-Control Architecture Methods (copied from PSR with adaptations)
+    
+    def get_pol_control_loss_for_te_polarization_degree(self, te_percentage: float):
+        """
+        Calculate pol-control loss for any degree of TE polarization from 0% to 100%.
+        
+        Args:
+            te_percentage (float): Percentage of TE polarization (0.0 to 100.0)
+            
+        Returns:
+            dict: Pol-control loss calculation for the specified TE polarization degree
+        """
+        if self.effective_architecture != 'pol_control':
+            return {'error': 'Polarization degree analysis only applies to pol_control architecture'}
+        
+        if not (0.0 <= te_percentage <= 100.0):
+            return {'error': 'TE percentage must be between 0.0 and 100.0'}
+        
+        # Calculate TM percentage
+        tm_percentage = 100.0 - te_percentage
+        
+        # Convert percentages to fractions
+        te_fraction = te_percentage / 100.0
+        tm_fraction = tm_percentage / 100.0
+        
+        # Convert dB losses to linear transmission
+        te_transmission = 10**(-self.psr_loss_te / 10)
+        tm_transmission = 10**(-self.psr_loss_tm / 10)
+        
+        # Weighted average in linear domain
+        weighted_transmission = (te_fraction * te_transmission) + (tm_fraction * tm_transmission)
+        
+        # Convert back to dB loss
+        avg_psr_loss = -10 * math.log10(weighted_transmission)
+        
+        # Total PSR loss for both PSR devices
+        total_psr_loss = 2 * avg_psr_loss
+        
+        # Add phase shifter and coupler losses (same for both paths)
+        total_phase_shifter_loss = 2 * self.phase_shifter_loss
+        total_coupler_loss = 2 * self.coupler_loss
+        
+        # Total pol-control specific loss
+        total_pol_control_loss = total_psr_loss + total_phase_shifter_loss + total_coupler_loss
+        
+        return {
+            'te_percentage': te_percentage,
+            'tm_percentage': tm_percentage,
+            'te_fraction': te_fraction,
+            'tm_fraction': tm_fraction,
+            'te_transmission': te_transmission,
+            'tm_transmission': tm_transmission,
+            'weighted_transmission': weighted_transmission,
+            'avg_psr_loss_per_device': avg_psr_loss,
+            'total_psr_loss': total_psr_loss,
+            'total_phase_shifter_loss': total_phase_shifter_loss,
+            'total_coupler_loss': total_coupler_loss,
+            'total_pol_control_loss': total_pol_control_loss,
+            'description': f"{te_percentage:.1f}% TE, {tm_percentage:.1f}% TM polarization with pol-control components"
+        }
+
+    def analyze_pol_control_loss_vs_te_polarization(self, step_size: float = 5.0):
+        """
+        Analyze pol-control loss across the full range of TE polarization degrees.
+        
+        Args:
+            step_size (float): Step size for TE percentage (default: 5.0%)
+            
+        Returns:
+            dict: Comprehensive analysis of pol-control loss vs TE polarization degree
+        """
+        if self.effective_architecture != 'pol_control':
+            return {'error': 'Polarization analysis only applies to pol_control architecture'}
+        
+        if step_size <= 0 or step_size > 100:
+            return {'error': 'Step size must be between 0 and 100'}
+        
+        # Generate TE percentages from 0% to 100%
+        te_percentages = []
+        current_te = 0.0
+        while current_te <= 100.0:
+            te_percentages.append(current_te)
+            current_te += step_size
+        
+        # Ensure we include exactly 100%
+        if te_percentages[-1] != 100.0:
+            te_percentages.append(100.0)
+        
+        # Calculate pol-control loss for each TE percentage
+        results = []
+        for te_pct in te_percentages:
+            result = self.get_pol_control_loss_for_te_polarization_degree(te_pct)
+            if 'error' not in result:
+                results.append(result)
+        
+        # Find minimum and maximum losses
+        if results:
+            min_loss_result = min(results, key=lambda x: x['total_pol_control_loss'])
+            max_loss_result = max(results, key=lambda x: x['total_pol_control_loss'])
+            
+            # Calculate total system loss for each case
+            base_loss = (self.connector_in_loss + self.connector_out_loss + 
+                        self.io_in_loss + self.io_out_loss + 
+                        self.wg_in_loss + self.wg_out_loss)
+            
+            min_total_loss = base_loss + min_loss_result['total_pol_control_loss']
+            max_total_loss = base_loss + max_loss_result['total_pol_control_loss']
+            
+            return {
+                'step_size': step_size,
+                'te_percentages': te_percentages,
+                'results': results,
+                'analysis': {
+                    'min_pol_control_loss': {
+                        'te_percentage': min_loss_result['te_percentage'],
+                        'total_pol_control_loss': min_loss_result['total_pol_control_loss'],
+                        'total_system_loss': min_total_loss,
+                        'description': min_loss_result['description']
+                    },
+                    'max_pol_control_loss': {
+                        'te_percentage': max_loss_result['te_percentage'],
+                        'total_pol_control_loss': max_loss_result['total_pol_control_loss'],
+                        'total_system_loss': max_total_loss,
+                        'description': max_loss_result['description']
+                    },
+                    'loss_range': {
+                        'pol_control_loss_range': max_loss_result['total_pol_control_loss'] - min_loss_result['total_pol_control_loss'],
+                        'total_system_loss_range': max_total_loss - min_total_loss
+                    }
+                },
+                'base_loss_components': {
+                    'connector_losses': self.connector_in_loss + self.connector_out_loss,
+                    'io_losses': self.io_in_loss + self.io_out_loss,
+                    'base_waveguide_routing': self.wg_in_loss + self.wg_out_loss,
+                    'total_base_loss': base_loss
+                }
+            }
+        else:
+            return {'error': 'No valid results generated'}
+
+    def calculate_soa_power_requirements_for_pol_control(self, target_pout_db: float, te_percentage: float, 
+                                                        num_wavelengths: int = 1, target_pout_3sigma: float | None = None, 
+                                                        soa_penalty_3sigma: float | None = None):
+        """
+        Calculate required SOA output power for pol-control architecture given a specific polarization fraction.
+        
+        This method determines how much power the SOA needs to output to achieve the target Pout
+        considering the polarization-dependent pol-control losses.
+        
+        Args:
+            target_pout_db (float): Target output power in dBm
+            te_percentage (float): Percentage of TE polarization (0.0 to 100.0)
+            num_wavelengths (int): Number of wavelengths (default: 1)
+            target_pout_3sigma (float | None): Target Pout for 3σ case (optional)
+            soa_penalty_3sigma (float | None): SOA penalty for 3σ case (optional)
+            
+        Returns:
+            dict: SOA power requirements and polarization analysis for pol-control
+        """
+        if self.effective_architecture != 'pol_control':
+            return {'error': 'SOA power analysis only applies to pol_control architecture'}
+        
+        if not (0.0 <= te_percentage <= 100.0):
+            return {'error': 'TE percentage must be between 0.0 and 100.0'}
+        
+        if num_wavelengths <= 0:
+            return {'error': 'Number of wavelengths must be positive'}
+        
+        # Calculate TM percentage
+        tm_percentage = 100.0 - te_percentage
+        te_fraction = te_percentage / 100.0
+        tm_fraction = tm_percentage / 100.0
+        
+        # Use the configured TE polarization fraction
+        effective_te_fraction = self.te_polarization_fraction
+        effective_tm_fraction = 1.0 - self.te_polarization_fraction
+        
+        # Calculate wavelength penalty
+        wavelength_penalty = 10 * math.log10(num_wavelengths)
+        
+        # Get pol-control loss for this polarization fraction
+        pol_control_analysis = self.get_pol_control_loss_for_te_polarization_degree(te_percentage)
+        if 'error' in pol_control_analysis:
+            return pol_control_analysis
+        
+        # Calculate losses from SOA to output
+        # Base losses that occur after SOA
+        base_soa_to_output_loss = (self.wg_out_loss + self.connector_out_loss + 
+                                  self.io_out_loss)
+        
+        # Pol-control specific losses (PSR + Phase Shifter + Coupler)
+        pol_control_loss = pol_control_analysis['total_pol_control_loss']
+        
+        # Calculate total loss from SOA to output
+        total_soa_to_output_loss = base_soa_to_output_loss + pol_control_loss
+        
+        # Calculate required SOA output power
+        # Formula: Target Pout + Wavelength Penalty + SOA Penalty + Loss from SOA to Output
+        soa_output_required = (target_pout_db + wavelength_penalty + 
+                             self.soa_penalty + total_soa_to_output_loss)
+        
+        result = {
+            'input_parameters': {
+                'target_pout_db': target_pout_db,
+                'te_percentage': te_percentage,
+                'tm_percentage': tm_percentage,
+                'te_fraction': te_fraction,
+                'tm_fraction': tm_fraction,
+                'te_polarization_fraction': self.te_polarization_fraction,
+                'num_wavelengths': num_wavelengths,
+                'wavelength_penalty_db': wavelength_penalty
+            },
+            'effective_polarization_analysis': {
+                'input_parameters': {
+                    'te_percentage': te_percentage,
+                    'tm_percentage': tm_percentage,
+                    'te_polarization_fraction': self.te_polarization_fraction
+                },
+                'polarized_components': {
+                    'te_fraction': te_fraction,
+                    'tm_fraction': tm_fraction,
+                    'polarized_te_fraction': effective_te_fraction,
+                    'polarized_tm_fraction': effective_tm_fraction,
+                    'unpolarized_fraction': 1.0 - self.te_polarization_fraction
+                },
+                'effective_fractions': {
+                    'effective_te_fraction': effective_te_fraction,
+                    'effective_tm_fraction': effective_tm_fraction,
+                    'effective_te_percentage': effective_te_fraction * 100.0,
+                    'effective_tm_percentage': effective_tm_fraction * 100.0
+                },
+                'description': f"TE fraction={self.te_polarization_fraction:.2f}: effective TE={effective_te_fraction*100:.1f}%, TM={effective_tm_fraction*100:.1f}%"
+            },
+            'pol_control_analysis': pol_control_analysis,
+            'loss_analysis': {
+                'base_soa_to_output_loss': base_soa_to_output_loss,
+                'pol_control_loss': pol_control_loss,
+                'total_soa_to_output_loss': total_soa_to_output_loss,
+                'psr_loss_component': pol_control_analysis['total_psr_loss'],
+                'phase_shifter_loss_component': pol_control_analysis['total_phase_shifter_loss'],
+                'coupler_loss_component': pol_control_analysis['total_coupler_loss']
+            },
+            'soa_requirements': {
+                'soa_output_required_db': soa_output_required,
+                'power_required_mw': 10**(soa_output_required / 10),
+                'description': f"SOA requires {soa_output_required:.2f} dBm for {te_percentage:.1f}% TE polarization with pol-control architecture"
+            },
+            'summary': {
+                'total_soa_power_mw': 10**(soa_output_required / 10),
+                'max_soa_output_db': soa_output_required,
+                'description': f"Pol-control SOA requires {soa_output_required:.2f} dBm for {te_percentage:.1f}% TE polarization (TE fraction={self.te_polarization_fraction:.2f})"
+            }
+        }
+        
+        # Add 3σ case if provided
+        if target_pout_3sigma is not None and soa_penalty_3sigma is not None:
+            sigma_wavelength_penalty = 10 * math.log10(num_wavelengths)
+            
+            soa_output_sigma = (target_pout_3sigma + sigma_wavelength_penalty + 
+                              soa_penalty_3sigma + total_soa_to_output_loss)
+            
+            result['sigma_case'] = {
+                'soa_output_required_db': target_pout_3sigma + sigma_wavelength_penalty + soa_penalty_3sigma + total_soa_to_output_loss,
+                'soa_output_final_db': soa_output_sigma,
+                'power_required_mw': 10**(soa_output_sigma / 10)
+            }
+        
+        return result
+
+    def get_total_loss_by_pol_control_case(self, polarization_case: str = 'mixed'):
+        """
+        Calculate total loss for pol-control architecture for different polarization cases.
+        
+        Args:
+            polarization_case (str): 'pure_te', 'pure_tm', or 'mixed'
+            
+        Returns:
+            dict: Total loss calculation for the specified polarization case
+        """
+        if self.effective_architecture != 'pol_control':
+            return {'error': 'Polarization case analysis only applies to pol_control architecture'}
+        
+        if polarization_case not in ['pure_te', 'pure_tm', 'mixed']:
+            return {'error': 'Polarization case must be pure_te, pure_tm, or mixed'}
+        
+        # Base losses (same for all cases)
+        base_loss = (self.connector_in_loss + self.connector_out_loss + 
+                    self.io_in_loss + self.io_out_loss + 
+                    self.wg_in_loss + self.wg_out_loss)
+        
+        # Pol-control specific losses depend on polarization case
+        if polarization_case == 'pure_te':
+            # 100% TE polarization
+            psr_loss = 2 * self.psr_loss_te
+            phase_shifter_loss = 2 * self.phase_shifter_loss
+            coupler_loss = 2 * self.coupler_loss
+            total_pol_control_loss = psr_loss + phase_shifter_loss + coupler_loss
+            description = "Pure TE polarization (100% TE)"
+            
+        elif polarization_case == 'pure_tm':
+            # 100% TM polarization
+            psr_loss = 2 * self.psr_loss_tm
+            phase_shifter_loss = 2 * self.phase_shifter_loss
+            coupler_loss = 2 * self.coupler_loss
+            total_pol_control_loss = psr_loss + phase_shifter_loss + coupler_loss
+            description = "Pure TM polarization (100% TM)"
+            
+        else:  # mixed
+            # Use configured TE polarization fraction
+            te_fraction = self.te_polarization_fraction
+            tm_fraction = 1.0 - self.te_polarization_fraction
+            
+            # Weighted average PSR loss
+            avg_psr_loss = (te_fraction * self.psr_loss_te) + (tm_fraction * self.psr_loss_tm)
+            psr_loss = 2 * avg_psr_loss
+            phase_shifter_loss = 2 * self.phase_shifter_loss
+            coupler_loss = 2 * self.coupler_loss
+            total_pol_control_loss = psr_loss + phase_shifter_loss + coupler_loss
+            description = f"Mixed polarization ({self.te_polarization_fraction:.1%} TE, {tm_fraction:.1%} TM)"
+        
+        total_loss = base_loss + total_pol_control_loss
+        
+        return {
+            'polarization_case': polarization_case,
+            'description': description,
+            'base_loss': base_loss,
+            'pol_control_loss': {
+                'psr_loss': psr_loss,
+                'phase_shifter_loss': phase_shifter_loss,
+                'coupler_loss': coupler_loss,
+                'total_pol_control_loss': total_pol_control_loss
+            },
+            'total_loss': total_loss
+        }
+
+    def compare_pol_control_cases(self):
+        """
+        Compare total losses for different polarization cases in pol-control architecture.
+        
+        Returns:
+            dict: Comparison of losses for pure TE, pure TM, and mixed polarization cases
+        """
+        if self.effective_architecture != 'pol_control':
+            return {'error': 'Polarization case comparison only applies to pol_control architecture'}
+        
+        # Calculate losses for each case
+        pure_te = self.get_total_loss_by_pol_control_case('pure_te')
+        pure_tm = self.get_total_loss_by_pol_control_case('pure_tm')
+        mixed = self.get_total_loss_by_pol_control_case('mixed')
+        
+        if 'error' in pure_te or 'error' in pure_tm or 'error' in mixed:
+            return {'error': 'Failed to calculate one or more polarization cases'}
+        
+        return {
+            'architecture': 'pol_control',
+            'cases': {
+                'pure_te': pure_te,
+                'pure_tm': pure_tm,
+                'mixed': mixed
+            },
+            'comparison': {
+                'lowest_loss': min(pure_te['total_loss'], pure_tm['total_loss'], mixed['total_loss']),
+                'highest_loss': max(pure_te['total_loss'], pure_tm['total_loss'], mixed['total_loss']),
+                'loss_range': max(pure_te['total_loss'], pure_tm['total_loss'], mixed['total_loss']) - min(pure_te['total_loss'], pure_tm['total_loss'], mixed['total_loss'])
+            }
+        }
