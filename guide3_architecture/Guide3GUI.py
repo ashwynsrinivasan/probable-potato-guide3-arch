@@ -868,7 +868,8 @@ class Guide3GUI(tk.Tk):
             'wpe_vs_wavelength': tk.BooleanVar(),
             'gain_vs_wavelength': tk.BooleanVar(),
             'pin_vs_wavelength': tk.BooleanVar(),
-            'saturation_vs_wavelength': tk.BooleanVar()
+            'saturation_vs_wavelength': tk.BooleanVar(),
+            'soa_iv': tk.BooleanVar()
         }
         
         # Set defaults
@@ -1831,6 +1832,9 @@ Note: Results are based on Guide3A SOA output requirements.
             elif plot_name == 'saturation_vs_wavelength':
                 self._plot_saturation_vs_wavelength(fig, soa, row, col, temp_c, wavelengths,
                                                   median_selected, sigma_selected, j_density_median, j_density_sigma)
+            elif plot_name == 'soa_iv':
+                self._plot_soa_iv(fig, soa, row, col, temp_c, wavelengths,
+                                 median_selected, sigma_selected, j_density_median, j_density_sigma)
             
             plot_idx += 1
         
@@ -2169,6 +2173,64 @@ Note: Results are based on Guide3A SOA output requirements.
         
         fig.update_xaxes(title_text="Wavelength (nm)", row=row, col=col)
         fig.update_yaxes(title_text="Saturation Power (dBm)", row=row, col=col)
+
+    def _plot_soa_iv(self, fig, soa, row, col, temp_c, wavelengths,
+                    median_selected, sigma_selected, j_density_median, j_density_sigma):
+        """Plot SOA Current-Voltage (IV) characteristics"""
+        # Generate current range for IV plot (0 to 2x the maximum current density)
+        max_j_density = max(j_density_median, j_density_sigma) if median_selected and sigma_selected else (j_density_median if median_selected else j_density_sigma)
+        max_current_ma = soa.calculate_current_mA_from_J(max_j_density * 2.0)  # 2x for good range
+        
+        # Generate current points (0 to max_current_ma)
+        current_points = np.linspace(0, max_current_ma, 100)
+        voltage_median = []
+        voltage_sigma = []
+        
+        for current_ma in current_points:
+            if current_ma > 0:
+                voltage_median.append(soa.get_operating_voltage(current_ma))
+                voltage_sigma.append(soa.get_operating_voltage(current_ma))  # Same voltage model for both
+            else:
+                voltage_median.append(soa.V_turn_on)  # Turn-on voltage at zero current
+                voltage_sigma.append(soa.V_turn_on)
+        
+        if median_selected:
+            fig.add_trace(
+                go.Scatter(x=current_points, y=voltage_median, mode='lines', 
+                          name='Median Loss', line=dict(color='blue'), showlegend=False),
+                row=row, col=col
+            )
+        
+        if sigma_selected:
+            fig.add_trace(
+                go.Scatter(x=current_points, y=voltage_sigma, mode='lines', 
+                          name='3σ Loss', line=dict(color='red'), showlegend=False),
+                row=row, col=col
+            )
+        
+        # Add operating points for both cases
+        if median_selected:
+            median_current_ma = soa.calculate_current_mA_from_J(j_density_median)
+            median_voltage_v = soa.get_operating_voltage(median_current_ma)
+            fig.add_trace(
+                go.Scatter(x=[median_current_ma], y=[median_voltage_v], mode='markers',
+                          marker=dict(color='blue', size=10, symbol='circle'),
+                          name='Median Operating Point', showlegend=False),
+                row=row, col=col
+            )
+        
+        if sigma_selected:
+            sigma_current_ma = soa.calculate_current_mA_from_J(j_density_sigma)
+            sigma_voltage_v = soa.get_operating_voltage(sigma_current_ma)
+            fig.add_trace(
+                go.Scatter(x=[sigma_current_ma], y=[sigma_voltage_v], mode='markers',
+                          marker=dict(color='red', size=10, symbol='square'),
+                          name='3σ Operating Point', showlegend=False),
+                row=row, col=col
+            )
+        
+        fig.update_xaxes(title_text="Current (mA)", row=row, col=col)
+        fig.update_yaxes(title_text="Voltage (V)", row=row, col=col)
 
     def calculate_guide3a(self):
         """Calculate Guide3A parameters based on input values"""
