@@ -2433,49 +2433,7 @@ Input losses (before SOA) are not included as they don't affect the SOA output r
 """
             
             # Add polarization analysis for PSR architecture
-            if polarization_analysis and 'error' not in polarization_analysis:
-                common_header += f"""POLARIZATION-DEPENDENT LOSS ANALYSIS (PSR Architecture)
-{'='*60}
-
-PSR Loss Parameters:
-- TE/TM to TE2TE Port Loss: {float(self.guide3a_psr_loss_te_var.get()):.2f} dB
-- TE/TM to TM2TE Port Loss: {float(self.guide3a_psr_loss_tm_var.get()):.2f} dB
-- TE Polarization Fraction: {float(self.te_polarization_fraction_var.get()):.1%}
-
-Polarization Case Comparison:
-- Pure TE (100% TE): {polarization_analysis['polarization_cases']['pure_te']['total_loss']:.2f} dB
-- Pure TM (100% TM): {polarization_analysis['polarization_cases']['pure_tm']['total_loss']:.2f} dB
-- Mixed (50% TE, 50% TM): {polarization_analysis['polarization_cases']['mixed']['total_loss']:.2f} dB
-
-Loss Differences:
-- TE vs TM Difference: {polarization_analysis['comparison']['te_vs_tm_difference_db']:.2f} dB
-- TE vs Mixed Difference: {polarization_analysis['comparison']['te_vs_mixed_difference_db']:.2f} dB
-- TM vs Mixed Difference: {polarization_analysis['comparison']['tm_vs_mixed_difference_db']:.2f} dB
-
-Best Case: {polarization_analysis['comparison']['best_case'].upper()}
-Worst Case: {polarization_analysis['comparison']['worst_case'].upper()}
-Loss Range: {polarization_analysis['summary']['loss_range']:.2f} dB
-
-Current TE Polarization Analysis ({float(self.te_polarization_fraction_var.get()):.1%}):
-"""
-                
-                if te_polarization_analysis and 'error' not in te_polarization_analysis:
-                    common_header += f"""- TE Percentage: {te_polarization_analysis['te_percentage']:.1f}%
-- TM Percentage: {te_polarization_analysis['tm_percentage']:.1f}%
-- Average PSR Loss per Device: {te_polarization_analysis['avg_psr_loss_per_device']:.2f} dB
-- Total PSR Loss (2 devices): {te_polarization_analysis['total_psr_loss']:.2f} dB
-- Description: {te_polarization_analysis['description']}
-
-"""
-                else:
-                    common_header += f"- Error calculating current polarization analysis: {te_polarization_analysis['error'] if te_polarization_analysis else 'Not available'}\n\n"
-            elif guide3a.effective_architecture == 'psr':
-                common_header += f"""POLARIZATION-DEPENDENT LOSS ANALYSIS (PSR Architecture)
-{'='*60}
-
-Error: {polarization_analysis['error'] if polarization_analysis else 'Failed to calculate polarization analysis'}
-
-"""
+            # Note: Polarization analysis section removed as requested
             
             # Create median case content
             median_content = common_header + f"""MEDIAN LOSS CASE ANALYSIS
