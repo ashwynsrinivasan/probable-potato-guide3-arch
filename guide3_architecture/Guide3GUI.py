@@ -3,7 +3,7 @@ from tkinter import ttk, messagebox, filedialog
 try:
     from .EuropaSOA import EuropaSOA
 except ImportError:
-from EuropaSOA import EuropaSOA
+    from EuropaSOA import EuropaSOA
 import math
 import yaml
 import os
@@ -47,18 +47,20 @@ class Guide3GUI(tk.Tk):
                 'fiber_input_type': 'pm',
                 'pic_architecture': 'psrless',
                 'num_fibers': 40,
-                'operating_wavelength': 1310,
-                'temperature': 40,
+                'te_polarization_fraction': 0.5,
                 'io_in_loss': 1.5,
                 'io_out_loss': 1.5,
                 'connector_in_loss': 0.25,
                 'connector_out_loss': 0.25,
                 'wg_in_loss': 0.25,
                 'wg_out_loss': 0.25,
-                'psr_loss': 0.5,
+                'psr_loss_te': 0.37,
+                'psr_loss_tm': 0.93,
                 'phase_shifter_loss': 0.5,
                 'coupler_loss': 0.2,
-                'target_pout': -3.3,
+                'tap_in_loss': 0.3,
+                'tap_out_loss': 0.3,
+                'target_pout': -2.75,
                 'target_pout_3sigma': -0.3,
                 'soa_penalty': 2,
                 'soa_penalty_3sigma': 2,
@@ -66,8 +68,8 @@ class Guide3GUI(tk.Tk):
                 'ir_drop_nominal': 0.1,
                 'ir_drop_3sigma': 0.2,
                 'vrm_efficiency': 80,
-                'tec_cop_nominal': 4,
-                'tec_cop_3sigma': 2,
+                'tec_cop_nominal': 2,
+                'tec_cop_3sigma': 4,
                 'tec_power_efficiency': 80,
                 'driver_peripherals_power': 1.0,
                 'mcu_power': 0.5,
@@ -227,7 +229,7 @@ class Guide3GUI(tk.Tk):
         guide3_bottom_right_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(5, 0), pady=(5, 0))
 
         # --- Link Requirements per Lambda for Guide3A (Top-left) ---
-        guide3_link_requirements_frame = ttk.LabelFrame(guide3_top_left_frame, text="Link Requirements per Lambda for Guide3A", padding="10")
+        guide3_link_requirements_frame = ttk.LabelFrame(guide3_top_left_frame, text="Link Requirements per λ for Guide3A", padding="10")
         guide3_link_requirements_frame.pack(fill=tk.X, pady=5)
         
         # Target Pout
@@ -441,6 +443,13 @@ class Guide3GUI(tk.Tk):
         self.num_fibers_entry = ttk.Entry(module_config_frame, textvariable=self.num_fibers_var, width=15)
         self.num_fibers_entry.pack(anchor='w', padx=5, pady=(0, 10))
 
+        # TE Fraction
+        ttk.Label(module_config_frame, text="TE Fraction:").pack(pady=(5, 2), anchor='w')
+        self.te_polarization_fraction_var = tk.StringVar(value="0.5")
+        self.te_polarization_fraction_combo = ttk.Combobox(module_config_frame, textvariable=self.te_polarization_fraction_var,
+                                                          values=["0.0", "0.25", "0.5", "0.75", "1.0"], width=20, state="readonly")
+        self.te_polarization_fraction_combo.pack(anchor='w', padx=5, pady=(0, 10))
+
         # Guide3A wavelength and temperature variables (hidden, used for calculations)
         self.guide3a_wavelength_var = tk.StringVar(value="1310")
         self.guide3a_temp_var = tk.StringVar(value="40")
@@ -461,6 +470,10 @@ class Guide3GUI(tk.Tk):
         self.guide3a_mcu_power_var = tk.StringVar(value="0.5")
         self.guide3a_misc_power_var = tk.StringVar(value="0.25")
         self.guide3a_digital_core_efficiency_var = tk.StringVar(value="80")
+        
+        # Legacy PSR loss variable for backward compatibility
+        self.guide3a_psr_loss_var = tk.StringVar(value="0.5")
+        self.guide3a_psr_loss_entry = None  # Not used anymore, replaced by split fields
         
         # Loss Components Frame (moved below Module Configuration)
         loss_components_frame = ttk.LabelFrame(top_left_frame, text="Loss Components (dB)", padding="10")
@@ -522,11 +535,19 @@ class Guide3GUI(tk.Tk):
         self.guide3a_tap_out_loss_entry = ttk.Entry(tap_loss_frame, textvariable=self.guide3a_tap_out_loss_var, width=15)
         self.guide3a_tap_out_loss_entry.pack(anchor='w', padx=5, pady=(0, 5))
         
-        # PSR Loss
-        ttk.Label(loss_components_frame, text="PSR Loss:").pack(pady=(5, 2), anchor='w')
-        self.guide3a_psr_loss_var = tk.StringVar(value="0.5")
-        self.guide3a_psr_loss_entry = ttk.Entry(loss_components_frame, textvariable=self.guide3a_psr_loss_var, width=15)
-        self.guide3a_psr_loss_entry.pack(anchor='w', padx=5)
+        # PSR Loss - Split into two fields for PSR architecture
+        psr_loss_frame = ttk.LabelFrame(loss_components_frame, text="PSR Loss", padding="5")
+        psr_loss_frame.pack(fill=tk.X, pady=2)
+        
+        ttk.Label(psr_loss_frame, text="TE/TM to TE2TE Port (dB):").pack(pady=(2, 0), anchor='w')
+        self.guide3a_psr_loss_te_var = tk.StringVar(value="0.37")
+        self.guide3a_psr_loss_te_entry = ttk.Entry(psr_loss_frame, textvariable=self.guide3a_psr_loss_te_var, width=15)
+        self.guide3a_psr_loss_te_entry.pack(anchor='w', padx=5, pady=(0, 5))
+        
+        ttk.Label(psr_loss_frame, text="TE/TM to TM2TE Port (dB):").pack(pady=(2, 0), anchor='w')
+        self.guide3a_psr_loss_tm_var = tk.StringVar(value="0.93")
+        self.guide3a_psr_loss_tm_entry = ttk.Entry(psr_loss_frame, textvariable=self.guide3a_psr_loss_tm_var, width=15)
+        self.guide3a_psr_loss_tm_entry.pack(anchor='w', padx=5, pady=(0, 5))
         
         # Phase Shifter Loss
         ttk.Label(loss_components_frame, text="Phase Shifter Loss:").pack(pady=(5, 2), anchor='w')
@@ -541,116 +562,75 @@ class Guide3GUI(tk.Tk):
         self.guide3a_coupler_loss_entry.pack(anchor='w', padx=5)
         
         # --- Performance Parameters (Top-right) ---
-        performance_frame = ttk.LabelFrame(top_right_frame, text="Performance Parameters", padding="10")
+        performance_frame = ttk.LabelFrame(input_scrollable_frame, text="Performance Parameters", padding="10")
         performance_frame.pack(fill=tk.X, pady=5)
         
-        # Operating Wavelength
-        ttk.Label(performance_frame, text="Operating Wavelength [nm]:").pack(pady=(5, 2), anchor='w')
-        self.guide3a_operating_wavelength_var = tk.StringVar(value="1310")
-        self.guide3a_operating_wavelength_entry = ttk.Entry(performance_frame, textvariable=self.guide3a_operating_wavelength_var, width=15)
-        self.guide3a_operating_wavelength_entry.pack(anchor='w', padx=5)
-        
-        # Temperature
-        ttk.Label(performance_frame, text="Temperature [°C]:").pack(pady=(5, 2), anchor='w')
-        self.guide3a_temperature_var = tk.StringVar(value="25")
-        self.guide3a_temperature_entry = ttk.Entry(performance_frame, textvariable=self.guide3a_temperature_var, width=15)
-        self.guide3a_temperature_entry.pack(anchor='w', padx=5)
-        
-        # Target Pout
-        ttk.Label(performance_frame, text="Target Pout [dBm]:").pack(pady=(5, 2), anchor='w')
-        self.guide3a_target_pout_display_var = tk.StringVar(value="-2.75")
-        self.guide3a_target_pout_display_entry = ttk.Entry(performance_frame, textvariable=self.guide3a_target_pout_display_var, width=15)
-        self.guide3a_target_pout_display_entry.pack(anchor='w', padx=5)
-        
-        # SOA Penalty
-        ttk.Label(performance_frame, text="SOA Penalty [dB]:").pack(pady=(5, 2), anchor='w')
-        self.guide3a_soa_penalty_display_var = tk.StringVar(value="2")
-        self.guide3a_soa_penalty_display_entry = ttk.Entry(performance_frame, textvariable=self.guide3a_soa_penalty_display_var, width=15)
-        self.guide3a_soa_penalty_display_entry.pack(anchor='w', padx=5)
-        
-        # Number of Wavelengths
-        ttk.Label(performance_frame, text="Number of Wavelengths:").pack(pady=(5, 2), anchor='w')
-        self.guide3a_num_wavelengths_display_var = tk.StringVar(value="8")
-        self.guide3a_num_wavelengths_display_entry = ttk.Entry(performance_frame, textvariable=self.guide3a_num_wavelengths_display_var, width=15)
-        self.guide3a_num_wavelengths_display_entry.pack(anchor='w', padx=5)
-        
-        # --- Analog Block Parameters ---
+        # Analog Block Parameters
         analog_frame = ttk.LabelFrame(performance_frame, text="Analog Block", padding="5")
-        analog_frame.pack(fill=tk.X, pady=(10, 5))
+        analog_frame.pack(fill=tk.X, pady=5)
         
-        # IDAC Voltage Overhead
-        ttk.Label(analog_frame, text="IDAC Voltage Overhead [V]:").pack(pady=(2, 0), anchor='w')
-        self.guide3a_idac_voltage_overhead_display_var = tk.StringVar(value="0.4")
-        self.guide3a_idac_voltage_overhead_display_entry = ttk.Entry(analog_frame, textvariable=self.guide3a_idac_voltage_overhead_display_var, width=15)
-        self.guide3a_idac_voltage_overhead_display_entry.pack(anchor='w', padx=5, pady=(0, 5))
+        ttk.Label(analog_frame, text="IDAC Voltage Overhead (V):").pack(pady=(5, 2), anchor='w')
+        self.guide3a_idac_voltage_overhead_var = tk.StringVar(value="0.1")
+        self.guide3a_idac_voltage_overhead_entry = ttk.Entry(analog_frame, textvariable=self.guide3a_idac_voltage_overhead_var, width=15)
+        self.guide3a_idac_voltage_overhead_entry.pack(anchor='w', padx=5)
         
-        # IR Drop Nominal
-        ttk.Label(analog_frame, text="IR Drop Nominal [V]:").pack(pady=(2, 0), anchor='w')
-        self.guide3a_ir_drop_nominal_display_var = tk.StringVar(value="0.1")
-        self.guide3a_ir_drop_nominal_display_entry = ttk.Entry(analog_frame, textvariable=self.guide3a_ir_drop_nominal_display_var, width=15)
-        self.guide3a_ir_drop_nominal_display_entry.pack(anchor='w', padx=5, pady=(0, 5))
+        ttk.Label(analog_frame, text="IR Drop Nominal (V):").pack(pady=(5, 2), anchor='w')
+        self.guide3a_ir_drop_nominal_var = tk.StringVar(value="0.05")
+        self.guide3a_ir_drop_nominal_entry = ttk.Entry(analog_frame, textvariable=self.guide3a_ir_drop_nominal_var, width=15)
+        self.guide3a_ir_drop_nominal_entry.pack(anchor='w', padx=5)
         
-        # IR Drop 3σ
-        ttk.Label(analog_frame, text="IR Drop 3σ [V]:").pack(pady=(2, 0), anchor='w')
-        self.guide3a_ir_drop_3sigma_display_var = tk.StringVar(value="0.2")
-        self.guide3a_ir_drop_3sigma_display_entry = ttk.Entry(analog_frame, textvariable=self.guide3a_ir_drop_3sigma_display_var, width=15)
-        self.guide3a_ir_drop_3sigma_display_entry.pack(anchor='w', padx=5, pady=(0, 5))
+        ttk.Label(analog_frame, text="IR Drop 3σ (V):").pack(pady=(5, 2), anchor='w')
+        self.guide3a_ir_drop_3sigma_var = tk.StringVar(value="0.1")
+        self.guide3a_ir_drop_3sigma_entry = ttk.Entry(analog_frame, textvariable=self.guide3a_ir_drop_3sigma_var, width=15)
+        self.guide3a_ir_drop_3sigma_entry.pack(anchor='w', padx=5)
         
-        # VRM Efficiency
-        ttk.Label(analog_frame, text="VRM Efficiency [%]:").pack(pady=(2, 0), anchor='w')
-        self.guide3a_vrm_efficiency_display_var = tk.StringVar(value="80")
-        self.guide3a_vrm_efficiency_display_entry = ttk.Entry(analog_frame, textvariable=self.guide3a_vrm_efficiency_display_var, width=15)
-        self.guide3a_vrm_efficiency_display_entry.pack(anchor='w', padx=5, pady=(0, 5))
+        ttk.Label(analog_frame, text="VRM Efficiency (%):").pack(pady=(5, 2), anchor='w')
+        self.guide3a_vrm_efficiency_var = tk.StringVar(value="85")
+        self.guide3a_vrm_efficiency_entry = ttk.Entry(analog_frame, textvariable=self.guide3a_vrm_efficiency_var, width=15)
+        self.guide3a_vrm_efficiency_entry.pack(anchor='w', padx=5)
         
-        # --- Digital Block Parameters ---
+        # Digital Block Parameters
         digital_frame = ttk.LabelFrame(performance_frame, text="Digital Block", padding="5")
-        digital_frame.pack(fill=tk.X, pady=(5, 5))
+        digital_frame.pack(fill=tk.X, pady=5)
         
-        # Driver Peripherals Power
-        ttk.Label(digital_frame, text="Driver Peripherals Power [W]:").pack(pady=(2, 0), anchor='w')
-        self.guide3a_driver_peripherals_power_display_var = tk.StringVar(value="1.0")
-        self.guide3a_driver_peripherals_power_display_entry = ttk.Entry(digital_frame, textvariable=self.guide3a_driver_peripherals_power_display_var, width=15)
-        self.guide3a_driver_peripherals_power_display_entry.pack(anchor='w', padx=5, pady=(0, 5))
+        ttk.Label(digital_frame, text="Driver Peripherals Power (W):").pack(pady=(5, 2), anchor='w')
+        self.guide3a_driver_peripherals_power_var = tk.StringVar(value="0.5")
+        self.guide3a_driver_peripherals_power_entry = ttk.Entry(digital_frame, textvariable=self.guide3a_driver_peripherals_power_var, width=15)
+        self.guide3a_driver_peripherals_power_entry.pack(anchor='w', padx=5)
         
-        # MCU Power
-        ttk.Label(digital_frame, text="MCU Power [W]:").pack(pady=(2, 0), anchor='w')
-        self.guide3a_mcu_power_display_var = tk.StringVar(value="0.5")
-        self.guide3a_mcu_power_display_entry = ttk.Entry(digital_frame, textvariable=self.guide3a_mcu_power_display_var, width=15)
-        self.guide3a_mcu_power_display_entry.pack(anchor='w', padx=5, pady=(0, 5))
+        ttk.Label(digital_frame, text="MCU Power (W):").pack(pady=(5, 2), anchor='w')
+        self.guide3a_mcu_power_var = tk.StringVar(value="0.1")
+        self.guide3a_mcu_power_entry = ttk.Entry(digital_frame, textvariable=self.guide3a_mcu_power_var, width=15)
+        self.guide3a_mcu_power_entry.pack(anchor='w', padx=5)
         
-        # Misc Power
-        ttk.Label(digital_frame, text="Misc Power [W]:").pack(pady=(2, 0), anchor='w')
-        self.guide3a_misc_power_display_var = tk.StringVar(value="0.25")
-        self.guide3a_misc_power_display_entry = ttk.Entry(digital_frame, textvariable=self.guide3a_misc_power_display_var, width=15)
-        self.guide3a_misc_power_display_entry.pack(anchor='w', padx=5, pady=(0, 5))
+        ttk.Label(digital_frame, text="Misc Power (W):").pack(pady=(5, 2), anchor='w')
+        self.guide3a_misc_power_var = tk.StringVar(value="0.2")
+        self.guide3a_misc_power_entry = ttk.Entry(digital_frame, textvariable=self.guide3a_misc_power_var, width=15)
+        self.guide3a_misc_power_entry.pack(anchor='w', padx=5)
         
-        # Digital Core Efficiency
-        ttk.Label(digital_frame, text="Digital Core Efficiency [%]:").pack(pady=(2, 0), anchor='w')
-        self.guide3a_digital_core_efficiency_display_var = tk.StringVar(value="80")
-        self.guide3a_digital_core_efficiency_display_entry = ttk.Entry(digital_frame, textvariable=self.guide3a_digital_core_efficiency_display_var, width=15)
-        self.guide3a_digital_core_efficiency_display_entry.pack(anchor='w', padx=5, pady=(0, 5))
+        ttk.Label(digital_frame, text="Digital Core Efficiency (%):").pack(pady=(5, 2), anchor='w')
+        self.guide3a_digital_core_efficiency_var = tk.StringVar(value="90")
+        self.guide3a_digital_core_efficiency_entry = ttk.Entry(digital_frame, textvariable=self.guide3a_digital_core_efficiency_var, width=15)
+        self.guide3a_digital_core_efficiency_entry.pack(anchor='w', padx=5)
         
-        # --- Thermal Block Parameters ---
+        # Thermal Block Parameters
         thermal_frame = ttk.LabelFrame(performance_frame, text="Thermal Block", padding="5")
-        thermal_frame.pack(fill=tk.X, pady=(5, 5))
+        thermal_frame.pack(fill=tk.X, pady=5)
         
-        # TEC COP Nominal
-        ttk.Label(thermal_frame, text="TEC COP Nominal:").pack(pady=(2, 0), anchor='w')
-        self.guide3a_tec_cop_nominal_display_var = tk.StringVar(value="2")
-        self.guide3a_tec_cop_nominal_display_entry = ttk.Entry(thermal_frame, textvariable=self.guide3a_tec_cop_nominal_display_var, width=15)
-        self.guide3a_tec_cop_nominal_display_entry.pack(anchor='w', padx=5, pady=(0, 5))
+        ttk.Label(thermal_frame, text="TEC COP Nominal:").pack(pady=(5, 2), anchor='w')
+        self.guide3a_tec_cop_nominal_var = tk.StringVar(value="2.5")
+        self.guide3a_tec_cop_nominal_entry = ttk.Entry(thermal_frame, textvariable=self.guide3a_tec_cop_nominal_var, width=15)
+        self.guide3a_tec_cop_nominal_entry.pack(anchor='w', padx=5)
         
-        # TEC COP 3σ
-        ttk.Label(thermal_frame, text="TEC COP 3σ:").pack(pady=(2, 0), anchor='w')
-        self.guide3a_tec_cop_3sigma_display_var = tk.StringVar(value="4")
-        self.guide3a_tec_cop_3sigma_display_entry = ttk.Entry(thermal_frame, textvariable=self.guide3a_tec_cop_3sigma_display_var, width=15)
-        self.guide3a_tec_cop_3sigma_display_entry.pack(anchor='w', padx=5, pady=(0, 5))
+        ttk.Label(thermal_frame, text="TEC COP 3σ:").pack(pady=(5, 2), anchor='w')
+        self.guide3a_tec_cop_3sigma_var = tk.StringVar(value="1.5")
+        self.guide3a_tec_cop_3sigma_entry = ttk.Entry(thermal_frame, textvariable=self.guide3a_tec_cop_3sigma_var, width=15)
+        self.guide3a_tec_cop_3sigma_entry.pack(anchor='w', padx=5)
         
-        # TEC Power Efficiency
-        ttk.Label(thermal_frame, text="TEC Power Efficiency [%]:").pack(pady=(2, 0), anchor='w')
-        self.guide3a_tec_power_efficiency_display_var = tk.StringVar(value="80")
-        self.guide3a_tec_power_efficiency_display_entry = ttk.Entry(thermal_frame, textvariable=self.guide3a_tec_power_efficiency_display_var, width=15)
-        self.guide3a_tec_power_efficiency_display_entry.pack(anchor='w', padx=5, pady=(0, 5))
+        ttk.Label(thermal_frame, text="TEC Power Efficiency (%):").pack(pady=(5, 2), anchor='w')
+        self.guide3a_tec_power_efficiency_var = tk.StringVar(value="80")
+        self.guide3a_tec_power_efficiency_entry = ttk.Entry(thermal_frame, textvariable=self.guide3a_tec_power_efficiency_var, width=15)
+        self.guide3a_tec_power_efficiency_entry.pack(anchor='w', padx=5)
         
         # Bind scroll updates to all input widgets for proper vertical scrolling
         bind_scroll_updates(input_scrollable_frame)
@@ -1042,6 +1022,7 @@ class Guide3GUI(tk.Tk):
                 self.fiber_input_type_var.set(self.default_config['guide3a_parameters']['fiber_input_type'])
                 self.guide3a_architecture_var.set(self.default_config['guide3a_parameters']['pic_architecture'])
                 self.num_fibers_var.set(str(self.default_config['guide3a_parameters']['num_fibers']))
+                self.te_polarization_fraction_var.set(str(self.default_config['guide3a_parameters']['te_polarization_fraction']))
                 self.guide3a_wavelength_var.set(str(self.default_config['guide3a_parameters']['operating_wavelength']))
                 self.guide3a_temp_var.set(str(self.default_config['guide3a_parameters']['temperature']))
                 self.guide3a_io_in_loss_var.set(str(self.default_config['guide3a_parameters']['io_in_loss']))
@@ -1050,7 +1031,10 @@ class Guide3GUI(tk.Tk):
                 self.guide3a_connector_out_loss_var.set(str(self.default_config['guide3a_parameters']['connector_out_loss']))
                 self.guide3a_wg_in_loss_var.set(str(self.default_config['guide3a_parameters']['wg_in_loss']))
                 self.guide3a_wg_out_loss_var.set(str(self.default_config['guide3a_parameters']['wg_out_loss']))
-                self.guide3a_psr_loss_var.set(str(self.default_config['guide3a_parameters']['psr_loss']))
+                self.guide3a_tap_in_loss_var.set(str(self.default_config['guide3a_parameters']['tap_in_loss']))
+                self.guide3a_tap_out_loss_var.set(str(self.default_config['guide3a_parameters']['tap_out_loss']))
+                self.guide3a_psr_loss_te_var.set(str(self.default_config['guide3a_parameters']['psr_loss_te']))
+                self.guide3a_psr_loss_tm_var.set(str(self.default_config['guide3a_parameters']['psr_loss_tm']))
                 self.guide3a_phase_shifter_loss_var.set(str(self.default_config['guide3a_parameters']['phase_shifter_loss']))
                 self.guide3a_coupler_loss_var.set(str(self.default_config['guide3a_parameters']['coupler_loss']))
                 self.guide3a_target_pout_var.set(str(self.default_config['guide3a_parameters']['target_pout']))
@@ -1126,6 +1110,7 @@ class Guide3GUI(tk.Tk):
                 self.default_config['guide3a_parameters']['fiber_input_type'] = self.fiber_input_type_var.get()
                 self.default_config['guide3a_parameters']['pic_architecture'] = self.guide3a_architecture_var.get()
                 self.default_config['guide3a_parameters']['num_fibers'] = int(self.num_fibers_var.get())
+                self.default_config['guide3a_parameters']['te_polarization_fraction'] = float(self.te_polarization_fraction_var.get())
                 self.default_config['guide3a_parameters']['operating_wavelength'] = float(self.guide3a_wavelength_var.get())
                 self.default_config['guide3a_parameters']['temperature'] = float(self.guide3a_temp_var.get())
                 self.default_config['guide3a_parameters']['io_in_loss'] = float(self.guide3a_io_in_loss_var.get())
@@ -1134,7 +1119,8 @@ class Guide3GUI(tk.Tk):
                 self.default_config['guide3a_parameters']['connector_out_loss'] = float(self.guide3a_connector_out_loss_var.get())
                 self.default_config['guide3a_parameters']['wg_in_loss'] = float(self.guide3a_wg_in_loss_var.get())
                 self.default_config['guide3a_parameters']['wg_out_loss'] = float(self.guide3a_wg_out_loss_var.get())
-                self.default_config['guide3a_parameters']['psr_loss'] = float(self.guide3a_psr_loss_var.get())
+                self.default_config['guide3a_parameters']['psr_loss_te'] = float(self.guide3a_psr_loss_te_var.get())
+                self.default_config['guide3a_parameters']['psr_loss_tm'] = float(self.guide3a_psr_loss_tm_var.get())
                 self.default_config['guide3a_parameters']['phase_shifter_loss'] = float(self.guide3a_phase_shifter_loss_var.get())
                 self.default_config['guide3a_parameters']['coupler_loss'] = float(self.guide3a_coupler_loss_var.get())
                 self.default_config['guide3a_parameters']['target_pout'] = float(self.guide3a_target_pout_var.get())
@@ -1231,7 +1217,8 @@ class Guide3GUI(tk.Tk):
                     self.guide3a_connector_out_loss_var.set(str(config['guide3a_parameters'].get('connector_out_loss', 0.25)))
                     self.guide3a_wg_in_loss_var.set(str(config['guide3a_parameters'].get('wg_in_loss', 0.25)))
                     self.guide3a_wg_out_loss_var.set(str(config['guide3a_parameters'].get('wg_out_loss', 0.25)))
-                    self.guide3a_psr_loss_var.set(str(config['guide3a_parameters'].get('psr_loss', 0.5)))
+                    self.guide3a_psr_loss_te_var.set(str(config['guide3a_parameters'].get('psr_loss_te', 0.5)))
+                    self.guide3a_psr_loss_tm_var.set(str(config['guide3a_parameters'].get('psr_loss_tm', 0.5)))
                     self.guide3a_phase_shifter_loss_var.set(str(config['guide3a_parameters'].get('phase_shifter_loss', 0.5)))
                     self.guide3a_coupler_loss_var.set(str(config['guide3a_parameters'].get('coupler_loss', 0.2)))
                     self.guide3a_target_pout_var.set(str(config['guide3a_parameters'].get('target_pout', -3.3)))
@@ -1318,7 +1305,8 @@ class Guide3GUI(tk.Tk):
                         'connector_out_loss': float(self.guide3a_connector_out_loss_var.get()),
                         'wg_in_loss': float(self.guide3a_wg_in_loss_var.get()),
                         'wg_out_loss': float(self.guide3a_wg_out_loss_var.get()),
-                        'psr_loss': float(self.guide3a_psr_loss_var.get()),
+                        'psr_loss_te': float(self.guide3a_psr_loss_te_var.get()),
+                        'psr_loss_tm': float(self.guide3a_psr_loss_tm_var.get()),
                         'phase_shifter_loss': float(self.guide3a_phase_shifter_loss_var.get()),
                         'coupler_loss': float(self.guide3a_coupler_loss_var.get()),
                         'target_pout': float(self.guide3a_target_pout_var.get()),
@@ -1416,7 +1404,7 @@ class Guide3GUI(tk.Tk):
             try:
                 from .Guide3A import Guide3A
             except ImportError:
-            from Guide3A import Guide3A
+                from Guide3A import Guide3A
             
             # Get Guide3A parameters from GUI
             fiber_input_type = self.fiber_input_type_var.get()
@@ -1426,7 +1414,7 @@ class Guide3GUI(tk.Tk):
             temperature = float(self.guide3a_temp_var.get())
             io_in_loss = float(self.guide3a_io_in_loss_var.get())
             io_out_loss = float(self.guide3a_io_out_loss_var.get())
-            psr_loss = float(self.guide3a_psr_loss_var.get())
+            psr_loss = float(self.guide3a_psr_loss_te_var.get())
             phase_shifter_loss = float(self.guide3a_phase_shifter_loss_var.get())
             coupler_loss = float(self.guide3a_coupler_loss_var.get())
             target_pout = float(self.guide3a_target_pout_var.get())
@@ -1714,7 +1702,7 @@ Note: Results are based on Guide3A SOA output requirements.
             try:
                 from .Guide3A import Guide3A
             except ImportError:
-            from Guide3A import Guide3A
+                from Guide3A import Guide3A
             
             # Get Guide3A parameters from GUI
             fiber_input_type = self.fiber_input_type_var.get()
@@ -1724,7 +1712,7 @@ Note: Results are based on Guide3A SOA output requirements.
             temperature = float(self.guide3a_temp_var.get())
             io_in_loss = float(self.guide3a_io_in_loss_var.get())
             io_out_loss = float(self.guide3a_io_out_loss_var.get())
-            psr_loss = float(self.guide3a_psr_loss_var.get())
+            psr_loss = float(self.guide3a_psr_loss_te_var.get())
             phase_shifter_loss = float(self.guide3a_phase_shifter_loss_var.get())
             coupler_loss = float(self.guide3a_coupler_loss_var.get())
             target_pout = float(self.guide3a_target_pout_var.get())
@@ -1737,10 +1725,11 @@ Note: Results are based on Guide3A SOA output requirements.
                 pic_architecture=pic_architecture,
                 fiber_input_type=fiber_input_type,
                 num_fibers=num_fibers,
-                operating_wavelength_nm=operating_wavelength,
-                temperature_c=temperature,
-                io_in_loss=io_in_loss,
-                io_out_loss=io_out_loss,
+                te_polarization_fraction=float(self.te_polarization_fraction_var.get()),
+                operating_wavelength_nm=float(self.guide3a_wavelength_var.get()),
+                temperature_c=float(self.guide3a_temp_var.get()),
+                io_in_loss=float(self.guide3a_io_in_loss_var.get()),
+                io_out_loss=float(self.guide3a_io_out_loss_var.get()),
                 connector_in_loss=float(self.guide3a_connector_in_loss_var.get()),
                 connector_out_loss=float(self.guide3a_connector_out_loss_var.get()),
                 wg_in_loss=float(self.guide3a_wg_in_loss_var.get()),
@@ -1753,7 +1742,7 @@ Note: Results are based on Guide3A SOA output requirements.
                 target_pout=target_pout,
                 soa_penalty=soa_penalty,
                 soa_penalty_3sigma=soa_penalty_3sigma,
-                # Module parameters
+                # Module parameters (using hidden variables)
                 idac_voltage_overhead=float(self.guide3a_idac_voltage_overhead_var.get()),
                 ir_drop_nominal=float(self.guide3a_ir_drop_nominal_var.get()),
                 ir_drop_3sigma=float(self.guide3a_ir_drop_3sigma_var.get()),
@@ -2231,15 +2220,16 @@ Note: Results are based on Guide3A SOA output requirements.
             try:
                 from .Guide3A import Guide3A
             except ImportError:
-            from Guide3A import Guide3A
+                from Guide3A import Guide3A
             
             # Create Guide3A instance
             guide3a = Guide3A(
                 pic_architecture=self.guide3a_architecture_var.get(),
                 fiber_input_type=self.fiber_input_type_var.get(),
                 num_fibers=int(self.num_fibers_var.get()),
-                operating_wavelength_nm=float(self.guide3a_operating_wavelength_var.get()),
-                temperature_c=float(self.guide3a_temperature_var.get()),
+                te_polarization_fraction=float(self.te_polarization_fraction_var.get()),
+                operating_wavelength_nm=float(self.guide3a_wavelength_var.get()),
+                temperature_c=float(self.guide3a_temp_var.get()),
                 io_in_loss=float(self.guide3a_io_in_loss_var.get()),
                 io_out_loss=float(self.guide3a_io_out_loss_var.get()),
                 connector_in_loss=float(self.guide3a_connector_in_loss_var.get()),
@@ -2248,24 +2238,25 @@ Note: Results are based on Guide3A SOA output requirements.
                 wg_out_loss=float(self.guide3a_wg_out_loss_var.get()),
                 tap_in_loss=float(self.guide3a_tap_in_loss_var.get()),
                 tap_out_loss=float(self.guide3a_tap_out_loss_var.get()),
-                psr_loss=float(self.guide3a_psr_loss_var.get()),
+                psr_loss_te=float(self.guide3a_psr_loss_te_var.get()),
+                psr_loss_tm=float(self.guide3a_psr_loss_tm_var.get()),
                 phase_shifter_loss=float(self.guide3a_phase_shifter_loss_var.get()),
                 coupler_loss=float(self.guide3a_coupler_loss_var.get()),
-                target_pout=float(self.guide3a_target_pout_display_var.get()),
-                soa_penalty=float(self.guide3a_soa_penalty_display_var.get()),
+                target_pout=float(self.guide3a_target_pout_var.get()),
+                soa_penalty=float(self.guide3a_soa_penalty_var.get()),
                 soa_penalty_3sigma=float(self.guide3a_soa_penalty_3sigma_var.get()),
-                # Module parameters (using display variables)
-                idac_voltage_overhead=float(self.guide3a_idac_voltage_overhead_display_var.get()),
-                ir_drop_nominal=float(self.guide3a_ir_drop_nominal_display_var.get()),
-                ir_drop_3sigma=float(self.guide3a_ir_drop_3sigma_display_var.get()),
-                vrm_efficiency=float(self.guide3a_vrm_efficiency_display_var.get()),
-                tec_cop_nominal=float(self.guide3a_tec_cop_nominal_display_var.get()),
-                tec_cop_3sigma=float(self.guide3a_tec_cop_3sigma_display_var.get()),
-                tec_power_efficiency=float(self.guide3a_tec_power_efficiency_display_var.get()),
-                driver_peripherals_power=float(self.guide3a_driver_peripherals_power_display_var.get()),
-                mcu_power=float(self.guide3a_mcu_power_display_var.get()),
-                misc_power=float(self.guide3a_misc_power_display_var.get()),
-                digital_core_efficiency=float(self.guide3a_digital_core_efficiency_display_var.get())
+                # Module parameters (using hidden variables)
+                idac_voltage_overhead=float(self.guide3a_idac_voltage_overhead_var.get()),
+                ir_drop_nominal=float(self.guide3a_ir_drop_nominal_var.get()),
+                ir_drop_3sigma=float(self.guide3a_ir_drop_3sigma_var.get()),
+                vrm_efficiency=float(self.guide3a_vrm_efficiency_var.get()),
+                tec_cop_nominal=float(self.guide3a_tec_cop_nominal_var.get()),
+                tec_cop_3sigma=float(self.guide3a_tec_cop_3sigma_var.get()),
+                tec_power_efficiency=float(self.guide3a_tec_power_efficiency_var.get()),
+                driver_peripherals_power=float(self.guide3a_driver_peripherals_power_var.get()),
+                mcu_power=float(self.guide3a_mcu_power_var.get()),
+                misc_power=float(self.guide3a_misc_power_var.get()),
+                digital_core_efficiency=float(self.guide3a_digital_core_efficiency_var.get())
             )
             
             # Get comprehensive analysis
@@ -2298,6 +2289,15 @@ Note: Results are based on Guide3A SOA output requirements.
                 soa_active_length_um=l_active,
                 soa_width_um=w_um
             )
+            
+            # Calculate polarization-dependent losses for PSR architecture
+            polarization_analysis = None
+            te_polarization_analysis = None
+            if guide3a.effective_architecture == 'psr':
+                polarization_analysis = guide3a.compare_polarization_cases()
+                te_polarization_analysis = guide3a.get_psr_loss_for_te_polarization_degree(
+                    float(self.te_polarization_fraction_var.get()) * 100.0
+                )
             
             # Extract results for easier access
             median_pic_power = comprehensive_performance['median_case']['pic_power']
@@ -2361,9 +2361,19 @@ Loss Breakdown:
                     common_header += f"- Tap Input Loss: {arch_specific['tap_in_loss']:.2f} dB\n"
                     common_header += f"- Tap Output Loss: {arch_specific['tap_out_loss']:.2f} dB\n"
                     common_header += f"- Total Tap Loss: {arch_specific['total_tap_loss']:.2f} dB\n"
-                if 'psr_loss' in arch_specific:
+                
+                # Handle PSR architecture with polarization-dependent losses
+                if module_config['effective_architecture'] == 'psr':
+                    common_header += f"- PSR Loss (TE/TM to TE2TE Port): {arch_specific['psr_loss_te']:.2f} dB\n"
+                    common_header += f"- PSR Loss (TE/TM to TM2TE Port): {arch_specific['psr_loss_tm']:.2f} dB\n"
+                    common_header += f"- TE Polarization Fraction: {arch_specific['te_polarization_fraction']:.1%}\n"
+                    common_header += f"- TM Polarization Fraction: {arch_specific['tm_polarization_fraction']:.1%}\n"
+                    common_header += f"- Average PSR Loss per Device: {arch_specific['avg_psr_loss_per_device']:.2f} dB\n"
+                    common_header += f"- Total PSR Loss (2 devices): {arch_specific['total_psr_loss']:.2f} dB\n"
+                elif 'psr_loss' in arch_specific:
                     common_header += f"- PSR Loss: {arch_specific['psr_loss']:.2f} dB\n"
                     common_header += f"- Total PSR Loss: {arch_specific['total_psr_loss']:.2f} dB\n"
+                
                 if 'phase_shifter_loss' in arch_specific:
                     common_header += f"- Phase Shifter Loss: {arch_specific['phase_shifter_loss']:.2f} dB\n"
                     common_header += f"- Total Phase Shifter Loss: {arch_specific['total_phase_shifter_loss']:.2f} dB\n"
@@ -2407,6 +2417,51 @@ Total Loss from SOA to Output: {target_pout_calculation['median_case']['soa_to_o
 
 Note: This calculation includes only losses that occur AFTER the SOA in the signal path.
 Input losses (before SOA) are not included as they don't affect the SOA output requirement.
+
+"""
+            
+            # Add polarization analysis for PSR architecture
+            if polarization_analysis and 'error' not in polarization_analysis:
+                common_header += f"""POLARIZATION-DEPENDENT LOSS ANALYSIS (PSR Architecture)
+{'='*60}
+
+PSR Loss Parameters:
+- TE/TM to TE2TE Port Loss: {float(self.guide3a_psr_loss_te_var.get()):.2f} dB
+- TE/TM to TM2TE Port Loss: {float(self.guide3a_psr_loss_tm_var.get()):.2f} dB
+- TE Polarization Fraction: {float(self.te_polarization_fraction_var.get()):.1%}
+
+Polarization Case Comparison:
+- Pure TE (100% TE): {polarization_analysis['polarization_cases']['pure_te']['total_loss']:.2f} dB
+- Pure TM (100% TM): {polarization_analysis['polarization_cases']['pure_tm']['total_loss']:.2f} dB
+- Mixed (50% TE, 50% TM): {polarization_analysis['polarization_cases']['mixed']['total_loss']:.2f} dB
+
+Loss Differences:
+- TE vs TM Difference: {polarization_analysis['comparison']['te_vs_tm_difference_db']:.2f} dB
+- TE vs Mixed Difference: {polarization_analysis['comparison']['te_vs_mixed_difference_db']:.2f} dB
+- TM vs Mixed Difference: {polarization_analysis['comparison']['tm_vs_mixed_difference_db']:.2f} dB
+
+Best Case: {polarization_analysis['comparison']['best_case'].upper()}
+Worst Case: {polarization_analysis['comparison']['worst_case'].upper()}
+Loss Range: {polarization_analysis['summary']['loss_range']:.2f} dB
+
+Current TE Polarization Analysis ({float(self.te_polarization_fraction_var.get()):.1%}):
+"""
+                
+                if te_polarization_analysis and 'error' not in te_polarization_analysis:
+                    common_header += f"""- TE Percentage: {te_polarization_analysis['te_percentage']:.1f}%
+- TM Percentage: {te_polarization_analysis['tm_percentage']:.1f}%
+- Average PSR Loss per Device: {te_polarization_analysis['avg_psr_loss_per_device']:.2f} dB
+- Total PSR Loss (2 devices): {te_polarization_analysis['total_psr_loss']:.2f} dB
+- Description: {te_polarization_analysis['description']}
+
+"""
+                else:
+                    common_header += f"- Error calculating current polarization analysis: {te_polarization_analysis['error'] if te_polarization_analysis else 'Not available'}\n\n"
+            elif guide3a.effective_architecture == 'psr':
+                common_header += f"""POLARIZATION-DEPENDENT LOSS ANALYSIS (PSR Architecture)
+{'='*60}
+
+Error: {polarization_analysis['error'] if polarization_analysis else 'Failed to calculate polarization analysis'}
 
 """
             
@@ -2556,30 +2611,7 @@ Module Performance:
         self.fiber_input_type_var.set("pm")
         self.guide3a_architecture_var.set("psrless")
         self.num_fibers_var.set("40")
-        
-        # Reset performance parameters (display variables)
-        self.guide3a_operating_wavelength_var.set("1310")
-        self.guide3a_temperature_var.set("25")
-        self.guide3a_target_pout_display_var.set("-2.75")
-        self.guide3a_soa_penalty_display_var.set("2")
-        self.guide3a_num_wavelengths_display_var.set("8")
-        
-        # Reset analog block parameters (display variables)
-        self.guide3a_idac_voltage_overhead_display_var.set("0.4")
-        self.guide3a_ir_drop_nominal_display_var.set("0.1")
-        self.guide3a_ir_drop_3sigma_display_var.set("0.2")
-        self.guide3a_vrm_efficiency_display_var.set("80")
-        
-        # Reset digital block parameters (display variables)
-        self.guide3a_driver_peripherals_power_display_var.set("1.0")
-        self.guide3a_mcu_power_display_var.set("0.5")
-        self.guide3a_misc_power_display_var.set("0.25")
-        self.guide3a_digital_core_efficiency_display_var.set("80")
-        
-        # Reset thermal block parameters (display variables)
-        self.guide3a_tec_cop_nominal_display_var.set("2")
-        self.guide3a_tec_cop_3sigma_display_var.set("4")
-        self.guide3a_tec_power_efficiency_display_var.set("80")
+        self.te_polarization_fraction_var.set("0.5")
         
         # Reset hidden performance parameters (for calculations)
         self.guide3a_wavelength_var.set("1310")
@@ -2594,7 +2626,8 @@ Module Performance:
         self.guide3a_wg_out_loss_var.set("0.25")
         self.guide3a_tap_in_loss_var.set("0.3")
         self.guide3a_tap_out_loss_var.set("0.3")
-        self.guide3a_psr_loss_var.set("0.5")
+        self.guide3a_psr_loss_te_var.set("0.37")
+        self.guide3a_psr_loss_tm_var.set("0.93")
         self.guide3a_phase_shifter_loss_var.set("0.5")
         self.guide3a_coupler_loss_var.set("0.2")
         
@@ -2627,13 +2660,14 @@ Module Performance:
             try:
                 from .Guide3A import Guide3A
             except ImportError:
-            from Guide3A import Guide3A
+                from Guide3A import Guide3A
             
             # Create Guide3A instance with current parameters
             guide3a = Guide3A(
                 pic_architecture=self.guide3a_architecture_var.get(),
                 fiber_input_type=self.fiber_input_type_var.get(),
                 num_fibers=int(self.num_fibers_var.get()),
+                te_polarization_fraction=float(self.te_polarization_fraction_var.get()),
                 operating_wavelength_nm=float(self.guide3a_wavelength_var.get()),
                 temperature_c=float(self.guide3a_temp_var.get()),
                 io_in_loss=float(self.guide3a_io_in_loss_var.get()),
@@ -2644,13 +2678,13 @@ Module Performance:
                 wg_out_loss=float(self.guide3a_wg_out_loss_var.get()),
                 tap_in_loss=float(self.guide3a_tap_in_loss_var.get()),
                 tap_out_loss=float(self.guide3a_tap_out_loss_var.get()),
-                psr_loss=float(self.guide3a_psr_loss_var.get()),
+                psr_loss=float(self.guide3a_psr_loss_te_var.get()),
                 phase_shifter_loss=float(self.guide3a_phase_shifter_loss_var.get()),
                 coupler_loss=float(self.guide3a_coupler_loss_var.get()),
                 target_pout=float(self.guide3a_target_pout_var.get()),
                 soa_penalty=float(self.guide3a_soa_penalty_var.get()),
                 soa_penalty_3sigma=float(self.guide3a_soa_penalty_3sigma_var.get()),
-                # Module parameters
+                # Module parameters (using hidden variables)
                 idac_voltage_overhead=float(self.guide3a_idac_voltage_overhead_var.get()),
                 ir_drop_nominal=float(self.guide3a_ir_drop_nominal_var.get()),
                 ir_drop_3sigma=float(self.guide3a_ir_drop_3sigma_var.get()),
@@ -2730,10 +2764,12 @@ Module Performance:
             self.guide3a_architecture_combo['values'] = ["psrless"]
             self.guide3a_architecture_combo['state'] = "disabled"
             
-            # Disable PSR, Phase Shifter, and Coupler input fields for PM fiber
-            self.guide3a_psr_loss_entry.config(state='disabled')
+            # Disable PSR, Phase Shifter, Coupler, and TE Fraction input fields for PM fiber
+            self.guide3a_psr_loss_te_entry.config(state='disabled')
+            self.guide3a_psr_loss_tm_entry.config(state='disabled')
             self.guide3a_phase_shifter_entry.config(state='disabled')
             self.guide3a_coupler_loss_entry.config(state='disabled')
+            self.te_polarization_fraction_combo.config(state='disabled')
         else:
             # For SM fiber, allow psr or pol_control
             self.guide3a_architecture_var.set("psr")
@@ -2741,10 +2777,12 @@ Module Performance:
             self.guide3a_architecture_combo['values'] = ["psr", "pol_control"]
             self.guide3a_architecture_combo['state'] = "readonly"
             
-            # Enable PSR, Phase Shifter, and Coupler input fields for SM fiber
-            self.guide3a_psr_loss_entry.config(state='normal')
+            # Enable PSR, Phase Shifter, Coupler, and TE Fraction input fields for SM fiber
+            self.guide3a_psr_loss_te_entry.config(state='normal')
+            self.guide3a_psr_loss_tm_entry.config(state='normal')
             self.guide3a_phase_shifter_entry.config(state='normal')
             self.guide3a_coupler_loss_entry.config(state='normal')
+            self.te_polarization_fraction_combo.config(state='readonly')
         
         # Also check if architecture is psrless and disable accordingly
         self._update_architecture_dependent_fields()
@@ -2754,17 +2792,21 @@ Module Performance:
         architecture = self.guide3a_architecture_var.get()
         fiber_type = self.fiber_input_type_var.get()
         
-        # Disable PSR, Phase Shifter, and Coupler fields if PM fiber or psrless architecture
+        # Disable PSR, Phase Shifter, Coupler, and TE Fraction fields if PM fiber or psrless architecture
         should_disable = (fiber_type == "pm" or architecture == "psrless")
         
         if should_disable:
-            self.guide3a_psr_loss_entry.config(state='disabled')
+            self.guide3a_psr_loss_te_entry.config(state='disabled')
+            self.guide3a_psr_loss_tm_entry.config(state='disabled')
             self.guide3a_phase_shifter_entry.config(state='disabled')
             self.guide3a_coupler_loss_entry.config(state='disabled')
+            self.te_polarization_fraction_combo.config(state='disabled')
         else:
-            self.guide3a_psr_loss_entry.config(state='normal')
+            self.guide3a_psr_loss_te_entry.config(state='normal')
+            self.guide3a_psr_loss_tm_entry.config(state='normal')
             self.guide3a_phase_shifter_entry.config(state='normal')
             self.guide3a_coupler_loss_entry.config(state='normal')
+            self.te_polarization_fraction_combo.config(state='readonly')
 
     def use_guide3a_results(self):
         """Use the calculated SOA output requirements and current density from Guide3A as target Pout in EuropaSOA"""
@@ -2773,15 +2815,16 @@ Module Performance:
             try:
                 from .Guide3A import Guide3A
             except ImportError:
-            from Guide3A import Guide3A
+                from Guide3A import Guide3A
             
             # Create Guide3A instance with current parameters
             guide3a = Guide3A(
                 pic_architecture=self.guide3a_architecture_var.get(),
                 fiber_input_type=self.fiber_input_type_var.get(),
                 num_fibers=int(self.num_fibers_var.get()),
-                operating_wavelength_nm=float(self.guide3a_operating_wavelength_var.get()),
-                temperature_c=float(self.guide3a_temperature_var.get()),
+                te_polarization_fraction=float(self.te_polarization_fraction_var.get()),
+                operating_wavelength_nm=float(self.guide3a_wavelength_var.get()),
+                temperature_c=float(self.guide3a_temp_var.get()),
                 io_in_loss=float(self.guide3a_io_in_loss_var.get()),
                 io_out_loss=float(self.guide3a_io_out_loss_var.get()),
                 connector_in_loss=float(self.guide3a_connector_in_loss_var.get()),
@@ -2790,11 +2833,11 @@ Module Performance:
                 wg_out_loss=float(self.guide3a_wg_out_loss_var.get()),
                 tap_in_loss=float(self.guide3a_tap_in_loss_var.get()),
                 tap_out_loss=float(self.guide3a_tap_out_loss_var.get()),
-                psr_loss=float(self.guide3a_psr_loss_var.get()),
+                psr_loss=float(self.guide3a_psr_loss_te_var.get()),
                 phase_shifter_loss=float(self.guide3a_phase_shifter_loss_var.get()),
                 coupler_loss=float(self.guide3a_coupler_loss_var.get()),
-                target_pout=float(self.guide3a_target_pout_display_var.get()),
-                soa_penalty=float(self.guide3a_soa_penalty_display_var.get()),
+                target_pout=float(self.guide3a_target_pout_var.get()),
+                soa_penalty=float(self.guide3a_soa_penalty_var.get()),
                 soa_penalty_3sigma=float(self.guide3a_soa_penalty_3sigma_var.get()),
                 # Module parameters
                 idac_voltage_overhead=float(self.guide3a_idac_voltage_overhead_var.get()),
@@ -2870,17 +2913,21 @@ Module Performance:
         architecture = self.guide3a_architecture_var.get()
         fiber_type = self.fiber_input_type_var.get()
         
-        # Disable PSR, Phase Shifter, and Coupler fields if PM fiber or psrless architecture
+        # Disable PSR, Phase Shifter, Coupler, and TE Fraction fields if PM fiber or psrless architecture
         should_disable = (fiber_type == "pm" or architecture == "psrless")
         
         if should_disable:
-            self.guide3a_psr_loss_entry.config(state='disabled')
+            self.guide3a_psr_loss_te_entry.config(state='disabled')
+            self.guide3a_psr_loss_tm_entry.config(state='disabled')
             self.guide3a_phase_shifter_entry.config(state='disabled')
             self.guide3a_coupler_loss_entry.config(state='disabled')
+            self.te_polarization_fraction_combo.config(state='disabled')
         else:
-            self.guide3a_psr_loss_entry.config(state='normal')
+            self.guide3a_psr_loss_te_entry.config(state='normal')
+            self.guide3a_psr_loss_tm_entry.config(state='normal')
             self.guide3a_phase_shifter_entry.config(state='normal')
             self.guide3a_coupler_loss_entry.config(state='normal')
+            self.te_polarization_fraction_combo.config(state='readonly')
 
     def calculate_guide3(self):
         """Calculate Guide3 link requirements per lambda"""
@@ -3076,17 +3123,13 @@ Performance Parameters:
             self.guide3a_coupler_loss_var.set(self.guide3_coupler_loss_var.get())
             
             # Transfer performance parameters
-            self.guide3a_operating_wavelength_var.set(self.guide3_wavelength_var.get())
-            self.guide3a_temperature_var.set(self.guide3_temp_var.get())
-            self.guide3a_target_pout_display_var.set(self.guide3_target_pout_var.get())
-            self.guide3a_soa_penalty_display_var.set(self.guide3_soa_penalty_var.get())
-            self.guide3a_num_wavelengths_display_var.set(str(num_wavelengths))
-            
-            # Also sync hidden variables for calculations
             self.guide3a_wavelength_var.set(self.guide3_wavelength_var.get())
             self.guide3a_temp_var.set(self.guide3_temp_var.get())
             self.guide3a_target_pout_var.set(self.guide3_target_pout_var.get())
             self.guide3a_soa_penalty_var.set(self.guide3_soa_penalty_var.get())
+            
+            # Set default TE polarization fraction
+            self.te_polarization_fraction_var.set("0.5")
             
             # Switch to Guide3A tab
             self.notebook.select(1)  # Switch to Guide3A tab (index 1)
