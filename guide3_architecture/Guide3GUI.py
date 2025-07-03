@@ -2368,17 +2368,12 @@ Loss Breakdown:
                     common_header += f"- PSR Loss (TE/TM to TM2TE Port): {arch_specific['psr_loss_tm']:.2f} dB\n"
                     common_header += f"- TE Polarization Fraction: {arch_specific['te_polarization_fraction']:.1%}\n"
                     common_header += f"- TM Polarization Fraction: {arch_specific['tm_polarization_fraction']:.1%}\n"
-                    common_header += f"- PSR_in Loss (splitting): {arch_specific['psr_in_loss']:.2f} dB\n"
-                    common_header += f"- PSR_out Loss (combining): {arch_specific['psr_out_loss']:.2f} dB\n"
-                    common_header += f"- Total PSR Loss (2 devices): {arch_specific['total_psr_loss']:.2f} dB\n"
-                    
+                    # Removed PSR_in Loss, PSR_out Loss, Total PSR Loss, and Total Dual Path Loss from display
                     # Add dual path information
                     if 'dual_path_components' in arch_specific:
                         dual_paths = arch_specific['dual_path_components']
                         common_header += f"- TE/TE Path Loss: {dual_paths['te2te_path']['total_path_loss']:.2f} dB (tap components only)\n"
                         common_header += f"- TM/TE Path Loss: {dual_paths['tm2te_path']['total_path_loss']:.2f} dB (tap components only)\n"
-                        common_header += f"- Total Dual Path Loss: {arch_specific['total_dual_path_loss']:.2f} dB\n"
-                    
                     # Add correction note
                     if 'note' in arch_specific:
                         common_header += f"- Note: {arch_specific['note']}\n"

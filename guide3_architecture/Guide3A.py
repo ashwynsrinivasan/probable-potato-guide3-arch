@@ -198,14 +198,24 @@ class Guide3A:
             te_fraction = self.te_polarization_fraction
             tm_fraction = 1.0 - self.te_polarization_fraction
             
-            # PSR_in: Splits incoming light into TE and TM components
-            psr_in_loss = (te_fraction * self.psr_loss_te) + (tm_fraction * self.psr_loss_tm)
+            # PSR_in: Each path has its own loss based on the actual path taken
+            # - TE/TE path: psr_in_tetm → psr_in_te2te (TE loss)
+            # - TM/TE path: psr_in_tetm → psr_in_tm2te (TM loss)
+            te2te_psr_in_loss = self.psr_loss_te  # TE path through PSR_in
+            tm2te_psr_in_loss = self.psr_loss_tm  # TM path through PSR_in
             
-            # PSR_out: Combines TE/TE and TM/TE paths (both paths are TE)
-            psr_out_loss = self.psr_loss_te
+            # PSR_out: With connection swap:
+            # - psr_out_tm2te connects to tap_out_te2te (TE path)
+            # - psr_out_te2te connects to tap_out_tm2te (TM path)
+            # Each path has different PSR_out loss based on the connection
+            te2te_psr_out_loss = self.psr_loss_tm  # TM2TE port connects to TE2TE path
+            tm2te_psr_out_loss = self.psr_loss_te  # TE2TE port connects to TM2TE path
             
-            # Total PSR loss for both PSR devices
-            total_loss += psr_in_loss + psr_out_loss
+            # Total PSR loss: weighted average of both paths
+            te2te_total_psr_loss = te2te_psr_in_loss + te2te_psr_out_loss
+            tm2te_total_psr_loss = tm2te_psr_in_loss + tm2te_psr_out_loss
+            total_psr_loss = (te_fraction * te2te_total_psr_loss) + (tm_fraction * tm2te_total_psr_loss)
+            total_loss += total_psr_loss
             
             # Dual path components - only tap losses (waveguide routing is already included above)
             # TE/TE path components
@@ -255,39 +265,72 @@ class Guide3A:
         
         # Add architecture-specific losses
         if self.effective_architecture == 'psr':
+            total_loss = 0.0  # Initialize total_loss for breakdown calculation
             # Calculate polarization-dependent PSR loss based on TE fraction
             te_fraction = self.te_polarization_fraction
             tm_fraction = 1.0 - self.te_polarization_fraction
             
-            # PSR_in: Splits incoming light into TE and TM components
-            psr_in_loss = (te_fraction * self.psr_loss_te) + (tm_fraction * self.psr_loss_tm)
+            # PSR_in: Each path has its own loss based on the actual path taken
+            # - TE/TE path: psr_in_tetm → psr_in_te2te (TE loss)
+            # - TM/TE path: psr_in_tetm → psr_in_tm2te (TM loss)
+            te2te_psr_in_loss = self.psr_loss_te  # TE path through PSR_in
+            tm2te_psr_in_loss = self.psr_loss_tm  # TM path through PSR_in
             
-            # PSR_out: Combines TE/TE and TM/TE paths (both paths are TE)
-            psr_out_loss = self.psr_loss_te
+            # PSR_out: With connection swap:
+            # - psr_out_tm2te connects to tap_out_te2te (TE path)
+            # - psr_out_te2te connects to tap_out_tm2te (TM path)
+            # Each path has different PSR_out loss based on the connection
+            te2te_psr_out_loss = self.psr_loss_tm  # TM2TE port connects to TE2TE path
+            tm2te_psr_out_loss = self.psr_loss_te  # TE2TE port connects to TM2TE path
+            
+            # Total PSR loss: weighted average of both paths
+            te2te_total_psr_loss = te2te_psr_in_loss + te2te_psr_out_loss
+            tm2te_total_psr_loss = tm2te_psr_in_loss + tm2te_psr_out_loss
+            total_psr_loss = (te_fraction * te2te_total_psr_loss) + (tm_fraction * tm2te_total_psr_loss)
+            total_loss += total_psr_loss
+            
+            # Dual path components - only tap losses (waveguide routing is already included above)
+            # TE/TE path components
+            total_loss += self.tap_in_loss + self.tap_out_loss  # taps for TE/TE path
+            
+            # TM/TE path components  
+            total_loss += self.tap_in_loss + self.tap_out_loss  # taps for TM/TE path
+            
+            # Note: SOAs don't contribute to loss (amplification), but are present in both paths
             
             breakdown['architecture_specific'] = {
                 'psr_loss_te': self.psr_loss_te,
                 'psr_loss_tm': self.psr_loss_tm,
                 'te_polarization_fraction': self.te_polarization_fraction,
                 'tm_polarization_fraction': tm_fraction,
-                'psr_in_loss': psr_in_loss,
-                'psr_out_loss': psr_out_loss,
-                'total_psr_loss': psr_in_loss + psr_out_loss,
+                'psr_in_loss': te2te_psr_in_loss + tm2te_psr_in_loss,
+                'psr_out_loss': te2te_psr_out_loss + tm2te_psr_out_loss,
+                'te2te_psr_in_loss': te2te_psr_in_loss,
+                'tm2te_psr_in_loss': tm2te_psr_in_loss,
+                'te2te_psr_out_loss': te2te_psr_out_loss,
+                'tm2te_psr_out_loss': tm2te_psr_out_loss,
+                'te2te_total_psr_loss': te2te_total_psr_loss,
+                'tm2te_total_psr_loss': tm2te_total_psr_loss,
+                'total_psr_loss': total_psr_loss,
                 'dual_path_components': {
                     'te2te_path': {
                         'tap_loss': self.tap_in_loss + self.tap_out_loss,
-                        'total_path_loss': self.tap_in_loss + self.tap_out_loss
+                        'psr_in_loss': te2te_psr_in_loss,
+                        'psr_out_loss': te2te_psr_out_loss,
+                        'total_path_loss': te2te_total_psr_loss + self.tap_in_loss + self.tap_out_loss
                     },
                     'tm2te_path': {
                         'tap_loss': self.tap_in_loss + self.tap_out_loss,
-                        'total_path_loss': self.tap_in_loss + self.tap_out_loss
+                        'psr_in_loss': tm2te_psr_in_loss,
+                        'psr_out_loss': tm2te_psr_out_loss,
+                        'total_path_loss': tm2te_total_psr_loss + self.tap_in_loss + self.tap_out_loss
                     }
                 },
                 'total_dual_path_loss': 2 * (self.tap_in_loss + self.tap_out_loss),
                 'tap_in_loss': self.tap_in_loss,
                 'tap_out_loss': self.tap_out_loss,
                 'total_tap_loss': 2 * (self.tap_in_loss + self.tap_out_loss),  # Both paths
-                'note': 'Corrected calculation: PSR_in splits TE/TM, PSR_out combines TE/TE; waveguide routing included in base calculation'
+                'note': 'total_path_loss now includes psr_in_loss, psr_out_loss (for that path), and tap losses; updated for swapped connections.'
             }
             
         elif self.effective_architecture == 'pol_control':
@@ -536,7 +579,8 @@ Loss Breakdown:
         # Add architecture-specific losses
         arch_losses = breakdown['architecture_specific']
         for loss_type, value in arch_losses.items():
-            if 'total' in loss_type:
+            # Only include total_tap_loss and not the removed keys
+            if loss_type == 'total_tap_loss':
                 report += f"  - {loss_type.replace('_', ' ').title()}: {value:.1f} dB\n"
             elif loss_type == 'note':
                 report += f"  - {value}\n"
@@ -545,17 +589,19 @@ Loss Breakdown:
         if self.effective_architecture == 'psr' and 'dual_path_components' in arch_losses:
             report += f"\nDual Path Architecture Details:\n"
             dual_paths = arch_losses['dual_path_components']
-            report += f"  - TE/TE Path Loss: {dual_paths['te2te_path']['total_path_loss']:.1f} dB\n"
-            report += f"    • Tap Components: {dual_paths['te2te_path']['tap_loss']:.1f} dB\n"
-            report += f"  - TM/TE Path Loss: {dual_paths['tm2te_path']['total_path_loss']:.1f} dB\n"
-            report += f"    • Tap Components: {dual_paths['tm2te_path']['tap_loss']:.1f} dB\n"
-            report += f"  - Total Dual Path Loss: {arch_losses['total_dual_path_loss']:.1f} dB\n"
+            report += f"  - TE/TE Path Loss: {dual_paths['te2te_path']['total_path_loss']:.2f} dB (psr_in + psr_out + tap losses)\n"
+            report += f"    • PSR_in Loss: {dual_paths['te2te_path']['psr_in_loss']:.2f} dB\n"
+            report += f"    • PSR_out Loss (TM2TE port): {dual_paths['te2te_path']['psr_out_loss']:.2f} dB\n"
+            report += f"    • Tap Components: {dual_paths['te2te_path']['tap_loss']:.2f} dB\n"
+            report += f"  - TM/TE Path Loss: {dual_paths['tm2te_path']['total_path_loss']:.2f} dB (psr_in + psr_out + tap losses)\n"
+            report += f"    • PSR_in Loss: {dual_paths['tm2te_path']['psr_in_loss']:.2f} dB\n"
+            report += f"    • PSR_out Loss (TE2TE port): {dual_paths['tm2te_path']['psr_out_loss']:.2f} dB\n"
+            report += f"    • Tap Components: {dual_paths['tm2te_path']['tap_loss']:.2f} dB\n"
+            report += f"  - Total Dual Path Loss (tap only): {arch_losses['total_dual_path_loss']:.2f} dB\n"
             
             # Add PSR-specific information
             if 'psr_in_loss' in arch_losses and 'psr_out_loss' in arch_losses:
-                report += f"  - PSR_in Loss (splitting): {arch_losses['psr_in_loss']:.2f} dB\n"
-                report += f"  - PSR_out Loss (combining): {arch_losses['psr_out_loss']:.2f} dB\n"
-                report += f"  - Total PSR Loss: {arch_losses['total_psr_loss']:.2f} dB\n"
+                report += f"  - Connection Scheme: psr_out_tm2te→tap_out_te2te, psr_out_te2te→tap_out_tm2te\n"
             
             if 'note' in arch_losses:
                 report += f"  - Note: {arch_losses['note']}\n"
@@ -1417,14 +1463,15 @@ Performance Metrics:
         base_soa_to_output_loss = (self.wg_out_loss + self.connector_out_loss + 
                                   self.io_out_loss + self.tap_out_loss)
         
-        # PSR output loss (shared between paths)
-        psr_out_loss = self.psr_loss_te if te_percentage == 100.0 else (
-            self.psr_loss_tm if te_percentage == 0.0 else psr_analysis['avg_psr_loss_per_device']
-        )
+        # PSR output loss with connection swap:
+        # - TE/TE path: uses psr_out_tm2te (connects to tap_out_te2te)
+        # - TM/TE path: uses psr_out_te2te (connects to tap_out_tm2te)
+        te2te_psr_out_loss = self.psr_loss_tm  # TM2TE port connects to TE2TE path
+        tm2te_psr_out_loss = self.psr_loss_te  # TE2TE port connects to TM2TE path
         
         # Calculate total loss from SOA to output for each path
-        te2te_soa_to_output_loss = base_soa_to_output_loss + psr_out_loss
-        tm2te_soa_to_output_loss = base_soa_to_output_loss + psr_out_loss
+        te2te_soa_to_output_loss = base_soa_to_output_loss + te2te_psr_out_loss
+        tm2te_soa_to_output_loss = base_soa_to_output_loss + tm2te_psr_out_loss
         
         # Calculate required SOA output power for each path
         # Formula: Target Pout + Wavelength Penalty + SOA Penalty + Loss from SOA to Output
@@ -1477,7 +1524,8 @@ Performance Metrics:
             'psr_analysis': psr_analysis,
             'loss_analysis': {
                 'base_soa_to_output_loss': base_soa_to_output_loss,
-                'psr_out_loss': psr_out_loss,
+                'te2te_psr_out_loss': te2te_psr_out_loss,
+                'tm2te_psr_out_loss': tm2te_psr_out_loss,
                 'te2te_soa_to_output_loss': te2te_soa_to_output_loss,
                 'tm2te_soa_to_output_loss': tm2te_soa_to_output_loss
             },
