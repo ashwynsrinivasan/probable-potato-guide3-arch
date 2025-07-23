@@ -1,5 +1,6 @@
 import math
-from .EuropaSOA import EuropaSOA
+from src.models import EuropaSOA
+from typing import Union, List
 
 class Guide3A:
     """
@@ -748,7 +749,7 @@ Performance Metrics:
         except Exception as e:
             return {'error': str(e)}
 
-    def calculate_target_pout_all_wavelengths(self, num_wavelengths: int, target_pout_3sigma: float | None = None, soa_penalty_3sigma: float | None = None):
+    def calculate_target_pout_all_wavelengths(self, num_wavelengths: int, target_pout_3sigma: Union[float, None] = None, soa_penalty_3sigma: Union[float, None] = None):
         """
         Calculate target Pout for all wavelengths based on the formula:
         Pout + penalty + 10*log10(number_of_wavelengths)
@@ -795,7 +796,7 @@ Performance Metrics:
         
         return result 
 
-    def calculate_target_pout_after_soa(self, num_wavelengths: int, target_pout_3sigma: float | None = None, soa_penalty_3sigma: float | None = None):
+    def calculate_target_pout_after_soa(self, num_wavelengths: int, target_pout_3sigma: Union[float, None] = None, soa_penalty_3sigma: Union[float, None] = None):
         """
         Calculate the target Pout required from each SOA based on the correct formula:
         Base Target Pout + SOA Penalty + Wavelength-margin (10*log10(num_wavelengths)) + Loss from SOA to output of Guide3A
@@ -890,7 +891,7 @@ Performance Metrics:
         
         return result
 
-    def estimate_optimum_soa_current_density(self, num_wavelengths: int, target_pout_3sigma: float | None = None, soa_penalty_3sigma: float | None = None, wavelengths: list[float] | None = None):
+    def estimate_optimum_soa_current_density(self, num_wavelengths: int, target_pout_3sigma: Union[float, None] = None, soa_penalty_3sigma: Union[float, None] = None, wavelengths: Union[List[float], None] = None):
         """
         Estimate the optimum SOA current density and current such that the target Pout for the SOA 
         is at least 2dB below the average saturation power when all wavelengths are considered.
@@ -899,7 +900,7 @@ Performance Metrics:
             num_wavelengths (int): Number of wavelengths
             target_pout_3sigma (float): Target Pout for 3σ case (optional)
             soa_penalty_3sigma (float): SOA penalty for 3σ case (optional)
-            wavelengths (list[float]): List of wavelengths in nm (optional, defaults to 1310nm)
+            wavelengths (List[float]): List of wavelengths in nm (optional, defaults to 1310nm)
             
         Returns:
             dict: Optimum current density and current for median and 3σ cases
@@ -1154,9 +1155,9 @@ Performance Metrics:
         except Exception as e:
             return {'error': str(e)}
 
-    def calculate_comprehensive_performance(self, num_wavelengths: int, target_pout_3sigma: float | None = None, 
-                                          soa_penalty_3sigma: float | None = None, wavelengths: list[float] | None = None,
-                                          soa_active_length_um: float | None = None, soa_width_um: float | None = None):
+    def calculate_comprehensive_performance(self, num_wavelengths: int, target_pout_3sigma: Union[float, None] = None, 
+                                          soa_penalty_3sigma: Union[float, None] = None, wavelengths: Union[List[float], None] = None,
+                                          soa_active_length_um: Union[float, None] = None, soa_width_um: Union[float, None] = None):
         """
         Calculate comprehensive performance including PIC and module performance for both median and 3σ cases.
         
@@ -1164,7 +1165,7 @@ Performance Metrics:
             num_wavelengths (int): Number of wavelengths
             target_pout_3sigma (float): Target Pout for 3σ case (optional)
             soa_penalty_3sigma (float): SOA penalty for 3σ case (optional)
-            wavelengths (list[float]): List of wavelengths in nm (optional)
+            wavelengths (List[float]): List of wavelengths in nm (optional)
             soa_active_length_um (float): SOA active length in µm (optional, uses default if None)
             soa_width_um (float): SOA width in µm (optional, uses default if None)
             
@@ -1511,8 +1512,8 @@ Performance Metrics:
             return {'error': 'No valid results generated'}
 
     def calculate_soa_power_requirements_for_polarization(self, target_pout_db: float, te_percentage: float, 
-                                                        num_wavelengths: int = 1, target_pout_3sigma: float | None = None, 
-                                                        soa_penalty_3sigma: float | None = None):
+                                                        num_wavelengths: int = 1, target_pout_3sigma: Union[float, None] = None, 
+                                                        soa_penalty_3sigma: Union[float, None] = None):
         """
         Calculate required SOA output power for both TE/TE and TM/TE paths given a specific polarization fraction.
         
@@ -1821,8 +1822,8 @@ Performance Metrics:
             return {'error': 'No valid results generated'}
 
     def calculate_soa_power_requirements_for_pol_control(self, target_pout_db: float, te_percentage: float, 
-                                                        num_wavelengths: int = 1, target_pout_3sigma: float | None = None, 
-                                                        soa_penalty_3sigma: float | None = None):
+                                                        num_wavelengths: int = 1, target_pout_3sigma: Union[float, None] = None, 
+                                                        soa_penalty_3sigma: Union[float, None] = None):
         """
         Calculate required SOA output power for pol-control architecture given a specific polarization fraction.
         
@@ -1833,8 +1834,8 @@ Performance Metrics:
             target_pout_db (float): Target output power in dBm
             te_percentage (float): Percentage of TE polarization (0.0 to 100.0)
             num_wavelengths (int): Number of wavelengths (default: 1)
-            target_pout_3sigma (float | None): Target Pout for 3σ case (optional)
-            soa_penalty_3sigma (float | None): SOA penalty for 3σ case (optional)
+            target_pout_3sigma (Union[float, None]): Target Pout for 3σ case (optional)
+            soa_penalty_3sigma (Union[float, None]): SOA penalty for 3σ case (optional)
             
         Returns:
             dict: SOA power requirements and polarization analysis for pol-control

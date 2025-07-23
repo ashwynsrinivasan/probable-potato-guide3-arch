@@ -6,6 +6,7 @@ from scipy.optimize import brentq
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import yaml
+from typing import Union
 
 # --- EuropaSOA CLASS DEFINITION ---
 class EuropaSOA:
@@ -194,7 +195,7 @@ class EuropaSOA:
         if delta_P_optical_mW < 0: return 0.0
         return (delta_P_optical_mW / P_electrical_mW) * 100.0
 
-    def find_Pin_for_target_Pout(self, target_Pout_mW: float, I_mA: float, lambda_nm: float, T_C: float) -> float | None:
+    def find_Pin_for_target_Pout(self, target_Pout_mW: float, I_mA: float, lambda_nm: float, T_C: float) -> Union[float, None]:
         original_L_temp = self.L_active_um
         self.L_active_um = self.L_active_um_orig
         J_kA_cm2 = self.calculate_current_density_kA_cm2(I_mA)

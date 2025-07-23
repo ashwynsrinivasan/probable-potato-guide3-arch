@@ -1,9 +1,6 @@
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
-try:
-    from .EuropaSOA import EuropaSOA
-except ImportError:
-    from EuropaSOA import EuropaSOA
+from src.models import EuropaSOA
 import math
 import yaml
 import os
