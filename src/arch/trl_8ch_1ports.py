@@ -1,35 +1,35 @@
 """
 TRL 8-Channel 1-Port Architecture
 
-This architecture contains 10 TRL devices and 10 RINGHTR components:
+This architecture contains 10 TRL devices and 1 RINGMUX_10x1ports circuit:
 - 8 operational TRL devices (optical power combined)
 - 2 redundant TRL devices (not powered, for backup)
-- 8 operational RINGHTR components (for thermal management)
-- 2 redundant RINGHTR components (not powered, for backup)
+- 1 RINGMUX_10x1ports circuit (with 8 operational + 2 redundant RINGHTR components)
 """
 
 import sys
 import os
 
-# Add models to path for imports
+# Add models and circuits to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 try:
     from models.TRL import TRL
-    from models.RINGHTR import RINGHTR
+    from circuits.RINGMUX_10x1ports import RINGMUX_10x1ports
 except ImportError:
     # Fallback for direct import
     from src.models.TRL import TRL
-    from src.models.RINGHTR import RINGHTR
+    from src.circuits.RINGMUX_10x1ports import RINGMUX_10x1ports
 
 
 class Trl8ch1ports:
     """
     TRL 8-channel 1-ports architecture class
     
-    Contains 10 TRL devices and 10 RINGHTR components with redundancy:
-    - Devices 0-7: Operational (powered and contributing to output)
-    - Devices 8-9: Redundant (not powered, for backup purposes)
+    Contains 10 TRL devices and 1 RINGMUX_10x1ports circuit with redundancy:
+    - TRL Devices 0-7: Operational (powered and contributing to output)
+    - TRL Devices 8-9: Redundant (not powered, for backup purposes)
+    - RINGMUX circuit: Manages thermal control for all TRL devices
     """
     
     def __init__(self, temperature: float = 35.0, current: float = 130.0):
@@ -49,11 +49,8 @@ class Trl8ch1ports:
             trl = TRL(temperature=temperature, current=current)
             self.trl_devices.append(trl)
         
-        # Initialize 10 RINGHTR components (one per TRL)
-        self.ringhtr_devices = []
-        for i in range(10):
-            ringhtr = RINGHTR()
-            self.ringhtr_devices.append(ringhtr)
+        # Initialize 1 RINGMUX_10x1ports circuit (replaces individual RINGHTR devices)
+        self.ringmux_circuit = RINGMUX_10x1ports()
         
         # Define operational and redundant device indices
         self.operational_indices = list(range(8))  # Devices 0-7 are operational
@@ -83,16 +80,14 @@ class Trl8ch1ports:
         for i in self.operational_indices:
             self.combined_trl_heater_heat_load += self.trl_devices[i].trl_heater_heat_load
         
-        # Combined RINGHTR heat load from 8 operational devices
-        self.combined_ringhtr_heat_load = 0.0
-        for i in self.operational_indices:
-            self.combined_ringhtr_heat_load += self.ringhtr_devices[i].get_heat_generated()
+        # RINGMUX circuit heat load (from 8 operational RINGHTR devices in the circuit)
+        self.ringmux_heat_load = self.ringmux_circuit.get_combined_heat_load()
         
         # Total combined heat load
         self.total_combined_heat_load = (
             self.combined_trl_gain_heat_load + 
             self.combined_trl_heater_heat_load + 
-            self.combined_ringhtr_heat_load
+            self.ringmux_heat_load
         )
         
         # Combined electrical power from 8 operational TRL devices
@@ -109,25 +104,22 @@ class Trl8ch1ports:
     
     def get_operational_devices(self):
         """
-        Get operational TRL and RINGHTR devices
+        Get operational TRL devices and RINGMUX circuit
         
         Returns:
-            tuple: (operational_trl_devices, operational_ringhtr_devices)
+            tuple: (operational_trl_devices, ringmux_circuit)
         """
         operational_trl = [self.trl_devices[i] for i in self.operational_indices]
-        operational_ringhtr = [self.ringhtr_devices[i] for i in self.operational_indices]
-        return operational_trl, operational_ringhtr
+        return operational_trl, self.ringmux_circuit
     
     def get_redundant_devices(self):
         """
-        Get redundant TRL and RINGHTR devices (not powered)
+        Get redundant TRL devices (not powered)
         
         Returns:
-            tuple: (redundant_trl_devices, redundant_ringhtr_devices)
+            list: List of redundant TRL devices
         """
-        redundant_trl = [self.trl_devices[i] for i in self.redundant_indices]
-        redundant_ringhtr = [self.ringhtr_devices[i] for i in self.redundant_indices]
-        return redundant_trl, redundant_ringhtr
+        return [self.trl_devices[i] for i in self.redundant_indices]
     
     def get_combined_optical_power(self):
         """
@@ -157,7 +149,7 @@ class Trl8ch1ports:
         return {
             'TRL Gain Heat Load (8 devices)': self.combined_trl_gain_heat_load,
             'TRL Heater Heat Load (8 devices)': self.combined_trl_heater_heat_load,
-            'Additional RINGHTR Heat Load (8 devices)': self.combined_ringhtr_heat_load,
+            'RINGMUX Circuit Heat Load': self.ringmux_heat_load,
             'Total Combined Heat Load': self.total_combined_heat_load
         }
     
@@ -168,13 +160,13 @@ class Trl8ch1ports:
         Returns:
             dict: Power consumption breakdown
         """
-        # Additional RINGHTR electrical power (8 operational devices)
-        additional_ringhtr_power = self.combined_ringhtr_heat_load  # Assuming 100% efficiency
+        # RINGMUX circuit electrical power
+        ringmux_power = self.ringmux_circuit.get_combined_power_consumption()
         
         return {
             'TRL Electrical Power (8 devices)': self.combined_electrical_power,
-            'Additional RINGHTR Power (8 devices)': additional_ringhtr_power,
-            'Total Electrical Power': self.combined_electrical_power + additional_ringhtr_power
+            'RINGMUX Circuit Power': ringmux_power,
+            'Total Electrical Power': self.combined_electrical_power + ringmux_power
         }
     
     def get_combined_wpe(self):
@@ -193,23 +185,23 @@ class Trl8ch1ports:
         Returns:
             dict: Device status information
         """
+        ringmux_status = self.ringmux_circuit.get_device_status()
+        
         return {
             'total_trl_devices': len(self.trl_devices),
-            'total_ringhtr_devices': len(self.ringhtr_devices),
             'operational_trl_count': len(self.operational_indices),
             'redundant_trl_count': len(self.redundant_indices),
-            'operational_ringhtr_count': len(self.operational_indices),
-            'redundant_ringhtr_count': len(self.redundant_indices),
             'operational_indices': self.operational_indices,
-            'redundant_indices': self.redundant_indices
+            'redundant_indices': self.redundant_indices,
+            'ringmux_circuit_status': ringmux_status
         }
     
     def activate_redundant_device(self, device_index):
         """
-        Activate a redundant device (move from redundant to operational)
+        Activate a redundant TRL device (move from redundant to operational)
         
         Args:
-            device_index (int): Index of the device to activate (must be in redundant_indices)
+            device_index (int): Index of the TRL device to activate (must be in redundant_indices)
             
         Returns:
             bool: True if successful, False otherwise
@@ -226,10 +218,10 @@ class Trl8ch1ports:
     
     def deactivate_operational_device(self, device_index):
         """
-        Deactivate an operational device (move from operational to redundant)
+        Deactivate an operational TRL device (move from operational to redundant)
         
         Args:
-            device_index (int): Index of the device to deactivate (must be in operational_indices)
+            device_index (int): Index of the TRL device to deactivate (must be in operational_indices)
             
         Returns:
             bool: True if successful, False otherwise
@@ -256,7 +248,7 @@ class Trl8ch1ports:
         power_consumption = self.get_power_consumption_breakdown()
         
         return {
-            'architecture_name': 'TRL 8-Channel 1-Port',
+            'architecture_name': 'TRL 8-Channel 1-Port with RINGMUX',
             'operating_conditions': {
                 'temperature_c': self.temperature,
                 'current_per_trl_ma': self.current
@@ -274,10 +266,10 @@ class Trl8ch1ports:
 
 def main():
     """
-    Main function to demonstrate TRL 8-channel 1-port architecture
+    Main function to demonstrate TRL 8-channel 1-port architecture with RINGMUX
     """
-    print("TRL 8-Channel 1-Port Architecture Demo")
-    print("=" * 50)
+    print("TRL 8-Channel 1-Port Architecture with RINGMUX Demo")
+    print("=" * 60)
     
     # Create architecture instance
     arch = Trl8ch1ports(temperature=35.0, current=130.0)
@@ -294,9 +286,13 @@ def main():
     print(f"  Total TRL Devices: {device_status['total_trl_devices']}")
     print(f"  Operational TRL: {device_status['operational_trl_count']} (indices: {device_status['operational_indices']})")
     print(f"  Redundant TRL: {device_status['redundant_trl_count']} (indices: {device_status['redundant_indices']})")
-    print(f"  Total RINGHTR Devices: {device_status['total_ringhtr_devices']}")
-    print(f"  Operational RINGHTR: {device_status['operational_ringhtr_count']}")
-    print(f"  Redundant RINGHTR: {device_status['redundant_ringhtr_count']}")
+    
+    # Display RINGMUX circuit status
+    ringmux_status = device_status['ringmux_circuit_status']
+    print(f"  RINGMUX Circuit:")
+    print(f"    Total RINGHTR: {ringmux_status['total_ringhtr_devices']}")
+    print(f"    Operational RINGHTR: {ringmux_status['operational_ringhtr_count']} (indices: {ringmux_status['operational_indices']})")
+    print(f"    Redundant RINGHTR: {ringmux_status['redundant_ringhtr_count']} (indices: {ringmux_status['redundant_indices']})")
     print()
     
     print("Performance Summary:")
@@ -318,14 +314,14 @@ def main():
     
     # Demonstrate redundancy management
     print("Redundancy Management Demo:")
-    print("Activating redundant device 8...")
+    print("Activating redundant TRL device 8...")
     success = arch.activate_redundant_device(8)
     if success:
         new_summary = arch.get_architecture_summary()
-        print(f"  New operational count: {new_summary['device_status']['operational_trl_count']}")
+        print(f"  New operational TRL count: {new_summary['device_status']['operational_trl_count']}")
         print(f"  New combined optical power: {new_summary['performance']['combined_optical_power_mw']:.1f} mW")
     else:
-        print("  Failed to activate device 8")
+        print("  Failed to activate TRL device 8")
 
 
 if __name__ == "__main__":
