@@ -171,6 +171,25 @@ class DFB:
         
         return currents, output_powers
     
+    def get_dfb_wpe_single_side(self, temperature, current):
+        """
+        Calculate DFB wall-plug efficiency using single-side optical output (for plotting)
+        
+        Args:
+            temperature (float): Temperature in Celsius
+            current (float): Current in mA
+            
+        Returns:
+            float: DFB single-side wall-plug efficiency as percentage
+        """
+        single_side_optical_power = self.calculate_output_power(temperature, current)
+        operating_voltage = self.get_operating_voltage(current)
+        input_power = (current / 1000.0) * operating_voltage  # Convert mA to A
+        
+        if input_power > 0:
+            return (single_side_optical_power / 1000.0) / input_power * 100  # Convert mW to W
+        return 0.0
+
     def get_dfb_wpe(self, temperature, current):
         """
         Calculate DFB wall-plug efficiency using actual operating voltage
@@ -181,7 +200,7 @@ class DFB:
             current (float): Current in mA
             
         Returns:
-            float: DFB wall-plug efficiency as percentage
+            float: DFB total wall-plug efficiency as percentage (both sides)
         """
         single_side_optical_power = self.calculate_output_power(temperature, current)
         total_optical_power = 2 * single_side_optical_power  # DFB outputs from both sides
@@ -263,9 +282,9 @@ class DFB:
         fig = make_subplots(
             rows=2, cols=3,
             subplot_titles=(
-                'DFB Output Optical Power vs Current', 
+                'DFB Single-Sided Output Optical Power vs Current', 
                 'DFB Current-Voltage (I-V) Characteristics',
-                'DFB Wall-Plug Efficiency vs Current',
+                'DFB Single-Sided Wall-Plug Efficiency vs Current',
                 f'Heat Sources Distribution (at {annotation_current}mA, {annotation_temp}°C)',
                 f'Power Consumption Breakdown (at {annotation_current}mA, {annotation_temp}°C)',
                 f'DFB Performance Summary (at {annotation_current}mA, {annotation_temp}°C)'
@@ -286,8 +305,8 @@ class DFB:
             # Calculate voltages for I-V plot
             voltages = [self.get_operating_voltage(current) for current in currents]
             
-            # Calculate DFB WPE
-            dfb_wpe_values = [self.get_dfb_wpe(temp, current) for current in currents]
+            # Calculate DFB Single-Sided WPE for plotting
+            dfb_wpe_single_values = [self.get_dfb_wpe_single_side(temp, current) for current in currents]
             
             color = colors[i]
             
@@ -319,13 +338,13 @@ class DFB:
                 row=1, col=2
             )
             
-            # DFB WPE plot (Row 1, Col 3) - Solid lines
+            # DFB Single-Sided WPE plot (Row 1, Col 3) - Solid lines
             fig.add_trace(
                 go.Scatter(
                     x=currents,
-                    y=dfb_wpe_values,
+                    y=dfb_wpe_single_values,
                     mode='lines',
-                    name=f'{temp}°C (WPE)',
+                    name=f'{temp}°C (Single-Sided WPE)',
                     line=dict(color=color, width=3),
                     legendgroup=f'temp_{temp}',
                     showlegend=False
@@ -336,7 +355,8 @@ class DFB:
         # Add annotations at 186mA, 35°C
         annotation_power = self.calculate_output_power(annotation_temp, annotation_current)
         annotation_voltage = self.get_operating_voltage(annotation_current)
-        annotation_wpe = self.get_dfb_wpe(annotation_temp, annotation_current)
+        annotation_wpe_single = self.get_dfb_wpe_single_side(annotation_temp, annotation_current)
+        annotation_wpe_total = self.get_dfb_wpe(annotation_temp, annotation_current)
         
         # Annotation for Power plot
         fig.add_annotation(
@@ -356,10 +376,10 @@ class DFB:
             row=1, col=2
         )
         
-        # Annotation for WPE plot
+        # Annotation for Single-Sided WPE plot
         fig.add_annotation(
-            x=annotation_current, y=annotation_wpe,
-            text=f"{annotation_wpe:.2f}%<br>@{annotation_current}mA, {annotation_temp}°C",
+            x=annotation_current, y=annotation_wpe_single,
+            text=f"{annotation_wpe_single:.2f}%<br>@{annotation_current}mA, {annotation_temp}°C",
             showarrow=True, arrowhead=2, arrowcolor="red", arrowwidth=2,
             bgcolor="white", bordercolor="red", borderwidth=2,
             row=1, col=3
@@ -407,9 +427,9 @@ class DFB:
                            fill_color='lightblue',
                            align='left'),
                 cells=dict(values=[
-                    ['Operating Current', 'Operating Temperature', 'Optical Output (One Side)', 'Total Optical Output (Both Sides)', 'Operating Voltage', 'Electrical Power', 'Heat Load', 'Wall-Plug Efficiency'],
-                    [f'{annotation_current}', f'{annotation_temp}', f'{single_side_power:.1f}', f'{total_optical_power:.1f}', f'{annotation_voltage:.3f}', f'{electrical_power:.1f}', f'{heat_load:.1f}', f'{annotation_wpe:.2f}'],
-                    ['mA', '°C', 'mW', 'mW', 'V', 'mW', 'mW', '%']
+                    ['Operating Current', 'Operating Temperature', 'Optical Output (One Side)', 'Total Optical Output (Both Sides)', 'Operating Voltage', 'Electrical Power', 'Heat Load', 'Single-Sided Wall-Plug Efficiency', 'Total Wall-Plug Efficiency'],
+                    [f'{annotation_current}', f'{annotation_temp}', f'{single_side_power:.1f}', f'{total_optical_power:.1f}', f'{annotation_voltage:.3f}', f'{electrical_power:.1f}', f'{heat_load:.1f}', f'{annotation_wpe_single:.2f}', f'{annotation_wpe_total:.2f}'],
+                    ['mA', '°C', 'mW', 'mW', 'V', 'mW', 'mW', '%', '%']
                 ],
                 fill_color='white',
                 align='left')
@@ -443,7 +463,7 @@ class DFB:
         # Update y-axes with appropriate ranges
         fig.update_yaxes(title_text="Pout [mW]", range=[0, 40], row=1, col=1)
         fig.update_yaxes(title_text="Voltage [V]", range=[1.0, 2.5], row=1, col=2)
-        fig.update_yaxes(title_text="WPE [%]", range=[0, 25], row=1, col=3)
+        fig.update_yaxes(title_text="Single-Sided WPE [%]", range=[0, 15], row=1, col=3)
         
         # Add grid to scatter plots
         fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='lightgray')
@@ -496,8 +516,8 @@ class DFB:
                     fontsize=10, ha='left')
         
         plt.xlabel('DFB Current [mA]')
-        plt.ylabel('Power - One Side [mW]')
-        plt.title('DFB Output Optical Power vs Current')
+        plt.ylabel('Single-Sided Pout [mW]')
+        plt.title('DFB Single-Sided Output Optical Power vs Current')
         plt.grid(True, alpha=0.3)
         plt.legend()
         plt.ylim(0, 40)
@@ -532,26 +552,26 @@ class DFB:
         plt.subplot(3, 2, 3)
         for i, temp in enumerate(temperatures):
             currents, _ = self.get_performance_curve(temp, current_range)
-            dfb_wpe_values = [self.get_dfb_wpe(temp, current) for current in currents]
+            dfb_wpe_single_values = [self.get_dfb_wpe_single_side(temp, current) for current in currents]
             
             color = colors[i % len(colors)]
-            plt.plot(currents, dfb_wpe_values, color=color, linewidth=3,
+            plt.plot(currents, dfb_wpe_single_values, color=color, linewidth=3,
                     label=f'Temperature: {temp}°C')
         
         # Add annotation at 186mA, 35°C
-        annotation_wpe = self.get_dfb_wpe(annotation_temp, annotation_current)
-        plt.annotate(f'{annotation_wpe:.2f}%\n@{annotation_current}mA, {annotation_temp}°C',
-                    xy=(annotation_current, annotation_wpe), xytext=(annotation_current+20, annotation_wpe+1),
+        annotation_wpe_single = self.get_dfb_wpe_single_side(annotation_temp, annotation_current)
+        plt.annotate(f'{annotation_wpe_single:.2f}%\n@{annotation_current}mA, {annotation_temp}°C',
+                    xy=(annotation_current, annotation_wpe_single), xytext=(annotation_current+20, annotation_wpe_single+1),
                     arrowprops=dict(arrowstyle='->', color='red', lw=2),
                     bbox=dict(boxstyle="round,pad=0.3", facecolor="white", edgecolor="red"),
                     fontsize=10, ha='left')
         
         plt.xlabel('Current [mA]')
-        plt.ylabel('WPE [%]')
-        plt.title('DFB Wall-Plug Efficiency vs Current')
+        plt.ylabel('Single-Sided WPE [%]')
+        plt.title('DFB Single-Sided Wall-Plug Efficiency vs Current')
         plt.grid(True, alpha=0.3)
         plt.legend()
-        plt.ylim(0, 25)
+        plt.ylim(0, 15)
         plt.xlim(0, 300)
         
         # Plot Heat Sources Pie Chart (at 186mA, 35°C)
@@ -579,6 +599,8 @@ class DFB:
         heat_load = self.get_dfb_heat_load(annotation_temp, annotation_current)
         single_side_power = self.calculate_output_power(annotation_temp, annotation_current)
         total_optical_power = 2 * single_side_power
+        annotation_wpe_single = self.get_dfb_wpe_single_side(annotation_temp, annotation_current)
+        annotation_wpe_total = self.get_dfb_wpe(annotation_temp, annotation_current)
         summary_data = [
             ['Operating Current', f'{annotation_current} mA'],
             ['Operating Temperature', f'{annotation_temp} °C'],
@@ -587,7 +609,8 @@ class DFB:
             ['Operating Voltage', f'{annotation_voltage:.3f} V'],
             ['Electrical Power', f'{electrical_power:.1f} mW'],
             ['Heat Load', f'{heat_load:.1f} mW'],
-            ['Wall-Plug Efficiency', f'{annotation_wpe:.2f} %'],
+            ['Single-Sided Wall-Plug Efficiency', f'{annotation_wpe_single:.2f} %'],
+            ['Total Wall-Plug Efficiency', f'{annotation_wpe_total:.2f} %'],
             ['Threshold Current (35°C)', f'{self.threshold_currents[35]:.0f} mA'],
             ['Slope Efficiency (35°C)', f'{self.slope_efficiencies[35]:.3f} mW/mA']
         ]
@@ -655,14 +678,16 @@ def main():
     operating_voltage = dfb.get_operating_voltage(dfb.current)
     electrical_power = dfb.current * operating_voltage
     heat_load = dfb.get_dfb_heat_load(dfb.temperature, dfb.current)
-    wpe = dfb.get_dfb_wpe(dfb.temperature, dfb.current)
+    wpe_single = dfb.get_dfb_wpe_single_side(dfb.temperature, dfb.current)
+    wpe_total = dfb.get_dfb_wpe(dfb.temperature, dfb.current)
     
     print(f"Optical Output Power (One Side): {single_side_optical_output:.1f}mW")
     print(f"Total Optical Output Power (Both Sides): {total_optical_output:.1f}mW")
     print(f"Operating Voltage: {operating_voltage:.3f}V")
     print(f"Electrical Power: {electrical_power:.1f}mW")
     print(f"Heat Load: {heat_load:.1f}mW")
-    print(f"Wall-Plug Efficiency: {wpe:.2f}%")
+    print(f"Single-Sided Wall-Plug Efficiency: {wpe_single:.2f}%")
+    print(f"Total Wall-Plug Efficiency: {wpe_total:.2f}%")
     print()
     
     # Show operating voltage examples

@@ -8,8 +8,8 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import yaml
 from typing import Union
 
-# --- EuropaSOA CLASS DEFINITION ---
-class EuropaSOA:
+# --- SOA CLASS DEFINITION ---
+class SOA:
     """
     Represents a Semiconductor Optical Amplifier (SOA) based on the OpenLight PIC Application Note.
     Includes optical models (Gain, Psat, NF), an analytical I-V model, and WPE calculation.
