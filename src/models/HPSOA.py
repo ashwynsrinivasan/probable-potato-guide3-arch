@@ -105,9 +105,108 @@ class HPSOA:
                 {"Index": 32, "T[°C]": 80, "I[A]": 0.23, "λ [nm]": 1311, "Pin [dBm]": 10, "Pout [dBm]": 18.0, "WPE [%]": 18.5, "NF [dB]": 8.59},
                 {"Index": 33, "T[°C]": 80, "I[A]": 0.23, "λ [nm]": 1318, "Pin [dBm]": 10, "Pout [dBm]": 18.5, "WPE [%]": 20.7, "NF [dB]": 8.04},
                 {"Index": 34, "T[°C]": 80, "I[A]": 0.28, "λ [nm]": 1304, "Pin [dBm]": 10, "Pout [dBm]": 18.9, "WPE [%]": 17.7, "NF [dB]": 8.12},
-                {"Index": 35, "T[°C]": 80, "I[A]": 0.28, "λ [nm]": 1311, "Pin [dBm]": 10, "Pout [dBm]": 18.7, "WPE [%]": 16.9, "NF [dB]": 8.42},
+                {"Index": 35, "T[°C]": 80, "I[A]": 0.28, "λ [nm]": 1311, "Pin [dBm]": 10, "Pout [dBm]": 18.7, "WPE [%]": 16.9, "NF [dB]": 8.69},
                 {"Index": 36, "T[°C]": 80, "I[A]": 0.28, "λ [nm]": 1318, "Pin [dBm]": 10, "Pout [dBm]": 19.2, "WPE [%]": 18.9, "NF [dB]": 7.92}
             ]
+        }
+
+    def dbm_to_mw(self, dbm):
+        """
+        Convert dBm to mW
+        
+        Args:
+            dbm (float): Power in dBm
+            
+        Returns:
+            float: Power in mW
+        """
+        return 10 ** (dbm / 10)
+
+    def get_operating_voltage(self, current_a):
+        """
+        Calculate operating voltage based on current using equivalent circuit model
+        
+        Args:
+            current_a (float): Current in Amperes
+            
+        Returns:
+            float: Operating voltage in V
+        """
+        V_turn_on = self.hpsoa_performance["equivalent_circuit_parameters"]["V_turn_on"]
+        Rs1_ohm = self.hpsoa_performance["equivalent_circuit_parameters"]["Rs1_ohm"]
+        Rs2_ohm = self.hpsoa_performance["equivalent_circuit_parameters"]["Rs2_ohm"]
+        
+        # Using parallel resistance model: 1/Rs_total = 1/Rs1 + 1/Rs2
+        Rs_total = (Rs1_ohm * Rs2_ohm) / (Rs1_ohm + Rs2_ohm)
+        
+        # Operating voltage: V = V_turn_on + I * Rs_total
+        return V_turn_on + (current_a * Rs_total)
+
+    def get_hpsoa_heat_load(self, temperature_c, current_a, wavelength_nm):
+        """
+        Calculate HPSOA heat load (remaining electrical power not converted to optical)
+        
+        Args:
+            temperature_c (float): Temperature in Celsius
+            current_a (float): Current in Amperes
+            wavelength_nm (float): Wavelength in nm
+            
+        Returns:
+            float: HPSOA heat load in mW
+        """
+        # Find matching data point
+        df = pd.DataFrame(self.performance_summary["data"])
+        mask = (df["T[°C]"] == temperature_c) & (df["I[A]"] == current_a) & (df["λ [nm]"] == wavelength_nm)
+        matching_data = df[mask]
+        
+        if len(matching_data) == 0:
+            return 0.0  # No matching data found
+        
+        row = matching_data.iloc[0]
+        
+        # Get optical output power in mW
+        optical_output_mw = self.dbm_to_mw(row["Pout [dBm]"])
+        
+        # Calculate electrical power
+        operating_voltage = self.get_operating_voltage(current_a)
+        electrical_power_mw = current_a * operating_voltage * 1000  # Convert to mW
+        
+        # Heat load is electrical power minus optical power output
+        heat_load = electrical_power_mw - optical_output_mw
+        return max(0, heat_load)  # Ensure non-negative
+
+    def get_heat_sources(self, temperature_c, current_a, wavelength_nm):
+        """
+        Get breakdown of heat sources (for HPSOA, only one source: the gain section)
+        
+        Args:
+            temperature_c (float): Temperature in Celsius  
+            current_a (float): Current in Amperes
+            wavelength_nm (float): Wavelength in nm
+            
+        Returns:
+            dict: Dictionary with heat source breakdown
+        """
+        return {
+            'HPSOA Gain Heat Load': self.get_hpsoa_heat_load(temperature_c, current_a, wavelength_nm)
+        }
+
+    def get_power_consumption(self, temperature_c, current_a, wavelength_nm):
+        """
+        Get power consumption breakdown (for HPSOA, only electrical power to gain section)
+        
+        Args:
+            temperature_c (float): Temperature in Celsius
+            current_a (float): Current in Amperes  
+            wavelength_nm (float): Wavelength in nm
+            
+        Returns:
+            dict: Dictionary with power consumption breakdown
+        """
+        operating_voltage = self.get_operating_voltage(current_a)
+        electrical_power_mw = current_a * operating_voltage * 1000  # Convert to mW
+        return {
+            'HPSOA Gain': electrical_power_mw
         }
 
     def get_revision_history(self):
@@ -146,10 +245,10 @@ class HPSOA:
         """Returns the HPSOA performance summary data."""
         return self.performance_summary["data"]
 
-    def plot_performance_data(self, figsize=(18, 12), save_path="data/plots/models/hpsoa.png"):
+    def plot_performance_data(self, figsize=(24, 12), save_path="data/plots/models/hpsoa.png"):
         """
         Plot HPSOA performance data with subplots organized by:
-        - Columns: Output Power, WPE, and NF
+        - Columns: Output Power, WPE, NF, and Heat Load
         - Rows: Temperature
         - Each subplot: Different currents on x-axis
         
@@ -160,21 +259,28 @@ class HPSOA:
         # Convert data to pandas DataFrame for easier manipulation
         df = pd.DataFrame(self.performance_summary["data"])
         
+        # Calculate heat load for each data point
+        heat_loads = []
+        for _, row in df.iterrows():
+            heat_load = self.get_hpsoa_heat_load(row["T[°C]"], row["I[A]"], row["λ [nm]"])
+            heat_loads.append(heat_load)
+        df["Heat Load [mW]"] = heat_loads
+        
         # Get unique temperatures and currents
         temperatures = sorted(df["T[°C]"].unique())
         currents = sorted(df["I[A]"].unique())
         wavelengths = sorted(df["λ [nm]"].unique())
         
-        # Create subplot grid: rows = temperatures, cols = 3 (Pout, WPE, NF)
-        fig, axes = plt.subplots(len(temperatures), 3, figsize=figsize)
-        fig.suptitle('HPSOA Performance Analysis', fontsize=16, fontweight='bold')
+        # Create subplot grid: rows = temperatures, cols = 4 (Pout, WPE, NF, Heat Load)
+        fig, axes = plt.subplots(len(temperatures), 4, figsize=figsize)
+        fig.suptitle('HPSOA Performance Analysis with Heat Load', fontsize=16, fontweight='bold')
         
         # Ensure axes is always 2D array
         if len(temperatures) == 1:
             axes = axes.reshape(1, -1)
         
         # Column titles
-        column_titles = ['Output Power (dBm)', 'Wall-Plug Efficiency (%)', 'Noise Figure (dB)']
+        column_titles = ['Output Power (dBm)', 'Wall-Plug Efficiency (%)', 'Noise Figure (dB)', 'Heat Load (mW)']
         
         # Color scheme for different currents
         colors = ['#1f77b4', '#ff7f0e', '#2ca02c']  # Blue, Orange, Green
@@ -185,8 +291,8 @@ class HPSOA:
             # Filter data for this temperature
             temp_data = df[df["T[°C]"] == temp]
             
-            # Plot each metric (Pout, WPE, NF)
-            for j, metric in enumerate(['Pout [dBm]', 'WPE [%]', 'NF [dB]']):
+            # Plot each metric (Pout, WPE, NF, Heat Load)
+            for j, metric in enumerate(['Pout [dBm]', 'WPE [%]', 'NF [dB]', 'Heat Load [mW]']):
                 ax = axes[i, j]
                 
                 # Plot data for each current
@@ -207,8 +313,10 @@ class HPSOA:
                                 value_str = f'{row[metric]:.1f}'
                             elif metric == 'WPE [%]':
                                 value_str = f'{row[metric]:.1f}%'
-                            else:  # NF [dB]
+                            elif metric == 'NF [dB]':
                                 value_str = f'{row[metric]:.2f}'
+                            else:  # Heat Load [mW]
+                                value_str = f'{row[metric]:.0f}'
                             
                             ax.annotate(value_str, 
                                       (row["λ [nm]"], row[metric]),
@@ -244,7 +352,8 @@ class HPSOA:
                 f'Data Summary: {len(df)} measurements | '
                 f'Temperature: {min(temperatures)}-{max(temperatures)}°C | '
                 f'Current: {min(currents)}-{max(currents)}A | '
-                f'Wavelength: {min(wavelengths)}-{max(wavelengths)}nm', 
+                f'Wavelength: {min(wavelengths)}-{max(wavelengths)}nm | '
+                f'Heat Load: {df["Heat Load [mW]"].min():.0f}-{df["Heat Load [mW]"].max():.0f}mW', 
                 fontsize=9, style='italic')
         
         # Create directory if it doesn't exist
@@ -264,6 +373,7 @@ class HPSOA:
         print(f"Output Power Range: {df['Pout [dBm]'].min():.1f} - {df['Pout [dBm]'].max():.1f} dBm")
         print(f"WPE Range: {df['WPE [%]'].min():.1f} - {df['WPE [%]'].max():.1f}%")
         print(f"Noise Figure Range: {df['NF [dB]'].min():.2f} - {df['NF [dB]'].max():.2f} dB")
+        print(f"Heat Load Range: {df['Heat Load [mW]'].min():.0f} - {df['Heat Load [mW]'].max():.0f} mW")
         print(f"\nPlot saved to: {save_path}")
         
         return fig, axes
