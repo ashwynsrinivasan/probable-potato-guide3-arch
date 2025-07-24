@@ -32,16 +32,21 @@ class Trl8ch1ports:
     - RINGMUX circuit: Manages thermal control for all TRL devices
     """
     
-    def __init__(self, temperature: float = 35.0, current: float = 130.0):
+    def __init__(self, temperature: float = 35.0, current: float = 130.0, io_loss_db: float = 1.35):
         """
         Initialize TRL 8-channel 1-port architecture
         
         Args:
             temperature (float): Operating temperature in Celsius (default: 35.0)
             current (float): Operating current per TRL in mA (default: 130.0)
+            io_loss_db (float): Input/Output optical loss in dB (default: 1.35)
         """
         self.temperature = temperature
         self.current = current
+        self.io_loss_db = io_loss_db
+        
+        # Convert dB loss to linear loss factor
+        self.io_loss_linear = 10 ** (-io_loss_db / 10)  # Linear loss factor
         
         # Initialize 10 TRL devices
         self.trl_devices = []
@@ -63,13 +68,16 @@ class Trl8ch1ports:
         """Calculate combined parameters for all operational devices and circuits"""
         # ==== TOTAL OPTICAL POWER ====
         # Total optical power from 8 operational TRL devices (RINGMUX doesn't produce optical power)
-        self.total_optical_power = 0.0
+        trl_optical_power_before_loss = 0.0
         for i in self.operational_indices:
-            self.total_optical_power += self.trl_devices[i].get_total_optical_power(
+            trl_optical_power_before_loss += self.trl_devices[i].get_total_optical_power(
                 self.temperature, self.current
             )
         # RINGMUX circuit optical power (always 0 for heater circuits)
-        self.total_optical_power += self.ringmux_circuit.get_total_optical_power()
+        trl_optical_power_before_loss += self.ringmux_circuit.get_total_optical_power()
+        
+        # Apply I/O loss to total optical power
+        self.total_optical_power = trl_optical_power_before_loss * self.io_loss_linear
         
         # ==== TOTAL ELECTRICAL POWER ====
         # Total electrical power from 8 operational TRL devices (including their internal heaters)
@@ -211,12 +219,39 @@ class Trl8ch1ports:
             dict: Power consumption breakdown
         """
         # RINGMUX circuit electrical power
-        ringmux_power = self.ringmux_circuit.get_combined_power_consumption()
+        ringmux_power = self.ringmux_circuit.get_total_electrical_power()
         
         return {
             'TRL Electrical Power (8 devices)': self.combined_electrical_power,
             'RINGMUX Circuit Power': ringmux_power,
             'Total Electrical Power': self.combined_electrical_power + ringmux_power
+        }
+    
+    def get_detailed_power_consumption_breakdown(self):
+        """
+        Get detailed power consumption breakdown for all contributors in the architecture
+        
+        Returns:
+            dict: Detailed power consumption breakdown for pie chart
+        """
+        # TRL gain electrical power (8 operational devices)
+        trl_gain_power = 0.0
+        for i in self.operational_indices:
+            operating_voltage = self.trl_devices[i].get_operating_voltage(self.current)
+            trl_gain_power += self.current * operating_voltage
+        
+        # TRL heater power (8 operational devices)
+        trl_heater_power = 0.0
+        for i in self.operational_indices:
+            trl_heater_power += self.trl_devices[i].trl_heater_heat_load
+        
+        # RINGMUX circuit power
+        ringmux_power = self.ringmux_circuit.get_total_electrical_power()
+        
+        return {
+            'TRL Gain (8 devices)': trl_gain_power,
+            'TRL Internal Heaters (8 devices)': trl_heater_power,
+            'RINGMUX Circuit (8 RINGHTR)': ringmux_power
         }
     
     def get_combined_wpe(self):
@@ -301,7 +336,9 @@ class Trl8ch1ports:
             'architecture_name': 'TRL 8-Channel 1-Port with RINGMUX',
             'operating_conditions': {
                 'temperature_c': self.temperature,
-                'current_per_trl_ma': self.current
+                'current_per_trl_ma': self.current,
+                'io_loss_db': self.io_loss_db,
+                'io_loss_linear_factor': self.io_loss_linear
             },
             'device_status': device_status,
             'performance': {
@@ -456,7 +493,11 @@ def main():
     summary = arch.get_architecture_summary()
     
     print(f"Architecture: {summary['architecture_name']}")
-    print(f"Operating Conditions: {summary['operating_conditions']['temperature_c']}°C, {summary['operating_conditions']['current_per_trl_ma']}mA per TRL")
+    operating_conditions = summary['operating_conditions']
+    print(f"Operating Conditions:")
+    print(f"  Temperature: {operating_conditions['temperature_c']}°C")
+    print(f"  Current per TRL: {operating_conditions['current_per_trl_ma']}mA")
+    print(f"  I/O Loss: {operating_conditions['io_loss_db']}dB (linear factor: {operating_conditions['io_loss_linear_factor']:.3f})")
     print()
     
     print("Device Status:")
@@ -495,6 +536,57 @@ def main():
     print("Power Consumption Breakdown:")
     for component, value in summary['power_consumption_mw'].items():
         print(f"  {component}: {value:.1f} mW")
+    print()
+    
+    print("Power Consumption Breakdown:")
+    for component, value in summary['power_consumption_mw'].items():
+        print(f"  {component}: {value:.1f} mW")
+    print()
+    
+    # Create power consumption pie chart
+    print("Creating Power Consumption Pie Chart...")
+    detailed_power = arch.get_detailed_power_consumption_breakdown()
+    
+    # Create the pie chart
+    import matplotlib.pyplot as plt
+    import numpy as np
+    
+    plt.figure(figsize=(10, 8))
+    colors = ['#ff6b6b', '#4ecdc4', '#45b7d1']
+    wedges, texts, autotexts = plt.pie(
+        detailed_power.values(), 
+        labels=detailed_power.keys(), 
+        autopct='%1.1f%%',
+        colors=colors, 
+        startangle=90,
+        textprops={'fontsize': 10}
+    )
+    
+    # Enhance the pie chart
+    plt.title(f'TRL Architecture Power Consumption Breakdown\n'
+             f'Total: {sum(detailed_power.values()):.1f} mW '
+             f'({operating_conditions["temperature_c"]}°C, {operating_conditions["current_per_trl_ma"]}mA per TRL)',
+             fontsize=14, fontweight='bold', pad=20)
+    
+    # Add value annotations
+    for i, (label, value) in enumerate(detailed_power.items()):
+        angle = (wedges[i].theta1 + wedges[i].theta2) / 2
+        x = 0.7 * np.cos(np.radians(angle))
+        y = 0.7 * np.sin(np.radians(angle))
+        plt.annotate(f'{value:.1f}mW', xy=(x, y), ha='center', va='center',
+                    fontsize=9, fontweight='bold', color='white',
+                    bbox=dict(boxstyle='round,pad=0.3', facecolor='black', alpha=0.7))
+    
+    # Make the chart circular
+    plt.axis('equal')
+    
+    # Save the pie chart
+    import os
+    pie_chart_path = 'data/plots/arch/trl_8ch_1ports_power_pie.png'
+    os.makedirs(os.path.dirname(pie_chart_path), exist_ok=True)
+    plt.savefig(pie_chart_path, dpi=300, bbox_inches='tight')
+    plt.close()
+    print(f"  Power consumption pie chart saved to: {pie_chart_path}")
     print()
     
     # Demonstrate redundancy management
