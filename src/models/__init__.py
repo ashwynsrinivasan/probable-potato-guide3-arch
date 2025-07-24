@@ -3,6 +3,7 @@ SOA Models Package
 
 This package contains Semiconductor Optical Amplifier (SOA) model classes and thermal management components:
 - HPSOA: High Power SOA model
+- MPSOA: Multi-Port SOA model
 - SOA: SOA model (formerly EuropaSOA)
 - EuropaSOA_datasoa: Alternative Europa SOA implementation
 - TRL: Tunable Ring Laser model with thermal management
@@ -13,6 +14,7 @@ This package contains Semiconductor Optical Amplifier (SOA) model classes and th
 """
 
 from .HPSOA import HPSOA
+from .MPSOA import MPSOA
 from .SOA import SOA
 from .TRL import TRL
 from .DFB import DFB
@@ -26,4 +28,4 @@ try:
 except ImportError:
     EuropaSOA_datasoa = None
 
-__all__ = ['HPSOA', 'SOA', 'EuropaSOA_datasoa', 'TRL', 'DFB', 'RINGHTR', 'PHASEHTR', 'MZIHTR'] 
+__all__ = ['HPSOA', 'MPSOA', 'SOA', 'EuropaSOA_datasoa', 'TRL', 'DFB', 'RINGHTR', 'PHASEHTR', 'MZIHTR'] 
