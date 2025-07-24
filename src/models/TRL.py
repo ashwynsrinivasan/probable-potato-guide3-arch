@@ -5,6 +5,14 @@ import plotly.express as px
 from plotly.subplots import make_subplots
 import plotly.offline as pyo
 
+# Handle imports for both direct execution and module import
+try:
+    from .RINGHTR import RINGHTR
+    from .PHASEHTR import PHASEHTR
+except ImportError:
+    from RINGHTR import RINGHTR
+    from PHASEHTR import PHASEHTR
+
 class TRL:
     """
     TRL model class for calculating output optical power based on temperature and current
@@ -25,6 +33,18 @@ class TRL:
         
         # Electrical parameters (copied from EuropaSOA)
         self.V_turn_on = 1.05       # Turn-on voltage in V
+        
+        # Initialize heater objects
+        self.ring_htr_1 = RINGHTR()  # First ring heater
+        self.ring_htr_2 = RINGHTR()  # Second ring heater
+        self.phase_htr = PHASEHTR()  # Phase heater
+        
+        # Calculate heater heat loads
+        self.trl_heater_heat_load = (
+            self.ring_htr_1.ring_htr_heat_load + 
+            self.ring_htr_2.ring_htr_heat_load + 
+            self.phase_htr.phase_htr_heat_load
+        )
         
         # Temperature-dependent threshold currents (mA) - reverted to original values
         self.threshold_currents = {
@@ -179,16 +199,47 @@ class TRL:
         
         return currents, output_powers
     
-    def get_wall_plug_efficiency(self, temperature, current):
+    def get_total_wpe(self, temperature, current):
         """
-        Calculate wall-plug efficiency using actual operating voltage
+        Calculate total wall-plug efficiency considering TRL gain power and all heater power consumption
         
         Args:
             temperature (float): Temperature in Celsius
             current (float): Current in mA
             
         Returns:
-            float: Wall-plug efficiency as percentage
+            float: Total wall-plug efficiency as percentage
+        """
+        # Optical output power from TRL gain
+        optical_output_power = self.calculate_output_power(temperature, current)  # mW
+        
+        # Electrical power consumption from TRL gain
+        trl_operating_voltage = self.get_operating_voltage(current)
+        trl_electrical_power_mw = current * trl_operating_voltage  # P = I * V (mA * V = mW)
+        
+        # Total electrical power consumption (TRL + all heaters)
+        total_electrical_power_mw = (
+            trl_electrical_power_mw + 
+            self.ring_htr_1.get_power_consumption() + 
+            self.ring_htr_2.get_power_consumption() + 
+            self.phase_htr.get_power_consumption()
+        )
+        
+        # Total WPE = Optical Output Power / Total Electrical Power
+        if total_electrical_power_mw > 0:
+            return (optical_output_power / total_electrical_power_mw) * 100  # Percentage
+        return 0.0
+    
+    def get_trl_gain_wpe(self, temperature, current):
+        """
+        Calculate TRL gain wall-plug efficiency using actual operating voltage
+        
+        Args:
+            temperature (float): Temperature in Celsius
+            current (float): Current in mA
+            
+        Returns:
+            float: TRL gain wall-plug efficiency as percentage
         """
         output_power = self.calculate_output_power(temperature, current)
         operating_voltage = self.get_operating_voltage(current)
@@ -198,9 +249,60 @@ class TRL:
             return (output_power / 1000.0) / input_power * 100  # Convert mW to W
         return 0.0
     
+    def get_trl_gain_heat_load(self, temperature, current):
+        """
+        Calculate TRL gain heat load (remaining electrical power not converted to optical)
+        
+        Args:
+            temperature (float): Temperature in Celsius
+            current (float): Current in mA
+            
+        Returns:
+            float: TRL gain heat load in mW
+        """
+        output_power = self.calculate_output_power(temperature, current)
+        operating_voltage = self.get_operating_voltage(current)
+        electrical_power_mw = current * operating_voltage  # P = I * V (mA * V = mW)
+        
+        # Heat load is electrical power minus optical power output
+        heat_load = electrical_power_mw - output_power
+        return max(0, heat_load)  # Ensure non-negative
+    
+    def get_trl_heat_load(self, temperature, current):
+        """
+        Calculate total TRL heat load (gain heat load + heater heat load)
+        
+        Args:
+            temperature (float): Temperature in Celsius
+            current (float): Current in mA
+            
+        Returns:
+            float: Total TRL heat load in mW
+        """
+        gain_heat_load = self.get_trl_gain_heat_load(temperature, current)
+        return gain_heat_load + self.trl_heater_heat_load
+    
+    def get_heat_sources(self, temperature, current):
+        """
+        Get breakdown of all heat sources
+        
+        Args:
+            temperature (float): Temperature in Celsius
+            current (float): Current in mA
+            
+        Returns:
+            dict: Dictionary with heat source breakdown
+        """
+        return {
+            'TRL Gain Heat Load': self.get_trl_gain_heat_load(temperature, current),
+            'Ring Heater 1': self.ring_htr_1.ring_htr_heat_load,
+            'Ring Heater 2': self.ring_htr_2.ring_htr_heat_load,
+            'Phase Heater': self.phase_htr.phase_htr_heat_load
+        }
+    
     def create_interactive_plot(self, save_path='trl_interactive_plot.html'):
         """
-        Create an interactive Plotly plot showing all temperatures simultaneously
+        Create an interactive Plotly plot showing all temperatures simultaneously with heat source pie chart
         
         Args:
             save_path (str): Path to save the HTML file
@@ -209,15 +311,25 @@ class TRL:
         available_temps = [10, 35, 45, 55, 80]
         current_range = (0, 200, 1)
         
-        # Create subplots - 3 rows: Pout, I-V, WPE
+        # Operating point for annotations and pie charts
+        annotation_current = 130  # mA
+        annotation_temp = 35      # °C
+        
+        # Create subplots - 2x3 grid: Pout, I-V, TRL Gain WPE, Total WPE, Heat Sources Pie Chart, Power Consumption
         fig = make_subplots(
-            rows=3, cols=1,
+            rows=2, cols=3,
             subplot_titles=(
                 'TRL Output Optical Power vs Current', 
                 'TRL Current-Voltage (I-V) Characteristics',
-                'TRL Wall-Plug Efficiency vs Current'
+                'TRL Gain Wall-Plug Efficiency vs Current',
+                'TRL Total Wall-Plug Efficiency vs Current',
+                f'Heat Sources Distribution (at {annotation_current}mA, {annotation_temp}°C)',
+                f'Power Consumption Breakdown (at {annotation_current}mA, {annotation_temp}°C)'
             ),
-            vertical_spacing=0.08
+            specs=[[{"type": "scatter"}, {"type": "scatter"}, {"type": "scatter"}],
+                   [{"type": "scatter"}, {"type": "pie"}, {"type": "pie"}]],
+            vertical_spacing=0.12,
+            horizontal_spacing=0.08
         )
         
         # Color palette
@@ -230,23 +342,13 @@ class TRL:
             # Calculate voltages for I-V plot
             voltages = [self.get_operating_voltage(current) for current in currents]
             
-            # Calculate WPE from I-V and output power
-            wpe_values = []
-            for j, current in enumerate(currents):
-                if current > 0 and voltages[j] > 0:
-                    electrical_power_mW = current * voltages[j]  # P = I * V (mA * V = mW)
-                    optical_power_mW = powers[j]
-                    if electrical_power_mW > 0:
-                        wpe = (optical_power_mW / electrical_power_mW) * 100  # WPE percentage
-                    else:
-                        wpe = 0.0
-                else:
-                    wpe = 0.0
-                wpe_values.append(wpe)
+            # Calculate TRL Gain WPE and Total WPE
+            trl_gain_wpe_values = [self.get_trl_gain_wpe(temp, current) for current in currents]
+            total_wpe_values = [self.get_total_wpe(temp, current) for current in currents]
             
             color = colors[i % len(colors)]
             
-            # Power plot (Row 1)
+            # Power plot (Row 1, Col 1) - Solid lines
             fig.add_trace(
                 go.Scatter(
                     x=currents,
@@ -260,38 +362,130 @@ class TRL:
                 row=1, col=1
             )
             
-            # I-V plot (Row 2)
+            # I-V plot (Row 1, Col 2) - Solid lines
             fig.add_trace(
                 go.Scatter(
                     x=currents,
                     y=voltages,
                     mode='lines',
                     name=f'{temp}°C (I-V)',
-                    line=dict(color=color, width=2, dash='dot'),
+                    line=dict(color=color, width=2),
+                    legendgroup=f'temp_{temp}',
+                    showlegend=False
+                ),
+                row=1, col=2
+            )
+            
+            # TRL Gain WPE plot (Row 1, Col 3) - Solid lines
+            fig.add_trace(
+                go.Scatter(
+                    x=currents,
+                    y=trl_gain_wpe_values,
+                    mode='lines',
+                    name=f'{temp}°C (Gain WPE)',
+                    line=dict(color=color, width=2),
+                    legendgroup=f'temp_{temp}',
+                    showlegend=False
+                ),
+                row=1, col=3
+            )
+            
+            # Total WPE plot (Row 2, Col 1) - Solid lines
+            fig.add_trace(
+                go.Scatter(
+                    x=currents,
+                    y=total_wpe_values,
+                    mode='lines',
+                    name=f'{temp}°C (Total WPE)',
+                    line=dict(color=color, width=2),
                     legendgroup=f'temp_{temp}',
                     showlegend=False
                 ),
                 row=2, col=1
             )
-            
-            # WPE plot (Row 3)
-            fig.add_trace(
-                go.Scatter(
-                    x=currents,
-                    y=wpe_values,
-                    mode='lines',
-                    name=f'{temp}°C (WPE)',
-                    line=dict(color=color, width=2, dash='dash'),
-                    legendgroup=f'temp_{temp}',
-                    showlegend=False
-                ),
-                row=3, col=1
-            )
         
-        # Update layout (no dropdown needed)
+        # Add annotations at 130mA, 35°C
+        annotation_power = self.calculate_output_power(annotation_temp, annotation_current)
+        annotation_voltage = self.get_operating_voltage(annotation_current)
+        annotation_gain_wpe = self.get_trl_gain_wpe(annotation_temp, annotation_current)
+        annotation_total_wpe = self.get_total_wpe(annotation_temp, annotation_current)
+        
+        # Annotation for Power plot
+        fig.add_annotation(
+            x=annotation_current, y=annotation_power,
+            text=f"{annotation_power:.1f}mW<br>@{annotation_current}mA, {annotation_temp}°C",
+            showarrow=True, arrowhead=2, arrowcolor="red", arrowwidth=2,
+            bgcolor="white", bordercolor="red", borderwidth=2,
+            row=1, col=1
+        )
+        
+        # Annotation for I-V plot
+        fig.add_annotation(
+            x=annotation_current, y=annotation_voltage,
+            text=f"{annotation_voltage:.3f}V<br>@{annotation_current}mA",
+            showarrow=True, arrowhead=2, arrowcolor="red", arrowwidth=2,
+            bgcolor="white", bordercolor="red", borderwidth=2,
+            row=1, col=2
+        )
+        
+        # Annotation for TRL Gain WPE plot
+        fig.add_annotation(
+            x=annotation_current, y=annotation_gain_wpe,
+            text=f"{annotation_gain_wpe:.2f}%<br>@{annotation_current}mA, {annotation_temp}°C",
+            showarrow=True, arrowhead=2, arrowcolor="red", arrowwidth=2,
+            bgcolor="white", bordercolor="red", borderwidth=2,
+            row=1, col=3
+        )
+        
+        # Annotation for Total WPE plot
+        fig.add_annotation(
+            x=annotation_current, y=annotation_total_wpe,
+            text=f"{annotation_total_wpe:.2f}%<br>@{annotation_current}mA, {annotation_temp}°C",
+            showarrow=True, arrowhead=2, arrowcolor="red", arrowwidth=2,
+            bgcolor="white", bordercolor="red", borderwidth=2,
+            row=2, col=1
+        )
+        
+        # Add pie chart for heat sources (at 130mA, 35°C)
+        heat_sources = self.get_heat_sources(annotation_temp, annotation_current)
+        fig.add_trace(
+            go.Pie(
+                labels=list(heat_sources.keys()),
+                values=list(heat_sources.values()),
+                name="Heat Sources",
+                textinfo='label+percent+value',
+                texttemplate='%{label}<br>%{value:.1f}mW<br>(%{percent})',
+                hovertemplate='<b>%{label}</b><br>Heat Load: %{value:.1f}mW<br>Percentage: %{percent}<extra></extra>'
+            ),
+            row=2, col=2
+        )
+        
+        # Add pie chart for power consumption breakdown (at 130mA, 35°C)
+        trl_electrical_power = annotation_current * self.get_operating_voltage(annotation_current)  # mA * V = mW
+        power_consumption = {
+            'TRL Gain': trl_electrical_power,
+            'Ring Heater 1': self.ring_htr_1.get_power_consumption(),
+            'Ring Heater 2': self.ring_htr_2.get_power_consumption(),
+            'Phase Heater': self.phase_htr.get_power_consumption()
+        }
+        
+        fig.add_trace(
+            go.Pie(
+                labels=list(power_consumption.keys()),
+                values=list(power_consumption.values()),
+                name="Power Consumption",
+                textinfo='label+percent+value',
+                texttemplate='%{label}<br>%{value:.1f}mW<br>(%{percent})',
+                hovertemplate='<b>%{label}</b><br>Power: %{value:.1f}mW<br>Percentage: %{percent}<extra></extra>',
+                marker=dict(colors=['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4'])
+            ),
+            row=2, col=3
+        )
+        
+        # Update layout
         fig.update_layout(
             title={
-                'text': 'TRL Performance Characteristics - All Temperatures',
+                'text': f'TRL Performance Characteristics with Thermal Management - Annotated at {annotation_current}mA, {annotation_temp}°C',
                 'x': 0.5,
                 'xanchor': 'center'
             },
@@ -308,15 +502,17 @@ class TRL:
         
         # Update x-axes
         fig.update_xaxes(title_text="Current [mA]", row=1, col=1)
+        fig.update_xaxes(title_text="Current [mA]", row=1, col=2)
+        fig.update_xaxes(title_text="Current [mA]", row=1, col=3)
         fig.update_xaxes(title_text="Current [mA]", row=2, col=1)
-        fig.update_xaxes(title_text="Current [mA]", row=3, col=1)
         
         # Update y-axes with appropriate ranges
         fig.update_yaxes(title_text="Pout [mW]", range=[0, 40], row=1, col=1)
-        fig.update_yaxes(title_text="Voltage [V]", range=[1.0, 2.0], row=2, col=1)
-        fig.update_yaxes(title_text="WPE [%]", range=[0, 20], row=3, col=1)
+        fig.update_yaxes(title_text="Voltage [V]", range=[1.0, 2.0], row=1, col=2)
+        fig.update_yaxes(title_text="TRL Gain WPE [%]", range=[0, 20], row=1, col=3)
+        fig.update_yaxes(title_text="Total WPE [%]", range=[0, 10], row=2, col=1)
         
-        # Add grid to all subplots
+        # Add grid to scatter plots
         fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='lightgray')
         fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='lightgray')
         
@@ -341,15 +537,27 @@ class TRL:
         
         colors = ['red', 'blue', 'purple', 'green', 'orange']
         
-        plt.figure(figsize=(12, 12))
+        # Operating point for annotations and pie charts
+        annotation_current = 130  # mA
+        annotation_temp = 35      # °C
+        
+        plt.figure(figsize=(18, 12))
         
         # Plot Pout vs Current
-        plt.subplot(3, 1, 1)
+        plt.subplot(3, 2, 1)
         for i, temp in enumerate(temperatures):
             currents, powers = self.get_performance_curve(temp, current_range)
             color = colors[i % len(colors)]
             plt.plot(currents, powers, color=color, linewidth=2, 
                     label=f'Temperature: {temp}°C')
+        
+        # Add annotation at 130mA, 35°C
+        annotation_power = self.calculate_output_power(annotation_temp, annotation_current)
+        plt.annotate(f'{annotation_power:.1f}mW\n@{annotation_current}mA, {annotation_temp}°C',
+                    xy=(annotation_current, annotation_power), xytext=(annotation_current+20, annotation_power+5),
+                    arrowprops=dict(arrowstyle='->', color='red', lw=2),
+                    bbox=dict(boxstyle="round,pad=0.3", facecolor="white", edgecolor="red"),
+                    fontsize=10, ha='left')
         
         plt.xlabel('Current [mA]')
         plt.ylabel('Pout [mW]')
@@ -360,13 +568,21 @@ class TRL:
         plt.xlim(0, 200)
         
         # Plot I-V Characteristics
-        plt.subplot(3, 1, 2)
+        plt.subplot(3, 2, 2)
         for i, temp in enumerate(temperatures):
             currents, _ = self.get_performance_curve(temp, current_range)
             voltages = [self.get_operating_voltage(current) for current in currents]
             color = colors[i % len(colors)]
-            plt.plot(currents, voltages, color=color, linewidth=2, linestyle=':', 
+            plt.plot(currents, voltages, color=color, linewidth=2, 
                     label=f'Temperature: {temp}°C')
+        
+        # Add annotation at 130mA
+        annotation_voltage = self.get_operating_voltage(annotation_current)
+        plt.annotate(f'{annotation_voltage:.3f}V\n@{annotation_current}mA',
+                    xy=(annotation_current, annotation_voltage), xytext=(annotation_current+20, annotation_voltage+0.05),
+                    arrowprops=dict(arrowstyle='->', color='red', lw=2),
+                    bbox=dict(boxstyle="round,pad=0.3", facecolor="white", edgecolor="red"),
+                    fontsize=10, ha='left')
         
         plt.xlabel('Current [mA]')
         plt.ylabel('Voltage [V]')
@@ -376,37 +592,79 @@ class TRL:
         plt.ylim(1.0, 2.0)
         plt.xlim(0, 200)
         
-        # Plot Wall-Plug Efficiency (calculated from I-V and optical power)
-        plt.subplot(3, 1, 3)
+        # Plot TRL Gain Wall-Plug Efficiency
+        plt.subplot(3, 2, 3)
         for i, temp in enumerate(temperatures):
-            currents, powers = self.get_performance_curve(temp, current_range)
-            voltages = [self.get_operating_voltage(current) for current in currents]
-            
-            # Calculate WPE from I-V and output power
-            wpe_values = []
-            for j, current in enumerate(currents):
-                if current > 0 and voltages[j] > 0:
-                    electrical_power_mW = current * voltages[j]  # P = I * V (mA * V = mW)
-                    optical_power_mW = powers[j]
-                    if electrical_power_mW > 0:
-                        wpe = (optical_power_mW / electrical_power_mW) * 100  # WPE percentage
-                    else:
-                        wpe = 0.0
-                else:
-                    wpe = 0.0
-                wpe_values.append(wpe)
+            currents, _ = self.get_performance_curve(temp, current_range)
+            trl_gain_wpe_values = [self.get_trl_gain_wpe(temp, current) for current in currents]
             
             color = colors[i % len(colors)]
-            plt.plot(currents, wpe_values, color=color, linewidth=2, linestyle='--',
+            plt.plot(currents, trl_gain_wpe_values, color=color, linewidth=2,
                     label=f'Temperature: {temp}°C')
         
+        # Add annotation at 130mA, 35°C
+        annotation_gain_wpe = self.get_trl_gain_wpe(annotation_temp, annotation_current)
+        plt.annotate(f'{annotation_gain_wpe:.2f}%\n@{annotation_current}mA, {annotation_temp}°C',
+                    xy=(annotation_current, annotation_gain_wpe), xytext=(annotation_current+20, annotation_gain_wpe+1),
+                    arrowprops=dict(arrowstyle='->', color='red', lw=2),
+                    bbox=dict(boxstyle="round,pad=0.3", facecolor="white", edgecolor="red"),
+                    fontsize=10, ha='left')
+        
         plt.xlabel('Current [mA]')
-        plt.ylabel('WPE [%]')
-        plt.title('TRL Wall-Plug Efficiency vs Current (from I-V)')
+        plt.ylabel('TRL Gain WPE [%]')
+        plt.title('TRL Gain Wall-Plug Efficiency vs Current')
         plt.grid(True, alpha=0.3)
         plt.legend()
         plt.ylim(0, 20)
         plt.xlim(0, 200)
+        
+        # Plot Total Wall-Plug Efficiency
+        plt.subplot(3, 2, 4)
+        for i, temp in enumerate(temperatures):
+            currents, _ = self.get_performance_curve(temp, current_range)
+            total_wpe_values = [self.get_total_wpe(temp, current) for current in currents]
+            
+            color = colors[i % len(colors)]
+            plt.plot(currents, total_wpe_values, color=color, linewidth=2,
+                    label=f'Temperature: {temp}°C')
+        
+        # Add annotation at 130mA, 35°C
+        annotation_total_wpe = self.get_total_wpe(annotation_temp, annotation_current)
+        plt.annotate(f'{annotation_total_wpe:.2f}%\n@{annotation_current}mA, {annotation_temp}°C',
+                    xy=(annotation_current, annotation_total_wpe), xytext=(annotation_current+20, annotation_total_wpe+0.5),
+                    arrowprops=dict(arrowstyle='->', color='red', lw=2),
+                    bbox=dict(boxstyle="round,pad=0.3", facecolor="white", edgecolor="red"),
+                    fontsize=10, ha='left')
+        
+        plt.xlabel('Current [mA]')
+        plt.ylabel('Total WPE [%]')
+        plt.title('TRL Total Wall-Plug Efficiency vs Current')
+        plt.grid(True, alpha=0.3)
+        plt.legend()
+        plt.ylim(0, 10)
+        plt.xlim(0, 200)
+        
+        # Plot Heat Sources Pie Chart (at 130mA, 35°C)
+        plt.subplot(3, 2, 5)
+        heat_sources = self.get_heat_sources(annotation_temp, annotation_current)
+        colors_pie = ['#ff9999', '#66b3ff', '#99ff99', '#ffcc99']
+        plt.pie(heat_sources.values(), labels=heat_sources.keys(), autopct='%1.1f%%',
+                colors=colors_pie, startangle=90)
+        plt.title(f'Heat Sources Distribution\n(at {annotation_current}mA, {annotation_temp}°C)')
+        
+        # Plot Power Consumption Pie Chart (at 130mA, 35°C)
+        plt.subplot(3, 2, 6)
+        trl_electrical_power = annotation_current * self.get_operating_voltage(annotation_current)  # mA * V = mW
+        power_consumption = {
+            'TRL Gain': trl_electrical_power,
+            'Ring HTR 1': self.ring_htr_1.get_power_consumption(),
+            'Ring HTR 2': self.ring_htr_2.get_power_consumption(),
+            'Phase HTR': self.phase_htr.get_power_consumption()
+        }
+        colors_pie2 = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4']
+        plt.pie(power_consumption.values(), labels=power_consumption.keys(), autopct='%1.1f%%',
+                colors=colors_pie2, startangle=90)
+        plt.title(f'Power Consumption Breakdown\n(at {annotation_current}mA, {annotation_temp}°C)')
         
         plt.tight_layout()
         
@@ -436,6 +694,14 @@ def main():
     print(f"Series Resistance: {trl.calculate_series_resistance_ohm():.3f} Ω")
     print()
     
+    # Print heater parameters
+    print("Heater Parameters:")
+    print(f"Ring Heater 1: {trl.ring_htr_1.ring_htr_heat_load}mW (Duty: {trl.ring_htr_1.get_duty_cycle()*100:.1f}%)")
+    print(f"Ring Heater 2: {trl.ring_htr_2.ring_htr_heat_load}mW (Duty: {trl.ring_htr_2.get_duty_cycle()*100:.1f}%)")
+    print(f"Phase Heater: {trl.phase_htr.phase_htr_heat_load}mW (Duty: {trl.phase_htr.get_duty_cycle()*100:.1f}%)")
+    print(f"Total Heater Heat Load: {trl.trl_heater_heat_load}mW")
+    print()
+    
     # Verify the corrected values with original thresholds
     print("Verification of corrected parameters (with original thresholds):")
     print(f"80°C at 100mA: {trl.calculate_output_power(80, 100):.1f}mW (target: 8.0mW)")
@@ -446,6 +712,25 @@ def main():
     print(f"35°C at 100mA: {trl.calculate_output_power(35, 100):.1f}mW (target: 22.5mW)")
     print()
     
+    # Show thermal analysis at 130mA, 35°C
+    print("Thermal Analysis at 130mA, 35°C:")
+    gain_heat_load = trl.get_trl_gain_heat_load(35, 130)
+    total_heat_load = trl.get_trl_heat_load(35, 130)
+    gain_wpe = trl.get_trl_gain_wpe(35, 130)
+    total_wpe = trl.get_total_wpe(35, 130)
+    trl_electrical_power = 130 * trl.get_operating_voltage(130)
+    total_electrical_power = trl_electrical_power + trl.trl_heater_heat_load
+    optical_output = trl.calculate_output_power(35, 130)
+    
+    print(f"Optical Output Power: {optical_output:.1f}mW")
+    print(f"TRL Gain WPE: {gain_wpe:.2f}%")
+    print(f"Total WPE (including heaters): {total_wpe:.2f}%")
+    print(f"TRL Gain Heat Load: {gain_heat_load:.1f}mW")
+    print(f"TRL Total Heat Load: {total_heat_load:.1f}mW")
+    print(f"TRL Electrical Power: {trl_electrical_power:.1f}mW")
+    print(f"Total Electrical Power (TRL + Heaters): {total_electrical_power:.1f}mW")
+    print()
+    
     # Show operating voltage examples
     print("Operating Voltage Examples:")
     for current in [80, 100, 140]:
@@ -454,15 +739,29 @@ def main():
     print()
     
     # Create interactive plot with dropdown
-    print("Generating interactive TRL performance plot with temperature dropdown...")
+    print("Generating interactive TRL performance plot with thermal management...")
     trl.create_interactive_plot('trl_interactive_plot.html')
     
     # Create matplotlib plot for comparison (save but don't show)
     print("Generating and saving matplotlib plot...")
+    
+    # Determine the correct path for saving plots
+    import os
+    current_dir = os.getcwd()
+    if current_dir.endswith('src/models'):
+        # Running from src/models directory
+        save_path = '../../data/plots/models/trl_performance.png'
+    else:
+        # Running from project root
+        save_path = 'data/plots/models/trl_performance.png'
+    
+    # Ensure directory exists
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    
     trl.plot_performance_curves(
         temperatures=[10, 35, 45, 55, 80],
         current_range=(0, 200, 1),
-        save_path='data/plots/models/trl_performance.png',
+        save_path=save_path,
         show_plot=False  # Don't display the plot
     )
 
