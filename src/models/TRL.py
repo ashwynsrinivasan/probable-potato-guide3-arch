@@ -18,13 +18,19 @@ class TRL:
     TRL model class for calculating output optical power based on temperature and current
     """
     
-    def __init__(self, W_um: float = 2.0):
+    def __init__(self, W_um: float = 2.0, temperature: float = 35.0, current: float = 130.0):
         """
         Initialize TRL model with temperature-dependent parameters
         
         Args:
             W_um (float): Ridge width in micrometers (default: 2.0)
+            temperature (float): Operating temperature in Celsius (default: 35.0)
+            current (float): Operating current in mA (default: 130.0)
         """
+        # Operating parameters
+        self.temperature = temperature
+        self.current = current
+        
         # TRL-specific geometric parameters
         self.L_active_mm = 1.1      # Active length in mm
         self.L_active_um = 1100.0   # Active length in micrometers (1.1mm)
@@ -300,12 +306,12 @@ class TRL:
             'Phase Heater': self.phase_htr.phase_htr_heat_load
         }
     
-    def create_interactive_plot(self, save_path='trl_interactive_plot.html'):
+    def create_interactive_plot(self, save_path=None):
         """
-        Create an interactive Plotly plot showing all temperatures simultaneously with heat source pie chart
+        Create an interactive Plotly plot showing all temperatures simultaneously
         
         Args:
-            save_path (str): Path to save the HTML file
+            save_path (str): Path to save the HTML file (optional, not saved by default)
         """
         # Available temperatures
         available_temps = [10, 35, 45, 55, 80]
@@ -485,7 +491,7 @@ class TRL:
         # Update layout
         fig.update_layout(
             title={
-                'text': f'TRL Performance Characteristics with Thermal Management - Annotated at {annotation_current}mA, {annotation_temp}°C',
+                'text': f'TRL Performance Characteristics - Annotated at {annotation_current}mA, {annotation_temp}°C',
                 'x': 0.5,
                 'xanchor': 'center'
             },
@@ -516,9 +522,12 @@ class TRL:
         fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='lightgray')
         fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='lightgray')
         
-        # Save as HTML file
-        pyo.plot(fig, filename=save_path, auto_open=True)
-        print(f"Interactive plot saved to: {save_path}")
+        # Only save HTML file if save_path is provided
+        if save_path:
+            pyo.plot(fig, filename=save_path, auto_open=True)
+            print(f"Interactive plot saved to: {save_path}")
+        else:
+            fig.show()
         
         return fig
     
@@ -682,11 +691,12 @@ def main():
     """
     Main function to demonstrate TRL model and create interactive plots
     """
-    # Create TRL instance
+    # Create TRL instance with default parameters (130mA, 35°C)
     trl = TRL()
     
     # Print TRL parameters
     print("TRL Model Parameters:")
+    print(f"Default Operating Point: {trl.current}mA, {trl.temperature}°C")
     print(f"Active Length: {trl.L_active_mm} mm ({trl.L_active_um} μm)")
     print(f"Taper Length: {trl.L_tapers_um} μm")
     print(f"Ridge Width: {trl.W_um} μm")
@@ -712,15 +722,15 @@ def main():
     print(f"35°C at 100mA: {trl.calculate_output_power(35, 100):.1f}mW (target: 22.5mW)")
     print()
     
-    # Show thermal analysis at 130mA, 35°C
-    print("Thermal Analysis at 130mA, 35°C:")
-    gain_heat_load = trl.get_trl_gain_heat_load(35, 130)
-    total_heat_load = trl.get_trl_heat_load(35, 130)
-    gain_wpe = trl.get_trl_gain_wpe(35, 130)
-    total_wpe = trl.get_total_wpe(35, 130)
-    trl_electrical_power = 130 * trl.get_operating_voltage(130)
+    # Show thermal analysis at default operating point (130mA, 35°C)
+    print(f"Thermal Analysis at {trl.current}mA, {trl.temperature}°C:")
+    gain_heat_load = trl.get_trl_gain_heat_load(trl.temperature, trl.current)
+    total_heat_load = trl.get_trl_heat_load(trl.temperature, trl.current)
+    gain_wpe = trl.get_trl_gain_wpe(trl.temperature, trl.current)
+    total_wpe = trl.get_total_wpe(trl.temperature, trl.current)
+    trl_electrical_power = trl.current * trl.get_operating_voltage(trl.current)
     total_electrical_power = trl_electrical_power + trl.trl_heater_heat_load
-    optical_output = trl.calculate_output_power(35, 130)
+    optical_output = trl.calculate_output_power(trl.temperature, trl.current)
     
     print(f"Optical Output Power: {optical_output:.1f}mW")
     print(f"TRL Gain WPE: {gain_wpe:.2f}%")
@@ -738,9 +748,9 @@ def main():
         print(f"At {current}mA: {voltage:.3f}V")
     print()
     
-    # Create interactive plot with dropdown
-    print("Generating interactive TRL performance plot with thermal management...")
-    trl.create_interactive_plot('trl_interactive_plot.html')
+    # Create interactive plot (no HTML save by default)
+    print("Generating interactive TRL performance plot...")
+    trl.create_interactive_plot()
     
     # Create matplotlib plot for comparison (save but don't show)
     print("Generating and saving matplotlib plot...")
