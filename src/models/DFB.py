@@ -36,17 +36,17 @@ class DFB:
         
         # Temperature-dependent threshold currents (mA) - based on image analysis
         self.threshold_currents = {
-            10: 50.0,   # 10°C threshold (blue line starts around 50mA)
-            35: 80.0,   # 35°C threshold (red line starts around 80mA)
-            80: 120.0   # 80°C threshold (green line starts around 120mA)
+            10: 30.0,   # 10°C threshold (blue line starts around 30mA)
+            35: 43.0,   # 35°C threshold (red line starts around 43mA)
+            80: 90.0   # 80°C threshold (green line starts around 90mA)
         }
         
         # Temperature-dependent slope efficiencies (mW/mA) - based on image analysis
         # From the image: all lines appear to have similar slopes, approximately 0.2 mW/mA
         self.slope_efficiencies = {
-            10: 0.20,   # 10°C slope efficiency
-            35: 0.20,   # 35°C slope efficiency
-            80: 0.18    # 80°C slope efficiency (slightly lower at high temp)
+            10: 0.23,   # 10°C slope efficiency
+            35: 0.21,   # 35°C slope efficiency
+            80: 0.14    # 80°C slope efficiency (slightly lower at high temp)
         }
         
         # Temperature-dependent maximum output powers (mW) - no clipping, allow natural progression
@@ -190,9 +190,59 @@ class DFB:
             return (output_power / 1000.0) / input_power * 100  # Convert mW to W
         return 0.0
     
+    def get_dfb_heat_load(self, temperature, current):
+        """
+        Calculate DFB heat load (remaining electrical power not converted to optical)
+        
+        Args:
+            temperature (float): Temperature in Celsius
+            current (float): Current in mA
+            
+        Returns:
+            float: DFB heat load in mW
+        """
+        output_power = self.calculate_output_power(temperature, current)
+        operating_voltage = self.get_operating_voltage(current)
+        electrical_power_mw = current * operating_voltage  # P = I * V (mA * V = mW)
+        
+        # Heat load is electrical power minus optical power output
+        heat_load = electrical_power_mw - output_power
+        return max(0, heat_load)  # Ensure non-negative
+    
+    def get_heat_sources(self, temperature, current):
+        """
+        Get breakdown of heat sources (for DFB, only one source: the gain section)
+        
+        Args:
+            temperature (float): Temperature in Celsius
+            current (float): Current in mA
+            
+        Returns:
+            dict: Dictionary with heat source breakdown
+        """
+        return {
+            'DFB Gain Heat Load': self.get_dfb_heat_load(temperature, current)
+        }
+    
+    def get_power_consumption(self, temperature, current):
+        """
+        Get power consumption breakdown (for DFB, only electrical power to gain section)
+        
+        Args:
+            temperature (float): Temperature in Celsius
+            current (float): Current in mA
+            
+        Returns:
+            dict: Dictionary with power consumption breakdown
+        """
+        electrical_power = current * self.get_operating_voltage(current)
+        return {
+            'DFB Gain': electrical_power
+        }
+
     def create_interactive_plot(self, save_path=None):
         """
-        Create an interactive Plotly plot showing all temperatures simultaneously
+        Create an interactive Plotly plot showing all temperatures simultaneously with heat source pie chart
         
         Args:
             save_path (str): Path to save the HTML file (optional, not saved by default)
@@ -201,23 +251,25 @@ class DFB:
         available_temps = [10, 35, 80]
         current_range = (0, 300, 1)  # Extended range for DFB
         
-        # Operating point for annotations
-        annotation_current = 130  # mA
+        # Operating point for annotations and pie charts
+        annotation_current = 186  # mA (changed from 130)
         annotation_temp = 35      # °C
         
-        # Create subplots - 2x2 grid: Pout, I-V, DFB WPE, Power Consumption
+        # Create subplots - 2x3 grid: Pout, I-V, DFB WPE, Heat Sources Pie Chart, Power Consumption Pie Chart, Performance Summary
         fig = make_subplots(
-            rows=2, cols=2,
+            rows=2, cols=3,
             subplot_titles=(
                 'DFB Output Optical Power vs Current', 
                 'DFB Current-Voltage (I-V) Characteristics',
                 'DFB Wall-Plug Efficiency vs Current',
+                f'Heat Sources Distribution (at {annotation_current}mA, {annotation_temp}°C)',
+                f'Power Consumption Breakdown (at {annotation_current}mA, {annotation_temp}°C)',
                 f'DFB Performance Summary (at {annotation_current}mA, {annotation_temp}°C)'
             ),
-            specs=[[{"type": "scatter"}, {"type": "scatter"}],
-                   [{"type": "scatter"}, {"type": "table"}]],
-            vertical_spacing=0.15,
-            horizontal_spacing=0.1
+            specs=[[{"type": "scatter"}, {"type": "scatter"}, {"type": "scatter"}],
+                   [{"type": "pie"}, {"type": "pie"}, {"type": "table"}]],
+            vertical_spacing=0.12,
+            horizontal_spacing=0.08
         )
         
         # Color palette
@@ -263,7 +315,7 @@ class DFB:
                 row=1, col=2
             )
             
-            # DFB WPE plot (Row 2, Col 1) - Solid lines
+            # DFB WPE plot (Row 1, Col 3) - Solid lines
             fig.add_trace(
                 go.Scatter(
                     x=currents,
@@ -274,10 +326,10 @@ class DFB:
                     legendgroup=f'temp_{temp}',
                     showlegend=False
                 ),
-                row=2, col=1
+                row=1, col=3
             )
         
-        # Add annotations at 130mA, 35°C
+        # Add annotations at 186mA, 35°C
         annotation_power = self.calculate_output_power(annotation_temp, annotation_current)
         annotation_voltage = self.get_operating_voltage(annotation_current)
         annotation_wpe = self.get_dfb_wpe(annotation_temp, annotation_current)
@@ -306,25 +358,57 @@ class DFB:
             text=f"{annotation_wpe:.2f}%<br>@{annotation_current}mA, {annotation_temp}°C",
             showarrow=True, arrowhead=2, arrowcolor="red", arrowwidth=2,
             bgcolor="white", bordercolor="red", borderwidth=2,
+            row=1, col=3
+        )
+        
+        # Add pie chart for heat sources (at 186mA, 35°C)
+        heat_sources = self.get_heat_sources(annotation_temp, annotation_current)
+        fig.add_trace(
+            go.Pie(
+                labels=list(heat_sources.keys()),
+                values=list(heat_sources.values()),
+                name="Heat Sources",
+                textinfo='label+percent+value',
+                texttemplate='%{label}<br>%{value:.1f}mW<br>(%{percent})',
+                hovertemplate='<b>%{label}</b><br>Heat Load: %{value:.1f}mW<br>Percentage: %{percent}<extra></extra>',
+                marker=dict(colors=['#ff9999'])
+            ),
             row=2, col=1
+        )
+        
+        # Add pie chart for power consumption breakdown (at 186mA, 35°C)
+        power_consumption = self.get_power_consumption(annotation_temp, annotation_current)
+        
+        fig.add_trace(
+            go.Pie(
+                labels=list(power_consumption.keys()),
+                values=list(power_consumption.values()),
+                name="Power Consumption",
+                textinfo='label+percent+value',
+                texttemplate='%{label}<br>%{value:.1f}mW<br>(%{percent})',
+                hovertemplate='<b>%{label}</b><br>Power: %{value:.1f}mW<br>Percentage: %{percent}<extra></extra>',
+                marker=dict(colors=['#ff6b6b'])
+            ),
+            row=2, col=2
         )
         
         # Add performance summary table
         electrical_power = annotation_current * self.get_operating_voltage(annotation_current)
+        heat_load = self.get_dfb_heat_load(annotation_temp, annotation_current)
         fig.add_trace(
             go.Table(
                 header=dict(values=['Parameter', 'Value', 'Unit'],
                            fill_color='lightblue',
                            align='left'),
                 cells=dict(values=[
-                    ['Operating Current', 'Operating Temperature', 'Optical Output', 'Operating Voltage', 'Electrical Power', 'Wall-Plug Efficiency'],
-                    [f'{annotation_current}', f'{annotation_temp}', f'{annotation_power:.1f}', f'{annotation_voltage:.3f}', f'{electrical_power:.1f}', f'{annotation_wpe:.2f}'],
-                    ['mA', '°C', 'mW', 'V', 'mW', '%']
+                    ['Operating Current', 'Operating Temperature', 'Optical Output', 'Operating Voltage', 'Electrical Power', 'Heat Load', 'Wall-Plug Efficiency'],
+                    [f'{annotation_current}', f'{annotation_temp}', f'{annotation_power:.1f}', f'{annotation_voltage:.3f}', f'{electrical_power:.1f}', f'{heat_load:.1f}', f'{annotation_wpe:.2f}'],
+                    ['mA', '°C', 'mW', 'V', 'mW', 'mW', '%']
                 ],
                 fill_color='white',
                 align='left')
             ),
-            row=2, col=2
+            row=2, col=3
         )
         
         # Update layout
@@ -348,12 +432,12 @@ class DFB:
         # Update x-axes
         fig.update_xaxes(title_text="Current [mA]", row=1, col=1)
         fig.update_xaxes(title_text="Current [mA]", row=1, col=2)
-        fig.update_xaxes(title_text="Current [mA]", row=2, col=1)
+        fig.update_xaxes(title_text="Current [mA]", row=1, col=3)
         
         # Update y-axes with appropriate ranges
         fig.update_yaxes(title_text="Pout [mW]", range=[0, 40], row=1, col=1)
         fig.update_yaxes(title_text="Voltage [V]", range=[1.0, 2.5], row=1, col=2)
-        fig.update_yaxes(title_text="WPE [%]", range=[0, 25], row=2, col=1)
+        fig.update_yaxes(title_text="WPE [%]", range=[0, 25], row=1, col=3)
         
         # Add grid to scatter plots
         fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='lightgray')
@@ -383,24 +467,24 @@ class DFB:
         
         colors = ['blue', 'red', 'green']  # Match image colors
         
-        # Operating point for annotations
-        annotation_current = 130  # mA
+        # Operating point for annotations and pie charts
+        annotation_current = 186  # mA (changed from 130)
         annotation_temp = 35      # °C
         
-        plt.figure(figsize=(15, 10))
+        plt.figure(figsize=(18, 12))
         
         # Plot Pout vs Current
-        plt.subplot(2, 2, 1)
+        plt.subplot(3, 2, 1)
         for i, temp in enumerate(temperatures):
             currents, powers = self.get_performance_curve(temp, current_range)
             color = colors[i % len(colors)]
             plt.plot(currents, powers, color=color, linewidth=3, 
                     label=f'Temperature: {temp}°C')
         
-        # Add annotation at 130mA, 35°C
+        # Add annotation at 186mA, 35°C
         annotation_power = self.calculate_output_power(annotation_temp, annotation_current)
         plt.annotate(f'{annotation_power:.1f}mW\n@{annotation_current}mA, {annotation_temp}°C',
-                    xy=(annotation_current, annotation_power), xytext=(annotation_current+30, annotation_power+5),
+                    xy=(annotation_current, annotation_power), xytext=(annotation_current+20, annotation_power+5),
                     arrowprops=dict(arrowstyle='->', color='red', lw=2),
                     bbox=dict(boxstyle="round,pad=0.3", facecolor="white", edgecolor="red"),
                     fontsize=10, ha='left')
@@ -414,7 +498,7 @@ class DFB:
         plt.xlim(0, 300)
         
         # Plot I-V Characteristics
-        plt.subplot(2, 2, 2)
+        plt.subplot(3, 2, 2)
         for i, temp in enumerate(temperatures):
             currents, _ = self.get_performance_curve(temp, current_range)
             voltages = [self.get_operating_voltage(current) for current in currents]
@@ -422,10 +506,10 @@ class DFB:
             plt.plot(currents, voltages, color=color, linewidth=3, 
                     label=f'Temperature: {temp}°C')
         
-        # Add annotation at 130mA
+        # Add annotation at 186mA
         annotation_voltage = self.get_operating_voltage(annotation_current)
         plt.annotate(f'{annotation_voltage:.3f}V\n@{annotation_current}mA',
-                    xy=(annotation_current, annotation_voltage), xytext=(annotation_current+30, annotation_voltage+0.1),
+                    xy=(annotation_current, annotation_voltage), xytext=(annotation_current+20, annotation_voltage+0.1),
                     arrowprops=dict(arrowstyle='->', color='red', lw=2),
                     bbox=dict(boxstyle="round,pad=0.3", facecolor="white", edgecolor="red"),
                     fontsize=10, ha='left')
@@ -439,7 +523,7 @@ class DFB:
         plt.xlim(0, 300)
         
         # Plot DFB Wall-Plug Efficiency
-        plt.subplot(2, 2, 3)
+        plt.subplot(3, 2, 3)
         for i, temp in enumerate(temperatures):
             currents, _ = self.get_performance_curve(temp, current_range)
             dfb_wpe_values = [self.get_dfb_wpe(temp, current) for current in currents]
@@ -448,10 +532,10 @@ class DFB:
             plt.plot(currents, dfb_wpe_values, color=color, linewidth=3,
                     label=f'Temperature: {temp}°C')
         
-        # Add annotation at 130mA, 35°C
+        # Add annotation at 186mA, 35°C
         annotation_wpe = self.get_dfb_wpe(annotation_temp, annotation_current)
         plt.annotate(f'{annotation_wpe:.2f}%\n@{annotation_current}mA, {annotation_temp}°C',
-                    xy=(annotation_current, annotation_wpe), xytext=(annotation_current+30, annotation_wpe+2),
+                    xy=(annotation_current, annotation_wpe), xytext=(annotation_current+20, annotation_wpe+1),
                     arrowprops=dict(arrowstyle='->', color='red', lw=2),
                     bbox=dict(boxstyle="round,pad=0.3", facecolor="white", edgecolor="red"),
                     fontsize=10, ha='left')
@@ -464,18 +548,36 @@ class DFB:
         plt.ylim(0, 25)
         plt.xlim(0, 300)
         
+        # Plot Heat Sources Pie Chart (at 186mA, 35°C)
+        plt.subplot(3, 2, 4)
+        heat_sources = self.get_heat_sources(annotation_temp, annotation_current)
+        colors_pie = ['#ff9999']
+        plt.pie(heat_sources.values(), labels=heat_sources.keys(), autopct='%1.1f%%',
+                colors=colors_pie, startangle=90)
+        plt.title(f'Heat Sources Distribution\n(at {annotation_current}mA, {annotation_temp}°C)')
+        
+        # Plot Power Consumption Pie Chart (at 186mA, 35°C)
+        plt.subplot(3, 2, 5)
+        power_consumption = self.get_power_consumption(annotation_temp, annotation_current)
+        colors_pie2 = ['#ff6b6b']
+        plt.pie(power_consumption.values(), labels=power_consumption.keys(), autopct='%1.1f%%',
+                colors=colors_pie2, startangle=90)
+        plt.title(f'Power Consumption Breakdown\n(at {annotation_current}mA, {annotation_temp}°C)')
+        
         # Plot Performance Summary Table
-        plt.subplot(2, 2, 4)
+        plt.subplot(3, 2, 6)
         plt.axis('off')
         
         # Create performance summary
         electrical_power = annotation_current * self.get_operating_voltage(annotation_current)
+        heat_load = self.get_dfb_heat_load(annotation_temp, annotation_current)
         summary_data = [
             ['Operating Current', f'{annotation_current} mA'],
             ['Operating Temperature', f'{annotation_temp} °C'],
             ['Optical Output Power', f'{annotation_power:.1f} mW'],
             ['Operating Voltage', f'{annotation_voltage:.3f} V'],
             ['Electrical Power', f'{electrical_power:.1f} mW'],
+            ['Heat Load', f'{heat_load:.1f} mW'],
             ['Wall-Plug Efficiency', f'{annotation_wpe:.2f} %'],
             ['Threshold Current (35°C)', f'{self.threshold_currents[35]:.0f} mA'],
             ['Slope Efficiency (35°C)', f'{self.slope_efficiencies[35]:.3f} mW/mA']
@@ -518,8 +620,8 @@ def main():
     """
     Main function to demonstrate DFB model and create interactive plots
     """
-    # Create DFB instance with default parameters (130mA, 35°C)
-    dfb = DFB()
+    # Create DFB instance with default parameters (186mA, 35°C)
+    dfb = DFB(temperature=35.0, current=186.0)
     
     # Print DFB parameters
     print("DFB Model Parameters:")
@@ -537,16 +639,18 @@ def main():
         print(f"{temp}°C - Threshold: {dfb.threshold_currents[temp]:.0f}mA, Slope: {dfb.slope_efficiencies[temp]:.3f}mW/mA")
     print()
     
-    # Show performance analysis at default operating point (130mA, 35°C)
+    # Show performance analysis at default operating point (186mA, 35°C)
     print(f"Performance Analysis at {dfb.current}mA, {dfb.temperature}°C:")
     optical_output = dfb.calculate_output_power(dfb.temperature, dfb.current)
     operating_voltage = dfb.get_operating_voltage(dfb.current)
     electrical_power = dfb.current * operating_voltage
+    heat_load = dfb.get_dfb_heat_load(dfb.temperature, dfb.current)
     wpe = dfb.get_dfb_wpe(dfb.temperature, dfb.current)
     
     print(f"Optical Output Power: {optical_output:.1f}mW")
     print(f"Operating Voltage: {operating_voltage:.3f}V")
     print(f"Electrical Power: {electrical_power:.1f}mW")
+    print(f"Heat Load: {heat_load:.1f}mW")
     print(f"Wall-Plug Efficiency: {wpe:.2f}%")
     print()
     
