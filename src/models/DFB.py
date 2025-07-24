@@ -174,6 +174,7 @@ class DFB:
     def get_dfb_wpe(self, temperature, current):
         """
         Calculate DFB wall-plug efficiency using actual operating voltage
+        Note: DFB outputs from both sides, so total optical power = 2 × single-side power
         
         Args:
             temperature (float): Temperature in Celsius
@@ -182,17 +183,19 @@ class DFB:
         Returns:
             float: DFB wall-plug efficiency as percentage
         """
-        output_power = self.calculate_output_power(temperature, current)
+        single_side_optical_power = self.calculate_output_power(temperature, current)
+        total_optical_power = 2 * single_side_optical_power  # DFB outputs from both sides
         operating_voltage = self.get_operating_voltage(current)
         input_power = (current / 1000.0) * operating_voltage  # Convert mA to A
         
         if input_power > 0:
-            return (output_power / 1000.0) / input_power * 100  # Convert mW to W
+            return (total_optical_power / 1000.0) / input_power * 100  # Convert mW to W
         return 0.0
     
     def get_dfb_heat_load(self, temperature, current):
         """
         Calculate DFB heat load (remaining electrical power not converted to optical)
+        Note: DFB outputs from both sides, so total optical power = 2 × single-side power
         
         Args:
             temperature (float): Temperature in Celsius
@@ -201,12 +204,13 @@ class DFB:
         Returns:
             float: DFB heat load in mW
         """
-        output_power = self.calculate_output_power(temperature, current)
+        single_side_optical_power = self.calculate_output_power(temperature, current)
+        total_optical_power = 2 * single_side_optical_power  # DFB outputs from both sides
         operating_voltage = self.get_operating_voltage(current)
         electrical_power_mw = current * operating_voltage  # P = I * V (mA * V = mW)
         
-        # Heat load is electrical power minus optical power output
-        heat_load = electrical_power_mw - output_power
+        # Heat load is electrical power minus total optical power output (both sides)
+        heat_load = electrical_power_mw - total_optical_power
         return max(0, heat_load)  # Ensure non-negative
     
     def get_heat_sources(self, temperature, current):
@@ -395,15 +399,17 @@ class DFB:
         # Add performance summary table
         electrical_power = annotation_current * self.get_operating_voltage(annotation_current)
         heat_load = self.get_dfb_heat_load(annotation_temp, annotation_current)
+        single_side_power = self.calculate_output_power(annotation_temp, annotation_current)
+        total_optical_power = 2 * single_side_power
         fig.add_trace(
             go.Table(
                 header=dict(values=['Parameter', 'Value', 'Unit'],
                            fill_color='lightblue',
                            align='left'),
                 cells=dict(values=[
-                    ['Operating Current', 'Operating Temperature', 'Optical Output', 'Operating Voltage', 'Electrical Power', 'Heat Load', 'Wall-Plug Efficiency'],
-                    [f'{annotation_current}', f'{annotation_temp}', f'{annotation_power:.1f}', f'{annotation_voltage:.3f}', f'{electrical_power:.1f}', f'{heat_load:.1f}', f'{annotation_wpe:.2f}'],
-                    ['mA', '°C', 'mW', 'V', 'mW', 'mW', '%']
+                    ['Operating Current', 'Operating Temperature', 'Optical Output (One Side)', 'Total Optical Output (Both Sides)', 'Operating Voltage', 'Electrical Power', 'Heat Load', 'Wall-Plug Efficiency'],
+                    [f'{annotation_current}', f'{annotation_temp}', f'{single_side_power:.1f}', f'{total_optical_power:.1f}', f'{annotation_voltage:.3f}', f'{electrical_power:.1f}', f'{heat_load:.1f}', f'{annotation_wpe:.2f}'],
+                    ['mA', '°C', 'mW', 'mW', 'V', 'mW', 'mW', '%']
                 ],
                 fill_color='white',
                 align='left')
@@ -571,10 +577,13 @@ class DFB:
         # Create performance summary
         electrical_power = annotation_current * self.get_operating_voltage(annotation_current)
         heat_load = self.get_dfb_heat_load(annotation_temp, annotation_current)
+        single_side_power = self.calculate_output_power(annotation_temp, annotation_current)
+        total_optical_power = 2 * single_side_power
         summary_data = [
             ['Operating Current', f'{annotation_current} mA'],
             ['Operating Temperature', f'{annotation_temp} °C'],
-            ['Optical Output Power', f'{annotation_power:.1f} mW'],
+            ['Optical Output (One Side)', f'{single_side_power:.1f} mW'],
+            ['Total Optical Output (Both Sides)', f'{total_optical_power:.1f} mW'],
             ['Operating Voltage', f'{annotation_voltage:.3f} V'],
             ['Electrical Power', f'{electrical_power:.1f} mW'],
             ['Heat Load', f'{heat_load:.1f} mW'],
@@ -641,13 +650,15 @@ def main():
     
     # Show performance analysis at default operating point (186mA, 35°C)
     print(f"Performance Analysis at {dfb.current}mA, {dfb.temperature}°C:")
-    optical_output = dfb.calculate_output_power(dfb.temperature, dfb.current)
+    single_side_optical_output = dfb.calculate_output_power(dfb.temperature, dfb.current)
+    total_optical_output = 2 * single_side_optical_output
     operating_voltage = dfb.get_operating_voltage(dfb.current)
     electrical_power = dfb.current * operating_voltage
     heat_load = dfb.get_dfb_heat_load(dfb.temperature, dfb.current)
     wpe = dfb.get_dfb_wpe(dfb.temperature, dfb.current)
     
-    print(f"Optical Output Power: {optical_output:.1f}mW")
+    print(f"Optical Output Power (One Side): {single_side_optical_output:.1f}mW")
+    print(f"Total Optical Output Power (Both Sides): {total_optical_output:.1f}mW")
     print(f"Operating Voltage: {operating_voltage:.3f}V")
     print(f"Electrical Power: {electrical_power:.1f}mW")
     print(f"Heat Load: {heat_load:.1f}mW")
