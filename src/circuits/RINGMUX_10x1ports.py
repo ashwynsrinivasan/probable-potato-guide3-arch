@@ -223,6 +223,89 @@ class RINGMUX_10x1ports:
             'heat_sources_mw': heat_sources,
             'power_consumption_mw': power_consumption
         }
+    
+    def simulate_component_failure(self, device_index):
+        """
+        Simulate component failure and automatically activate redundancy
+        
+        Args:
+            device_index (int): Index of the operational device that failed
+            
+        Returns:
+            dict: Failure handling results
+        """
+        if device_index not in self.operational_indices:
+            return {
+                'success': False,
+                'message': f'Device {device_index} is not operational, cannot fail',
+                'redundancy_activated': False
+            }
+        
+        # Check if redundant devices are available
+        if len(self.redundant_indices) == 0:
+            return {
+                'success': False,
+                'message': f'Device {device_index} failed but no redundant devices available',
+                'redundancy_activated': False,
+                'failed_device': device_index,
+                'system_degraded': True
+            }
+        
+        # Remove failed device from operational list
+        self.operational_indices.remove(device_index)
+        
+        # Activate first available redundant device
+        redundant_device = self.redundant_indices.pop(0)
+        self.operational_indices.append(redundant_device)
+        
+        # Recalculate combined parameters
+        old_heat_load = self.combined_heat_load
+        self._calculate_combined_parameters()
+        
+        return {
+            'success': True,
+            'message': f'Device {device_index} failed, activated redundant device {redundant_device}',
+            'redundancy_activated': True,
+            'failed_device': device_index,
+            'activated_device': redundant_device,
+            'heat_load_maintained': abs(self.combined_heat_load - old_heat_load) < 1e-6,
+            'new_operational_count': len(self.operational_indices),
+            'remaining_redundancy': len(self.redundant_indices)
+        }
+    
+    def get_reliability_status(self):
+        """
+        Get reliability and redundancy status of the circuit
+        
+        Returns:
+            dict: Reliability status information
+        """
+        total_devices = len(self.ringhtr_devices)
+        operational_count = len(self.operational_indices)
+        redundant_count = len(self.redundant_indices)
+        
+        # Calculate reliability metrics
+        operational_ratio = operational_count / total_devices
+        redundancy_ratio = redundant_count / total_devices
+        
+        # Determine system status
+        if redundant_count >= 2:
+            system_status = "Fully Protected"
+        elif redundant_count == 1:
+            system_status = "Single Redundancy"
+        else:
+            system_status = "No Redundancy - At Risk"
+        
+        return {
+            'total_devices': total_devices,
+            'operational_devices': operational_count,
+            'redundant_devices': redundant_count,
+            'operational_ratio': operational_ratio,
+            'redundancy_ratio': redundancy_ratio,
+            'system_status': system_status,
+            'can_handle_failures': redundant_count > 0,
+            'max_failures_tolerable': redundant_count
+        }
 
 
 def main():
@@ -274,6 +357,49 @@ def main():
         print(f"  New combined heat load: {new_summary['thermal_performance']['combined_heat_load_mw']:.1f} mW")
     else:
         print("  Failed to activate device 8")
+    
+    # Demonstrate component failure and automatic redundancy activation
+    print("\nComponent Failure and Redundancy Activation Demo:")
+    
+    # Get initial reliability status
+    reliability = circuit.get_reliability_status()
+    print(f"Initial System Status: {reliability['system_status']}")
+    print(f"  Can handle {reliability['max_failures_tolerable']} failures")
+    print(f"  Operational devices: {reliability['operational_devices']}")
+    print(f"  Redundant devices: {reliability['redundant_devices']}")
+    print()
+    
+    # Simulate failure of operational device 3
+    print("Simulating failure of operational device 3...")
+    failure_result = circuit.simulate_component_failure(3)
+    
+    if failure_result['success']:
+        print(f"  ✓ {failure_result['message']}")
+        print(f"  Heat load maintained: {failure_result['heat_load_maintained']}")
+        print(f"  New operational count: {failure_result['new_operational_count']}")
+        print(f"  Remaining redundancy: {failure_result['remaining_redundancy']}")
+    else:
+        print(f"  ✗ {failure_result['message']}")
+    
+    # Check reliability status after failure
+    reliability_after = circuit.get_reliability_status()
+    print(f"  System status after failure: {reliability_after['system_status']}")
+    print()
+    
+    # Simulate another failure to test single redundancy
+    print("Simulating failure of operational device 5...")
+    failure_result2 = circuit.simulate_component_failure(5)
+    
+    if failure_result2['success']:
+        print(f"  ✓ {failure_result2['message']}")
+        print(f"  Remaining redundancy: {failure_result2['remaining_redundancy']}")
+    else:
+        print(f"  ✗ {failure_result2['message']}")
+    
+    # Final reliability status
+    final_reliability = circuit.get_reliability_status()
+    print(f"  Final system status: {final_reliability['system_status']}")
+    print(f"  Can still handle {final_reliability['max_failures_tolerable']} more failures")
 
 
 if __name__ == "__main__":

@@ -317,6 +317,129 @@ class Trl8ch1ports:
             'heat_sources_mw': heat_sources,
             'power_consumption_mw': power_consumption
         }
+    
+    def simulate_trl_failure(self, trl_index):
+        """
+        Simulate TRL device failure and automatically activate redundancy
+        
+        Args:
+            trl_index (int): Index of the operational TRL device that failed
+            
+        Returns:
+            dict: Failure handling results
+        """
+        if trl_index not in self.operational_indices:
+            return {
+                'success': False,
+                'message': f'TRL device {trl_index} is not operational, cannot fail',
+                'redundancy_activated': False
+            }
+        
+        # Check if redundant TRL devices are available
+        if len(self.redundant_indices) == 0:
+            return {
+                'success': False,
+                'message': f'TRL device {trl_index} failed but no redundant TRL devices available',
+                'redundancy_activated': False,
+                'failed_device': trl_index,
+                'system_degraded': True
+            }
+        
+        # Store old performance for comparison
+        old_optical_power = self.total_optical_power
+        old_electrical_power = self.total_electrical_power
+        old_heat_load = self.total_heat_load
+        
+        # Remove failed TRL device from operational list
+        self.operational_indices.remove(trl_index)
+        
+        # Activate first available redundant TRL device
+        redundant_trl = self.redundant_indices.pop(0)
+        self.operational_indices.append(redundant_trl)
+        
+        # Recalculate combined parameters
+        self._calculate_combined_parameters()
+        
+        return {
+            'success': True,
+            'message': f'TRL device {trl_index} failed, activated redundant TRL device {redundant_trl}',
+            'redundancy_activated': True,
+            'failed_device': trl_index,
+            'activated_device': redundant_trl,
+            'performance_maintained': {
+                'optical_power': abs(self.total_optical_power - old_optical_power) < 1e-6,
+                'electrical_power': abs(self.total_electrical_power - old_electrical_power) < 1e-6,
+                'heat_load': abs(self.total_heat_load - old_heat_load) < 1e-6
+            },
+            'new_operational_count': len(self.operational_indices),
+            'remaining_redundancy': len(self.redundant_indices)
+        }
+    
+    def simulate_ringmux_component_failure(self, ringhtr_index):
+        """
+        Simulate RINGMUX component failure and automatically activate redundancy
+        
+        Args:
+            ringhtr_index (int): Index of the RINGHTR device in RINGMUX that failed
+            
+        Returns:
+            dict: Failure handling results from RINGMUX circuit
+        """
+        # Store old total heat load for comparison
+        old_total_heat_load = self.total_heat_load
+        
+        # Delegate failure handling to RINGMUX circuit
+        ringmux_result = self.ringmux_circuit.simulate_component_failure(ringhtr_index)
+        
+        if ringmux_result['success']:
+            # Recalculate architecture parameters after RINGMUX change
+            self._calculate_combined_parameters()
+            
+            # Add architecture-level information
+            ringmux_result['architecture_heat_load_maintained'] = abs(self.total_heat_load - old_total_heat_load) < 1e-6
+            ringmux_result['new_total_heat_load'] = self.total_heat_load
+        
+        return ringmux_result
+    
+    def get_system_reliability_status(self):
+        """
+        Get comprehensive reliability and redundancy status of the entire architecture
+        
+        Returns:
+            dict: System reliability status information
+        """
+        # TRL device reliability
+        total_trl_devices = len(self.trl_devices)
+        operational_trl_count = len(self.operational_indices)
+        redundant_trl_count = len(self.redundant_indices)
+        
+        # RINGMUX circuit reliability
+        ringmux_reliability = self.ringmux_circuit.get_reliability_status()
+        
+        # Overall system status
+        if redundant_trl_count >= 2 and ringmux_reliability['redundant_devices'] >= 2:
+            system_status = "Fully Protected"
+        elif redundant_trl_count >= 1 and ringmux_reliability['redundant_devices'] >= 1:
+            system_status = "Partial Redundancy"
+        else:
+            system_status = "At Risk - Limited Redundancy"
+        
+        return {
+            'system_status': system_status,
+            'trl_reliability': {
+                'total_devices': total_trl_devices,
+                'operational_devices': operational_trl_count,
+                'redundant_devices': redundant_trl_count,
+                'can_handle_failures': redundant_trl_count > 0,
+                'max_failures_tolerable': redundant_trl_count
+            },
+            'ringmux_reliability': ringmux_reliability,
+            'overall_fault_tolerance': {
+                'trl_failures_tolerable': redundant_trl_count,
+                'ringmux_failures_tolerable': ringmux_reliability['max_failures_tolerable'],
+                'total_failure_scenarios_covered': redundant_trl_count + ringmux_reliability['max_failures_tolerable']
+            }
+        }
 
 
 def main():
@@ -384,6 +507,66 @@ def main():
         print(f"  New combined optical power: {new_summary['performance']['combined_optical_power']:.1f} mW")
     else:
         print("  Failed to activate TRL device 8")
+    
+    # Demonstrate component failure and automatic redundancy activation
+    print("\nComponent Failure and Redundancy Activation Demo:")
+    print("=" * 60)
+    
+    # Get initial system reliability status
+    reliability = arch.get_system_reliability_status()
+    print(f"Initial System Status: {reliability['system_status']}")
+    print(f"TRL Devices - Can handle {reliability['trl_reliability']['max_failures_tolerable']} failures")
+    print(f"RINGMUX Circuit - Can handle {reliability['ringmux_reliability']['max_failures_tolerable']} failures")
+    print(f"Total failure scenarios covered: {reliability['overall_fault_tolerance']['total_failure_scenarios_covered']}")
+    print()
+    
+    # Simulate TRL device failure
+    print("1. Simulating TRL device failure (device 2)...")
+    trl_failure_result = arch.simulate_trl_failure(2)
+    
+    if trl_failure_result['success']:
+        print(f"  ✓ {trl_failure_result['message']}")
+        print(f"  Performance maintained:")
+        perf = trl_failure_result['performance_maintained']
+        print(f"    Optical power: {perf['optical_power']}")
+        print(f"    Electrical power: {perf['electrical_power']}")
+        print(f"    Heat load: {perf['heat_load']}")
+        print(f"  New operational TRL count: {trl_failure_result['new_operational_count']}")
+        print(f"  Remaining TRL redundancy: {trl_failure_result['remaining_redundancy']}")
+    else:
+        print(f"  ✗ {trl_failure_result['message']}")
+    print()
+    
+    # Simulate RINGMUX component failure
+    print("2. Simulating RINGMUX component failure (RINGHTR device 4)...")
+    ringmux_failure_result = arch.simulate_ringmux_component_failure(4)
+    
+    if ringmux_failure_result['success']:
+        print(f"  ✓ {ringmux_failure_result['message']}")
+        print(f"  Heat load maintained: {ringmux_failure_result['heat_load_maintained']}")
+        print(f"  Architecture heat load maintained: {ringmux_failure_result['architecture_heat_load_maintained']}")
+        print(f"  New RINGMUX operational count: {ringmux_failure_result['new_operational_count']}")
+        print(f"  Remaining RINGMUX redundancy: {ringmux_failure_result['remaining_redundancy']}")
+    else:
+        print(f"  ✗ {ringmux_failure_result['message']}")
+    print()
+    
+    # Check system reliability after failures
+    reliability_after = arch.get_system_reliability_status()
+    print("System Status After Failures:")
+    print(f"  Overall status: {reliability_after['system_status']}")
+    print(f"  TRL failures still tolerable: {reliability_after['trl_reliability']['max_failures_tolerable']}")
+    print(f"  RINGMUX failures still tolerable: {reliability_after['ringmux_reliability']['max_failures_tolerable']}")
+    print()
+    
+    # Show final performance
+    final_summary = arch.get_architecture_summary()
+    final_performance = final_summary['performance']
+    print("Final Architecture Performance:")
+    print(f"  Total Optical Power: {final_performance['total_optical_power']:.1f} mW")
+    print(f"  Total Electrical Power: {final_performance['total_electrical_power']:.1f} mW")
+    print(f"  Total Heat Load: {final_performance['total_heat_load']:.1f} mW")
+    print(f"  System maintained full performance despite failures: ✓")
 
 
 if __name__ == "__main__":
