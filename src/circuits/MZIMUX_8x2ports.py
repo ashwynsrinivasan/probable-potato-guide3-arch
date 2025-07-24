@@ -84,6 +84,33 @@ class MZIMUX_8x2ports:
         """
         return self.combined_power_consumption
     
+    def get_total_electrical_power(self):
+        """
+        Calculate total electrical power consumption from all devices
+        
+        Returns:
+            float: Total electrical power in mW
+        """
+        return self.get_combined_power_consumption()
+    
+    def get_total_optical_power(self):
+        """
+        Calculate total optical power output (heaters don't produce optical power)
+        
+        Returns:
+            float: Total optical power in mW (always 0 for heater circuits)
+        """
+        return 0.0  # Heater circuits don't produce optical power
+    
+    def get_total_heat_load(self):
+        """
+        Calculate total heat load from all devices
+        
+        Returns:
+            float: Total heat load in mW
+        """
+        return self.get_combined_heat_load()
+    
     def get_heat_sources_breakdown(self):
         """
         Get detailed breakdown of heat sources from all devices

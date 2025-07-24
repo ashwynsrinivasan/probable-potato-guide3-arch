@@ -262,6 +262,49 @@ class DFB:
         return {
             'DFB Gain': electrical_power
         }
+    
+    def get_total_electrical_power(self, temperature, current):
+        """
+        Calculate total electrical power consumption (only DFB gain, no heaters)
+        
+        Args:
+            temperature (float): Temperature in Celsius
+            current (float): Current in mA
+            
+        Returns:
+            float: Total electrical power in mW
+        """
+        # DFB only has gain electrical power, no heaters
+        operating_voltage = self.get_operating_voltage(current)
+        return current * operating_voltage  # P = I * V (mA * V = mW)
+    
+    def get_total_optical_power(self, temperature, current):
+        """
+        Calculate total optical power output (dual-side output for DFB)
+        
+        Args:
+            temperature (float): Temperature in Celsius
+            current (float): Current in mA
+            
+        Returns:
+            float: Total optical power in mW (both sides combined)
+        """
+        # DFB outputs from both sides, so total = 2 × single-side power
+        single_side_power = self.calculate_output_power(temperature, current)
+        return 2 * single_side_power
+    
+    def get_total_heat_load(self, temperature, current):
+        """
+        Calculate total heat load (same as DFB heat load)
+        
+        Args:
+            temperature (float): Temperature in Celsius
+            current (float): Current in mA
+            
+        Returns:
+            float: Total heat load in mW
+        """
+        return self.get_dfb_heat_load(temperature, current)
 
     def create_interactive_plot(self, save_path=None):
         """

@@ -52,6 +52,33 @@ class RINGHTR:
         """
         return self.ring_htr_heat_load
     
+    def get_total_electrical_power(self):
+        """
+        Calculate total electrical power consumption (same as power consumption for heaters)
+        
+        Returns:
+            float: Total electrical power in mW
+        """
+        return self.get_power_consumption()
+    
+    def get_total_optical_power(self):
+        """
+        Calculate total optical power output (heaters don't produce optical power)
+        
+        Returns:
+            float: Total optical power in mW (always 0 for heaters)
+        """
+        return 0.0  # Heaters don't produce optical power
+    
+    def get_total_heat_load(self):
+        """
+        Calculate total heat load (same as heat generated for heaters)
+        
+        Returns:
+            float: Total heat load in mW
+        """
+        return self.get_heat_generated()
+    
     def get_duty_cycle(self):
         """
         Get the operating duty cycle

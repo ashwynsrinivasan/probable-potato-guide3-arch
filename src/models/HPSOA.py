@@ -196,18 +196,71 @@ class HPSOA:
         Get power consumption breakdown (for HPSOA, only electrical power to gain section)
         
         Args:
-            temperature_c (float): Temperature in Celsius
-            current_a (float): Current in Amperes  
+            temperature_c (float): Temperature in Celsius  
+            current_a (float): Current in Amperes
             wavelength_nm (float): Wavelength in nm
             
         Returns:
             dict: Dictionary with power consumption breakdown
         """
-        operating_voltage = self.get_operating_voltage(current_a)
-        electrical_power_mw = current_a * operating_voltage * 1000  # Convert to mW
+        electrical_power_mw = current_a * self.get_operating_voltage(current_a) * 1000  # Convert to mW
         return {
             'HPSOA Gain': electrical_power_mw
         }
+    
+    def get_total_electrical_power(self, temperature_c, current_a, wavelength_nm):
+        """
+        Calculate total electrical power consumption (only HPSOA gain, no heaters)
+        
+        Args:
+            temperature_c (float): Temperature in Celsius
+            current_a (float): Current in Amperes
+            wavelength_nm (float): Wavelength in nm
+            
+        Returns:
+            float: Total electrical power in mW
+        """
+        # HPSOA only has gain electrical power, no heaters
+        operating_voltage = self.get_operating_voltage(current_a)
+        return current_a * operating_voltage * 1000  # Convert to mW
+    
+    def get_total_optical_power(self, temperature_c, current_a, wavelength_nm):
+        """
+        Calculate total optical power output
+        
+        Args:
+            temperature_c (float): Temperature in Celsius
+            current_a (float): Current in Amperes
+            wavelength_nm (float): Wavelength in nm
+            
+        Returns:
+            float: Total optical power in mW
+        """
+        # Find matching data point
+        df = pd.DataFrame(self.performance_summary["data"])
+        mask = (df["T[°C]"] == temperature_c) & (df["I[A]"] == current_a) & (df["λ [nm]"] == wavelength_nm)
+        matching_data = df[mask]
+        
+        if len(matching_data) == 0:
+            return 0.0  # No matching data found
+        
+        row = matching_data.iloc[0]
+        # Convert dBm to mW
+        return self.dbm_to_mw(row["Pout [dBm]"])
+    
+    def get_total_heat_load(self, temperature_c, current_a, wavelength_nm):
+        """
+        Calculate total heat load (same as HPSOA heat load)
+        
+        Args:
+            temperature_c (float): Temperature in Celsius
+            current_a (float): Current in Amperes
+            wavelength_nm (float): Wavelength in nm
+            
+        Returns:
+            float: Total heat load in mW
+        """
+        return self.get_hpsoa_heat_load(temperature_c, current_a, wavelength_nm)
 
     def get_revision_history(self):
         """Returns the revision history of the document."""

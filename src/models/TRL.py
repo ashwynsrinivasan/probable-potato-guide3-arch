@@ -306,6 +306,58 @@ class TRL:
             'Phase Heater': self.phase_htr.phase_htr_heat_load
         }
     
+    def get_total_electrical_power(self, temperature, current):
+        """
+        Calculate total electrical power consumption (TRL gain + all heaters)
+        
+        Args:
+            temperature (float): Temperature in Celsius
+            current (float): Current in mA
+            
+        Returns:
+            float: Total electrical power in mW
+        """
+        # TRL gain electrical power
+        trl_operating_voltage = self.get_operating_voltage(current)
+        trl_electrical_power_mw = current * trl_operating_voltage  # P = I * V (mA * V = mW)
+        
+        # Heater electrical power (same as heat load for 100% efficiency heaters)
+        heater_electrical_power_mw = (
+            self.ring_htr_1.get_power_consumption() + 
+            self.ring_htr_2.get_power_consumption() + 
+            self.phase_htr.get_power_consumption()
+        )
+        
+        return trl_electrical_power_mw + heater_electrical_power_mw
+    
+    def get_total_optical_power(self, temperature, current):
+        """
+        Calculate total optical power output (only from TRL gain, heaters don't produce optical power)
+        
+        Args:
+            temperature (float): Temperature in Celsius
+            current (float): Current in mA
+            
+        Returns:
+            float: Total optical power in mW
+        """
+        # Only TRL gain produces optical power, heaters don't contribute to optical output
+        return self.calculate_output_power(temperature, current)
+    
+    def get_total_heat_load(self, temperature, current):
+        """
+        Calculate total heat load (TRL gain heat load + all heater heat loads)
+        
+        Args:
+            temperature (float): Temperature in Celsius
+            current (float): Current in mA
+            
+        Returns:
+            float: Total heat load in mW
+        """
+        # This is the same as get_trl_heat_load but with a more descriptive name
+        return self.get_trl_heat_load(temperature, current)
+    
     def create_interactive_plot(self, save_path=None):
         """
         Create an interactive Plotly plot showing all temperatures simultaneously

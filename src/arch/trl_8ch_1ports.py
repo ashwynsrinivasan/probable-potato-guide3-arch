@@ -60,13 +60,40 @@ class Trl8ch1ports:
         self._calculate_combined_parameters()
     
     def _calculate_combined_parameters(self):
-        """Calculate combined optical power and heat loads for operational devices"""
-        # Combined optical power from 8 operational TRL devices
-        self.combined_optical_power = 0.0
+        """Calculate combined parameters for all operational devices and circuits"""
+        # ==== TOTAL OPTICAL POWER ====
+        # Total optical power from 8 operational TRL devices (RINGMUX doesn't produce optical power)
+        self.total_optical_power = 0.0
         for i in self.operational_indices:
-            self.combined_optical_power += self.trl_devices[i].calculate_output_power(
+            self.total_optical_power += self.trl_devices[i].get_total_optical_power(
                 self.temperature, self.current
             )
+        # RINGMUX circuit optical power (always 0 for heater circuits)
+        self.total_optical_power += self.ringmux_circuit.get_total_optical_power()
+        
+        # ==== TOTAL ELECTRICAL POWER ====
+        # Total electrical power from 8 operational TRL devices (including their internal heaters)
+        self.total_electrical_power = 0.0
+        for i in self.operational_indices:
+            self.total_electrical_power += self.trl_devices[i].get_total_electrical_power(
+                self.temperature, self.current
+            )
+        # RINGMUX circuit electrical power
+        self.total_electrical_power += self.ringmux_circuit.get_total_electrical_power()
+        
+        # ==== TOTAL HEAT LOAD ====
+        # Total heat load from 8 operational TRL devices (including their internal heaters)
+        self.total_heat_load = 0.0
+        for i in self.operational_indices:
+            self.total_heat_load += self.trl_devices[i].get_total_heat_load(
+                self.temperature, self.current
+            )
+        # RINGMUX circuit heat load
+        self.total_heat_load += self.ringmux_circuit.get_total_heat_load()
+        
+        # ==== LEGACY PARAMETERS (for backward compatibility) ====
+        # Keep existing parameters for backward compatibility
+        self.combined_optical_power = self.total_optical_power  # Same as total optical power
         
         # Combined TRL gain heat load from 8 operational devices
         self.combined_trl_gain_heat_load = 0.0
@@ -83,20 +110,16 @@ class Trl8ch1ports:
         # RINGMUX circuit heat load (from 8 operational RINGHTR devices in the circuit)
         self.ringmux_heat_load = self.ringmux_circuit.get_combined_heat_load()
         
-        # Total combined heat load
-        self.total_combined_heat_load = (
-            self.combined_trl_gain_heat_load + 
-            self.combined_trl_heater_heat_load + 
-            self.ringmux_heat_load
-        )
+        # Total combined heat load (legacy name, same as total_heat_load)
+        self.total_combined_heat_load = self.total_heat_load
         
-        # Combined electrical power from 8 operational TRL devices
+        # Combined TRL electrical power from 8 operational devices (gain only, not including internal heaters)
         self.combined_electrical_power = 0.0
         for i in self.operational_indices:
             operating_voltage = self.trl_devices[i].get_operating_voltage(self.current)
             self.combined_electrical_power += self.current * operating_voltage
         
-        # Combined wall-plug efficiency
+        # Combined TRL gain wall-plug efficiency (legacy calculation)
         if self.combined_electrical_power > 0:
             self.combined_wpe = (self.combined_optical_power / self.combined_electrical_power) * 100
         else:
@@ -138,6 +161,33 @@ class Trl8ch1ports:
             float: Total combined heat load in mW
         """
         return self.total_combined_heat_load
+    
+    def get_total_optical_power(self):
+        """
+        Get total optical power from all operational components
+        
+        Returns:
+            float: Total optical power in mW
+        """
+        return self.total_optical_power
+    
+    def get_total_electrical_power(self):
+        """
+        Get total electrical power from all operational components
+        
+        Returns:
+            float: Total electrical power in mW
+        """
+        return self.total_electrical_power
+    
+    def get_total_heat_load(self):
+        """
+        Get total heat load from all operational components
+        
+        Returns:
+            float: Total heat load in mW
+        """
+        return self.total_heat_load
     
     def get_heat_sources_breakdown(self):
         """
@@ -255,9 +305,14 @@ class Trl8ch1ports:
             },
             'device_status': device_status,
             'performance': {
-                'combined_optical_power_mw': self.combined_optical_power,
-                'combined_wpe_percent': self.combined_wpe,
-                'combined_heat_load_mw': self.total_combined_heat_load
+                # Legacy parameters (for backward compatibility)
+                'combined_optical_power': self.combined_optical_power,
+                'combined_wpe': self.combined_wpe,
+                'combined_heat_load': self.total_combined_heat_load,
+                # New total parameters (all components combined)
+                'total_optical_power': self.total_optical_power,
+                'total_electrical_power': self.total_electrical_power,
+                'total_heat_load': self.total_heat_load
             },
             'heat_sources_mw': heat_sources,
             'power_consumption_mw': power_consumption
@@ -297,9 +352,16 @@ def main():
     
     print("Performance Summary:")
     performance = summary['performance']
-    print(f"  Combined Optical Power: {performance['combined_optical_power_mw']:.1f} mW")
-    print(f"  Combined Wall-Plug Efficiency: {performance['combined_wpe_percent']:.2f} %")
-    print(f"  Total Heat Load: {performance['combined_heat_load_mw']:.1f} mW")
+    print("  Legacy TRL Performance (for backward compatibility):")
+    print(f"    Combined Optical Power: {performance['combined_optical_power']:.1f} mW")
+    print(f"    Combined Wall-Plug Efficiency: {performance['combined_wpe']:.2f} %")
+    print(f"    Combined Heat Load: {performance['combined_heat_load']:.1f} mW")
+    print()
+    print("  Total Architecture Performance (all components):")
+    print(f"    Total Optical Power: {performance['total_optical_power']:.1f} mW")
+    print(f"    Total Electrical Power: {performance['total_electrical_power']:.1f} mW")
+    print(f"    Total Heat Load: {performance['total_heat_load']:.1f} mW")
+    print(f"    Power Balance Check: {performance['total_electrical_power']:.1f} = {performance['total_optical_power']:.1f} + {performance['total_heat_load']:.1f} = {performance['total_optical_power'] + performance['total_heat_load']:.1f} mW")
     print()
     
     print("Heat Sources Breakdown:")
@@ -319,7 +381,7 @@ def main():
     if success:
         new_summary = arch.get_architecture_summary()
         print(f"  New operational TRL count: {new_summary['device_status']['operational_trl_count']}")
-        print(f"  New combined optical power: {new_summary['performance']['combined_optical_power_mw']:.1f} mW")
+        print(f"  New combined optical power: {new_summary['performance']['combined_optical_power']:.1f} mW")
     else:
         print("  Failed to activate TRL device 8")
 
