@@ -21,7 +21,7 @@ except ImportError:
     from src.circuits.MZISWITCH_2x2ports import MZISWITCH_2x2ports
 
 
-class switch_hpsoa_switch_1x1ports:
+class SWITCH_HPSOA_SWITCH_1x1ports:
     """
     Switch-HPSOA-Switch 1x1 ports circuit class
     
@@ -310,7 +310,7 @@ def main():
     print("=" * 50)
     
     # Create circuit instance
-    circuit = switch_hpsoa_switch_1x1ports(temperature_c=35.0, current_a=0.23, wavelength_nm=1311.0)
+    circuit = SWITCH_HPSOA_SWITCH_1x1ports(temperature_c=35.0, current_a=0.23, wavelength_nm=1311.0)
     
     # Get comprehensive summary
     summary = circuit.get_circuit_summary()

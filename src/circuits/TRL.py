@@ -7,11 +7,15 @@ import plotly.offline as pyo
 
 # Handle imports for both direct execution and module import
 try:
-    from .RINGHTR import RINGHTR
-    from .PHASEHTR import PHASEHTR
+    from models.RINGHTR import RINGHTR
+    from models.PHASEHTR import PHASEHTR
 except ImportError:
-    from RINGHTR import RINGHTR
-    from PHASEHTR import PHASEHTR
+    # Fallback for direct execution
+    import sys
+    import os
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+    from models.RINGHTR import RINGHTR
+    from models.PHASEHTR import PHASEHTR
 
 class TRL:
     """

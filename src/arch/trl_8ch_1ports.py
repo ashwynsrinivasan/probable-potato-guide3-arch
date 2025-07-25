@@ -14,11 +14,11 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 try:
-    from models.TRL import TRL
+    from circuits.TRL import TRL
     from circuits.RINGMUX_10x1ports import RINGMUX_10x1ports
 except ImportError:
     # Fallback for direct import
-    from src.models.TRL import TRL
+    from src.circuits.TRL import TRL
     from src.circuits.RINGMUX_10x1ports import RINGMUX_10x1ports
 
 
