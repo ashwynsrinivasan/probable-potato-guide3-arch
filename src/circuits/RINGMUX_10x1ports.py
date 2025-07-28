@@ -347,59 +347,13 @@ def main():
         print(f"  {component}: {value:.1f} mW")
     print()
     
-    # Demonstrate redundancy management
-    print("Redundancy Management Demo:")
-    print("Activating redundant device 8...")
-    success = circuit.activate_redundant_device(8)
-    if success:
-        new_summary = circuit.get_circuit_summary()
-        print(f"  New operational count: {new_summary['device_status']['operational_ringhtr_count']}")
-        print(f"  New combined heat load: {new_summary['thermal_performance']['combined_heat_load_mw']:.1f} mW")
-    else:
-        print("  Failed to activate device 8")
-    
-    # Demonstrate component failure and automatic redundancy activation
-    print("\nComponent Failure and Redundancy Activation Demo:")
-    
-    # Get initial reliability status
-    reliability = circuit.get_reliability_status()
-    print(f"Initial System Status: {reliability['system_status']}")
-    print(f"  Can handle {reliability['max_failures_tolerable']} failures")
-    print(f"  Operational devices: {reliability['operational_devices']}")
-    print(f"  Redundant devices: {reliability['redundant_devices']}")
-    print()
-    
-    # Simulate failure of operational device 3
-    print("Simulating failure of operational device 3...")
-    failure_result = circuit.simulate_component_failure(3)
-    
-    if failure_result['success']:
-        print(f"  ✓ {failure_result['message']}")
-        print(f"  Heat load maintained: {failure_result['heat_load_maintained']}")
-        print(f"  New operational count: {failure_result['new_operational_count']}")
-        print(f"  Remaining redundancy: {failure_result['remaining_redundancy']}")
-    else:
-        print(f"  ✗ {failure_result['message']}")
-    
-    # Check reliability status after failure
-    reliability_after = circuit.get_reliability_status()
-    print(f"  System status after failure: {reliability_after['system_status']}")
-    print()
-    
-    # Simulate another failure to test single redundancy
-    print("Simulating failure of operational device 5...")
-    failure_result2 = circuit.simulate_component_failure(5)
-    
-    if failure_result2['success']:
-        print(f"  ✓ {failure_result2['message']}")
-        print(f"  Remaining redundancy: {failure_result2['remaining_redundancy']}")
-    else:
-        print(f"  ✗ {failure_result2['message']}")
-    
-    # Final reliability status
-    final_reliability = circuit.get_reliability_status()
-    print(f"  Final system status: {final_reliability['system_status']}")
-    print(f"  Can still handle {final_reliability['max_failures_tolerable']} more failures")
+    # Show operational performance (no changes made)
+    final_summary = circuit.get_circuit_summary()
+    thermal = final_summary['thermal_performance']
+    print("Operational Circuit Performance:")
+    print(f"  Combined Heat Load: {thermal['combined_heat_load_mw']:.1f} mW")
+    print(f"  Combined Power Consumption: {thermal['combined_power_consumption_mw']:.1f} mW")
+    print(f"  System operating in normal operational mode: ✓")
 
 
 if __name__ == "__main__":

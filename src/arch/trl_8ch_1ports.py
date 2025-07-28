@@ -589,76 +589,26 @@ def main():
     print(f"  Power consumption pie chart saved to: {pie_chart_path}")
     print()
     
-    # Demonstrate redundancy management
-    print("Redundancy Management Demo:")
-    print("Activating redundant TRL device 8...")
-    success = arch.activate_redundant_device(8)
-    if success:
-        new_summary = arch.get_architecture_summary()
-        print(f"  New operational TRL count: {new_summary['device_status']['operational_trl_count']}")
-        print(f"  New combined optical power: {new_summary['performance']['combined_optical_power']:.1f} mW")
-    else:
-        print("  Failed to activate TRL device 8")
-    
-    # Demonstrate component failure and automatic redundancy activation
-    print("\nComponent Failure and Redundancy Activation Demo:")
+    # Show system reliability status (informational only, no demos)
+    print("System Reliability Information:")
     print("=" * 60)
     
-    # Get initial system reliability status
+    # Get system reliability status
     reliability = arch.get_system_reliability_status()
-    print(f"Initial System Status: {reliability['system_status']}")
+    print(f"System Status: {reliability['system_status']}")
     print(f"TRL Devices - Can handle {reliability['trl_reliability']['max_failures_tolerable']} failures")
     print(f"RINGMUX Circuit - Can handle {reliability['ringmux_reliability']['max_failures_tolerable']} failures")
     print(f"Total failure scenarios covered: {reliability['overall_fault_tolerance']['total_failure_scenarios_covered']}")
     print()
     
-    # Simulate TRL device failure
-    print("1. Simulating TRL device failure (device 2)...")
-    trl_failure_result = arch.simulate_trl_failure(2)
-    
-    if trl_failure_result['success']:
-        print(f"  ✓ {trl_failure_result['message']}")
-        print(f"  Performance maintained:")
-        perf = trl_failure_result['performance_maintained']
-        print(f"    Optical power: {perf['optical_power']}")
-        print(f"    Electrical power: {perf['electrical_power']}")
-        print(f"    Heat load: {perf['heat_load']}")
-        print(f"  New operational TRL count: {trl_failure_result['new_operational_count']}")
-        print(f"  Remaining TRL redundancy: {trl_failure_result['remaining_redundancy']}")
-    else:
-        print(f"  ✗ {trl_failure_result['message']}")
-    print()
-    
-    # Simulate RINGMUX component failure
-    print("2. Simulating RINGMUX component failure (RINGHTR device 4)...")
-    ringmux_failure_result = arch.simulate_ringmux_component_failure(4)
-    
-    if ringmux_failure_result['success']:
-        print(f"  ✓ {ringmux_failure_result['message']}")
-        print(f"  Heat load maintained: {ringmux_failure_result['heat_load_maintained']}")
-        print(f"  Architecture heat load maintained: {ringmux_failure_result['architecture_heat_load_maintained']}")
-        print(f"  New RINGMUX operational count: {ringmux_failure_result['new_operational_count']}")
-        print(f"  Remaining RINGMUX redundancy: {ringmux_failure_result['remaining_redundancy']}")
-    else:
-        print(f"  ✗ {ringmux_failure_result['message']}")
-    print()
-    
-    # Check system reliability after failures
-    reliability_after = arch.get_system_reliability_status()
-    print("System Status After Failures:")
-    print(f"  Overall status: {reliability_after['system_status']}")
-    print(f"  TRL failures still tolerable: {reliability_after['trl_reliability']['max_failures_tolerable']}")
-    print(f"  RINGMUX failures still tolerable: {reliability_after['ringmux_reliability']['max_failures_tolerable']}")
-    print()
-    
-    # Show final performance
+    # Show final operational performance (no changes made)
     final_summary = arch.get_architecture_summary()
     final_performance = final_summary['performance']
-    print("Final Architecture Performance:")
+    print("Operational Architecture Performance:")
     print(f"  Total Optical Power: {final_performance['total_optical_power']:.1f} mW")
     print(f"  Total Electrical Power: {final_performance['total_electrical_power']:.1f} mW")
     print(f"  Total Heat Load: {final_performance['total_heat_load']:.1f} mW")
-    print(f"  System maintained full performance despite failures: ✓")
+    print(f"  System operating in normal operational mode: ✓")
 
 
 if __name__ == "__main__":

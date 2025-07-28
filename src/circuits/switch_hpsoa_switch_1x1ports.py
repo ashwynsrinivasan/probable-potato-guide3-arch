@@ -349,34 +349,21 @@ def main():
         print(f"  {component}: {value:.1f} mW")
     print()
     
-    # Show reliability status
+    # Show reliability status (informational only, no demos)
     reliability = summary['reliability']
-    print("Reliability Status:")
+    print("System Reliability Information:")
     print(f"  System Status: {reliability['system_status']}")
     print(f"  Can handle HPSOA failures: {reliability['can_handle_hpsoa_failures']}")
     print(f"  Max HPSOA failures tolerable: {reliability['max_hpsoa_failures_tolerable']}")
     print()
     
-    # Demonstrate HPSOA failure and redundancy activation
-    print("HPSOA Failure and Redundancy Activation Demo:")
-    print("Simulating failure of operational HPSOA device 0...")
-    failure_result = circuit.simulate_hpsoa_failure(0)
-    
-    if failure_result['success']:
-        print(f"  ✓ {failure_result['message']}")
-        print(f"  Performance maintained:")
-        perf = failure_result['performance_maintained']
-        print(f"    Optical power: {perf['optical_power']}")
-        print(f"    Electrical power: {perf['electrical_power']}")
-        print(f"    Heat load: {perf['heat_load']}")
-        print(f"  New operational HPSOA count: {failure_result['new_operational_count']}")
-        print(f"  Remaining HPSOA redundancy: {failure_result['remaining_redundancy']}")
-    else:
-        print(f"  ✗ {failure_result['message']}")
-    
-    # Check reliability status after failure
-    reliability_after = circuit.get_reliability_status()
-    print(f"  System status after failure: {reliability_after['system_status']}")
+    # Show operational performance (no changes made)
+    performance = summary['performance']
+    print("Operational Circuit Performance:")
+    print(f"  Total Optical Power: {performance['total_optical_power_mw']:.1f} mW")
+    print(f"  Total Electrical Power: {performance['total_electrical_power_mw']:.1f} mW")
+    print(f"  Total Heat Load: {performance['total_heat_load_mw']:.1f} mW")
+    print(f"  System operating in normal operational mode: ✓")
 
 
 if __name__ == "__main__":
