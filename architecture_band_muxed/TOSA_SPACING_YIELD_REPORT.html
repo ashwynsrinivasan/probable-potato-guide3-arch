@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>TOSA_SPACING_YIELD_REPORT.md</title>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+
+<style>
+/* https://github.com/microsoft/vscode/blob/master/extensions/markdown-language-features/media/markdown.css */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+body {
+	font-family: var(--vscode-markdown-font-family, -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif);
+	font-size: var(--vscode-markdown-font-size, 14px);
+	padding: 0 26px;
+	line-height: var(--vscode-markdown-line-height, 22px);
+	word-wrap: break-word;
+}
+
+#code-csp-warning {
+	position: fixed;
+	top: 0;
+	right: 0;
+	color: white;
+	margin: 16px;
+	text-align: center;
+	font-size: 12px;
+	font-family: sans-serif;
+	background-color:#444444;
+	cursor: pointer;
+	padding: 6px;
+	box-shadow: 1px 1px 1px rgba(0,0,0,.25);
+}
+
+#code-csp-warning:hover {
+	text-decoration: none;
+	background-color:#007acc;
+	box-shadow: 2px 2px 2px rgba(0,0,0,.25);
+}
+
+body.scrollBeyondLastLine {
+	margin-bottom: calc(100vh - 22px);
+}
+
+body.showEditorSelection .code-line {
+	position: relative;
+}
+
+body.showEditorSelection .code-active-line:before,
+body.showEditorSelection .code-line:hover:before {
+	content: "";
+	display: block;
+	position: absolute;
+	top: 0;
+	left: -12px;
+	height: 100%;
+}
+
+body.showEditorSelection li.code-active-line:before,
+body.showEditorSelection li.code-line:hover:before {
+	left: -30px;
+}
+
+.vscode-light.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.15);
+}
+
+.vscode-light.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.40);
+}
+
+.vscode-light.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-dark.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.4);
+}
+
+.vscode-dark.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.60);
+}
+
+.vscode-dark.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-high-contrast.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 160, 0, 0.7);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 160, 0, 1);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+img {
+	max-width: 100%;
+	max-height: 100%;
+}
+
+a {
+	text-decoration: none;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+a:focus,
+input:focus,
+select:focus,
+textarea:focus {
+	outline: 1px solid -webkit-focus-ring-color;
+	outline-offset: -1px;
+}
+
+hr {
+	border: 0;
+	height: 2px;
+	border-bottom: 2px solid;
+}
+
+h1 {
+	padding-bottom: 0.3em;
+	line-height: 1.2;
+	border-bottom-width: 1px;
+	border-bottom-style: solid;
+}
+
+h1, h2, h3 {
+	font-weight: normal;
+}
+
+table {
+	border-collapse: collapse;
+}
+
+table > thead > tr > th {
+	text-align: left;
+	border-bottom: 1px solid;
+}
+
+table > thead > tr > th,
+table > thead > tr > td,
+table > tbody > tr > th,
+table > tbody > tr > td {
+	padding: 5px 10px;
+}
+
+table > tbody > tr + tr > td {
+	border-top: 1px solid;
+}
+
+blockquote {
+	margin: 0 7px 0 5px;
+	padding: 0 16px 0 10px;
+	border-left-width: 5px;
+	border-left-style: solid;
+}
+
+code {
+	font-family: Menlo, Monaco, Consolas, "Droid Sans Mono", "Courier New", monospace, "Droid Sans Fallback";
+	font-size: 1em;
+	line-height: 1.357em;
+}
+
+body.wordWrap pre {
+	white-space: pre-wrap;
+}
+
+pre:not(.hljs),
+pre.hljs code > div {
+	padding: 16px;
+	border-radius: 3px;
+	overflow: auto;
+}
+
+pre code {
+	color: var(--vscode-editor-foreground);
+	tab-size: 4;
+}
+
+/** Theming */
+
+.vscode-light pre {
+	background-color: rgba(220, 220, 220, 0.4);
+}
+
+.vscode-dark pre {
+	background-color: rgba(10, 10, 10, 0.4);
+}
+
+.vscode-high-contrast pre {
+	background-color: rgb(0, 0, 0);
+}
+
+.vscode-high-contrast h1 {
+	border-color: rgb(0, 0, 0);
+}
+
+.vscode-light table > thead > tr > th {
+	border-color: rgba(0, 0, 0, 0.69);
+}
+
+.vscode-dark table > thead > tr > th {
+	border-color: rgba(255, 255, 255, 0.69);
+}
+
+.vscode-light h1,
+.vscode-light hr,
+.vscode-light table > tbody > tr + tr > td {
+	border-color: rgba(0, 0, 0, 0.18);
+}
+
+.vscode-dark h1,
+.vscode-dark hr,
+.vscode-dark table > tbody > tr + tr > td {
+	border-color: rgba(255, 255, 255, 0.18);
+}
+
+</style>
+
+<style>
+/* Tomorrow Theme */
+/* http://jmblog.github.com/color-themes-for-google-code-highlightjs */
+/* Original theme - https://github.com/chriskempson/tomorrow-theme */
+
+/* Tomorrow Comment */
+.hljs-comment,
+.hljs-quote {
+	color: #8e908c;
+}
+
+/* Tomorrow Red */
+.hljs-variable,
+.hljs-template-variable,
+.hljs-tag,
+.hljs-name,
+.hljs-selector-id,
+.hljs-selector-class,
+.hljs-regexp,
+.hljs-deletion {
+	color: #c82829;
+}
+
+/* Tomorrow Orange */
+.hljs-number,
+.hljs-built_in,
+.hljs-builtin-name,
+.hljs-literal,
+.hljs-type,
+.hljs-params,
+.hljs-meta,
+.hljs-link {
+	color: #f5871f;
+}
+
+/* Tomorrow Yellow */
+.hljs-attribute {
+	color: #eab700;
+}
+
+/* Tomorrow Green */
+.hljs-string,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-addition {
+	color: #718c00;
+}
+
+/* Tomorrow Blue */
+.hljs-title,
+.hljs-section {
+	color: #4271ae;
+}
+
+/* Tomorrow Purple */
+.hljs-keyword,
+.hljs-selector-tag {
+	color: #8959a8;
+}
+
+.hljs {
+	display: block;
+	overflow-x: auto;
+	color: #4d4d4c;
+	padding: 0.5em;
+}
+
+.hljs-emphasis {
+	font-style: italic;
+}
+
+.hljs-strong {
+	font-weight: bold;
+}
+</style>
+
+<style>
+/*
+ * Markdown PDF CSS
+ */
+
+ body {
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif, "Meiryo";
+	padding: 0 12px;
+}
+
+pre {
+	background-color: #f8f8f8;
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	overflow-x: auto;
+	white-space: pre-wrap;
+	overflow-wrap: break-word;
+}
+
+pre:not(.hljs) {
+	padding: 23px;
+	line-height: 19px;
+}
+
+blockquote {
+	background: rgba(127, 127, 127, 0.1);
+	border-color: rgba(0, 122, 204, 0.5);
+}
+
+.emoji {
+	height: 1.4em;
+}
+
+code {
+	font-size: 14px;
+	line-height: 19px;
+}
+
+/* for inline code */
+:not(pre):not(.hljs) > code {
+	color: #C9AE75; /* Change the old color so it seems less like an error */
+	font-size: inherit;
+}
+
+/* Page Break : use <div class="page"/> to insert page break
+-------------------------------------------------------- */
+.page {
+	page-break-after: always;
+}
+
+</style>
+
+<script src="https://unpkg.com/mermaid/dist/mermaid.min.js"></script>
+</head>
+<body>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: document.body.classList.contains('vscode-dark') || document.body.classList.contains('vscode-high-contrast')
+          ? 'dark'
+          : 'default'
+    });
+  </script>
+<h1 id="tosa-adjacent-channel-spacing-problem-statement-and-strategy-comparison">TOSA Adjacent Channel Spacing: Problem Statement and Strategy Comparison</h1>
+<p>This report summarizes the problem of <strong>TOSA (Tunable Optical Sub-Assembly) yield</strong> with respect to <strong>adjacent channel spacing error</strong>, and compares three assembly strategies. The goal is to maximize the fraction of TOSAs that meet a <strong>maximum absolute spacing error</strong> threshold (e.g. <strong>≤ 40 GHz</strong>).</p>
+<hr>
+<h2 id="1-problem-statement">1. Problem Statement</h2>
+<h3 id="11-context">1.1 Context</h3>
+<ul>
+<li>
+<p>A <strong>TOSA</strong> contains <strong>4 lasers</strong>, one per channel (ch0–ch3), in a band-muxed architecture.</p>
+</li>
+<li>
+<p>Channel centers are defined in <strong>frequency deviation</strong> from a reference wavelength (1311 nm).</p>
+</li>
+<li>
+<p>For the <strong>200 GHz class</strong> (the case analyzed here), the four channel centers are:</p>
+<ul>
+<li><strong>ch0:</strong> 0 GHz</li>
+<li><strong>ch1:</strong> +200 GHz</li>
+<li><strong>ch2:</strong> −200 GHz</li>
+<li><strong>ch3:</strong> −400 GHz<br>
+(all relative to the frequency at 1311 nm).</li>
+</ul>
+</li>
+<li>
+<p>Each laser’s actual frequency varies around its channel center due to manufacturing spread. We assume a <strong>Gaussian</strong> distribution with <strong>3σ = ±1 nm</strong> in wavelength at 1311 nm, which corresponds to <strong>σ ≈ 58.2 GHz</strong> in frequency.</p>
+</li>
+</ul>
+<p><strong>Laser frequency distributions by channel (200 GHz and 400 GHz spacing, centered at 1311 nm):</strong></p>
+<p><img src="src/probable-potato-guide3-arch/architecture_band_muxed/laser_frequency_histograms.png" alt="Laser frequency histograms by channel"></p>
+<p><strong>Reference wavelength distributions (4 lasers at 1311 nm, 3σ = ±1 nm):</strong></p>
+<p><img src="src/probable-potato-guide3-arch/architecture_band_muxed/laser_wavelength_distributions.png" alt="Laser wavelength distributions"></p>
+<h3 id="12-adjacent-spacing-error">1.2 Adjacent Spacing Error</h3>
+<ul>
+<li>
+<p><strong>Nominal adjacent spacings</strong> (target values) are:</p>
+<ul>
+<li>ch1 − ch0: <strong>200 GHz</strong></li>
+<li>ch2 − ch1: <strong>−400 GHz</strong></li>
+<li>ch3 − ch2: <strong>−200 GHz</strong></li>
+</ul>
+</li>
+<li>
+<p>For a given TOSA (four laser frequencies), we compute the <strong>three adjacent spacing errors</strong>:</p>
+<ul>
+<li>Spacing error (ch0–ch1) = (f₁ − f₀) − 200</li>
+<li>Spacing error (ch1–ch2) = (f₂ − f₁) − (−400)</li>
+<li>Spacing error (ch2–ch3) = (f₃ − f₂) − (−200)</li>
+</ul>
+</li>
+<li>
+<p>We care about the <strong>maximum absolute spacing error</strong> over these three pairs <strong>per TOSA</strong>:</p>
+<ul>
+<li><strong>Max |error| per TOSA</strong> = max{ |e₀₁|, |e₁₂|, |e₂₃| } (in GHz).</li>
+</ul>
+</li>
+</ul>
+<h3 id="13-yield-metric">1.3 Yield Metric</h3>
+<ul>
+<li>
+<p>A TOSA is considered <strong>in-spec</strong> for a threshold <strong>T</strong> (e.g. 40 GHz) if:</p>
+<ul>
+<li><strong>Max |spacing error| ≤ T GHz.</strong></li>
+</ul>
+</li>
+<li>
+<p><strong>Yield</strong> = (number of TOSAs with max |error| ≤ T) / (total number of TOSAs built), expressed as a percentage.</p>
+</li>
+<li>
+<p>The report focuses on <strong>maximizing yield at ≤ 40 GHz</strong> and also reports yields at 20, 100, and 200 GHz for context. At 1311 nm, <strong>40 GHz ≈ ±0.23 nm</strong> wavelength error.</p>
+</li>
+</ul>
+<hr>
+<h2 id="2-strategies-compared">2. Strategies Compared</h2>
+<p>Three strategies are implemented in this folder. All use the same channel grid and laser statistics (Gaussian, 3σ = ±1 nm at 1311 nm).</p>
+<h3 id="21-random-sampling">2.1 Random Sampling</h3>
+<ul>
+<li><strong>Method:</strong> For each TOSA, <strong>randomly</strong> pick one laser from each channel (independent Gaussian samples around each channel center).</li>
+<li><strong>No binning or matching</strong> across channels.</li>
+<li><strong>Script:</strong> <code>random_sampling_tosa.py</code></li>
+<li><strong>Sample size (this report):</strong> 10 M TOSAs (200 GHz class), seed 42.</li>
+</ul>
+<h3 id="22-binned-sampling--4-bin-scheme">2.2 Binned Sampling — 4-Bin Scheme</h3>
+<ul>
+<li><strong>Method:</strong>
+<ul>
+<li>Sample a <strong>full inventory</strong> of lasers per channel (<strong>10 M per channel</strong>).</li>
+<li>Assign each laser to one of <strong>4 bins</strong> by its <strong>deviation from target</strong> (GHz):
+<ul>
+<li><strong>BIN0:</strong> −1000 to −100</li>
+<li><strong>BIN1:</strong> −100 to 0</li>
+<li><strong>BIN2:</strong> 0 to 100</li>
+<li><strong>BIN3:</strong> 100 to 1000</li>
+</ul>
+</li>
+<li>Build TOSAs by selecting <strong>one laser per channel from the same bin index</strong> (e.g. one from BIN2 for ch0, one from BIN2 for ch1, etc.).</li>
+<li><strong>No per-bin cap:</strong> for each bin we build as many TOSAs as the inventory allows (minimum across the four channel-bin counts). Total TOSAs ≈ 10 M.</li>
+</ul>
+</li>
+<li><strong>Script:</strong> <code>binned_sampling_tosa.py</code></li>
+<li><strong>Total TOSAs (this report):</strong> ~10 M (full inventory).</li>
+</ul>
+<h3 id="23-binned-sampling--10-bin-scheme">2.3 Binned Sampling — 10-Bin Scheme</h3>
+<ul>
+<li><strong>Method:</strong> Same idea as 4-bin, but with <strong>10 bins</strong> of <strong>40 GHz width</strong> in deviation from target:
+<ul>
+<li>BIN0: −1000 to −160, BIN1: −160 to −120, …, BIN9: 160 to 200 GHz.</li>
+<li>TOSAs are again built by picking one laser per channel from the <strong>same bin index</strong>. Full inventory per bin (no cap).</li>
+</ul>
+</li>
+<li><strong>Script:</strong> <code>binned_sampling_tosa.py</code></li>
+<li><strong>Total TOSAs (this report):</strong> ~10 M (full inventory).</li>
+</ul>
+<h3 id="24-bin-definitions-4-bin-and-10-bin">2.4 Bin definitions (4-bin and 10-bin)</h3>
+<p>The figure below shows how the <strong>4-bin</strong> and <strong>10-bin</strong> schemes partition laser <strong>deviation from target</strong> (GHz). The gray curve is the laser deviation PDF (Gaussian, σ ≈ 58.2 GHz). Colored vertical bands are the bins; TOSAs are built by picking one laser per channel from the same bin.</p>
+<p><img src="src/probable-potato-guide3-arch/architecture_band_muxed/bin_definition_histogram.png" alt="Bin definitions: 4-bin and 10-bin schemes"></p>
+<hr>
+<h2 id="3-yield-comparison-seed-42">3. Yield Comparison (Seed 42)</h2>
+<p>Numerical results from the scripts in this folder (200 GHz class only):</p>
+<table>
+<thead>
+<tr>
+<th>Max |error| threshold</th>
+<th>Random (% TOSAs)</th>
+<th>4-bin (% TOSAs)</th>
+<th>10-bin (% TOSAs)</th>
+<th>Wavelength error (nm)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>≤ 20 GHz</td>
+<td>0.98</td>
+<td>9.37</td>
+<td><strong>47.48</strong></td>
+<td>±0.115</td>
+</tr>
+<tr>
+<td><strong>≤ 40 GHz</strong></td>
+<td><strong>6.87</strong></td>
+<td><strong>40.30</strong></td>
+<td><strong>99.88</strong></td>
+<td>±0.229</td>
+</tr>
+<tr>
+<td>≤ 100 GHz</td>
+<td>51.39</td>
+<td>99.89</td>
+<td>100.00</td>
+<td>±0.573</td>
+</tr>
+<tr>
+<td>≤ 200 GHz</td>
+<td>95.86</td>
+<td>100.00</td>
+<td>100.00</td>
+<td>±1.147</td>
+</tr>
+</tbody>
+</table>
+<p><strong>TOSA counts (this run):</strong></p>
+<ul>
+<li>Random: 10,000,000</li>
+<li>4-bin: 9,995,164</li>
+<li>10-bin: 9,993,758</li>
+</ul>
+<p>All three strategies use comparable sample sizes (~10 M TOSAs). Binned sampling uses a <strong>full inventory</strong> of <strong>10 M lasers per channel</strong> with <strong>no per-bin cap</strong>: for each bin we build as many TOSAs as the smallest channel-bin count allows, so nearly the entire inventory is converted to TOSAs.</p>
+<p><strong>Random sampling — adjacent spacing error histograms and yield table:</strong></p>
+<p><img src="src/probable-potato-guide3-arch/architecture_band_muxed/random_sampling_tosa_adjacent_spacing_error_histograms.png" alt="Random sampling: spacing error (signed), |error|, max |error| PDF, max |error| CDF"></p>
+<p><strong>Binned sampling (4-bin and 10-bin) — adjacent spacing error histograms and yield table:</strong></p>
+<p><img src="src/probable-potato-guide3-arch/architecture_band_muxed/binned_sampling_tosa_spacing_error_histograms.png" alt="Binned sampling: 4-bin and 10-bin spacing error panels and table"></p>
+<hr>
+<h2 id="4-which-strategy-gives-maximum-yield-for-%E2%89%A4-40-ghz">4. Which Strategy Gives Maximum Yield for ≤ 40 GHz?</h2>
+<ul>
+<li><strong>Random:</strong> <strong>6.87%</strong> of TOSAs have max |spacing error| ≤ 40 GHz.</li>
+<li><strong>4-bin binned:</strong> <strong>40.30%</strong> — much better than random.</li>
+<li><strong>10-bin binned:</strong> <strong>99.88%</strong> — almost all TOSAs meet the 40 GHz spec.</li>
+</ul>
+<p><strong>Conclusion:</strong> <strong>The 10-bin binned strategy gives the best yield for ≤ 40 GHz |error|</strong> in this setup. By grouping lasers into narrow deviation bins and assembling TOSAs from the same bin index (full inventory, no per-bin cap), adjacent channel spacing errors are greatly reduced, and the 10-bin scheme (40 GHz bin width) aligns well with the 40 GHz error target.</p>
+<hr>
+<h2 id="5-8-channel-tosa-200-ghz-spacing">5. 8-Channel TOSA (200 GHz spacing)</h2>
+<p>The same process is repeated for an <strong>8-channel TOSA</strong> with <strong>all adjacent channels spaced by 200 GHz</strong>. Channel centers (frequency deviation from 1311 nm ref) are <strong>0, 200, 400, 600, 800, 1000, 1200, 1400 GHz</strong> (ch0–ch7). There are <strong>7 adjacent spacing pairs</strong> (ch0–ch1 through ch6–ch7); each has nominal spacing <strong>200 GHz</strong>. Max |error| per TOSA is the maximum of the 7 absolute spacing errors. Same laser statistics (Gaussian, 3σ = ±1 nm at 1311 nm) and same strategies: <strong>random sampling</strong>, <strong>4-bin binned</strong>, and <strong>10-bin binned</strong> (same bin definitions by deviation from target; full inventory, no per-bin cap). Scripts: <code>random_sampling_tosa_8ch.py</code>, <code>binned_sampling_tosa_8ch.py</code>. Separate figure files are generated so 4-channel and 8-channel results are not overwritten.</p>
+<h3 id="51-yield-comparison-8-channel-seed-42">5.1 Yield comparison (8-channel, seed 42)</h3>
+<table>
+<thead>
+<tr>
+<th>Max |error| threshold</th>
+<th>Random (% TOSAs)</th>
+<th>4-bin (% TOSAs)</th>
+<th>10-bin (% TOSAs)</th>
+<th>Wavelength error (nm)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>≤ 20 GHz</td>
+<td>0.00</td>
+<td>0.74</td>
+<td><strong>18.55</strong></td>
+<td>±0.115</td>
+</tr>
+<tr>
+<td><strong>≤ 40 GHz</strong></td>
+<td><strong>0.27</strong></td>
+<td><strong>13.85</strong></td>
+<td><strong>99.77</strong></td>
+<td>±0.229</td>
+</tr>
+<tr>
+<td>≤ 100 GHz</td>
+<td>22.66</td>
+<td>99.77</td>
+<td>100.00</td>
+<td>±0.573</td>
+</tr>
+<tr>
+<td>≤ 200 GHz</td>
+<td>90.79</td>
+<td>100.00</td>
+<td>100.00</td>
+<td>±1.147</td>
+</tr>
+</tbody>
+</table>
+<p><strong>TOSA counts (8-channel run):</strong> Random: 10,000,000 | 4-bin: 9,992,829 | 10-bin: 9,989,597.</p>
+<p>With more adjacent pairs (7 instead of 3), <strong>random yield at ≤ 40 GHz drops sharply</strong> (0.27% vs 6.87% for 4-channel). <strong>10-bin binned again gives the best yield</strong> (99.77% at ≤ 40 GHz); 4-bin is much better than random (13.85%) but well below 10-bin.</p>
+<p><strong>8-channel random sampling — adjacent spacing error histograms and yield table:</strong></p>
+<p><img src="src/probable-potato-guide3-arch/architecture_band_muxed/random_sampling_tosa_8ch_adjacent_spacing_error_histograms.png" alt="8-channel random sampling: spacing error histograms and table"></p>
+<p><strong>8-channel binned sampling (4-bin and 10-bin) — adjacent spacing error histograms and yield table:</strong></p>
+<p><img src="src/probable-potato-guide3-arch/architecture_band_muxed/binned_sampling_tosa_8ch_spacing_error_histograms.png" alt="8-channel binned sampling: 4-bin and 10-bin spacing error panels and table"></p>
+<hr>
+<h2 id="6-artifacts-in-this-folder">6. Artifacts in This Folder</h2>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>random_sampling_tosa.py</code></td>
+<td>Random TOSA assembly; computes spacing errors and plots histograms + summary table.</td>
+</tr>
+<tr>
+<td><code>random_sampling_tosa_adjacent_spacing_error_histograms.png</code></td>
+<td>One row: signed spacing error, |error|, max |error| PDF, max |error| CDF; table with % TOSAs and λ error.</td>
+</tr>
+<tr>
+<td><code>binned_sampling_tosa.py</code></td>
+<td>4-bin and 10-bin binned TOSA assembly; same plot layout per scheme.</td>
+</tr>
+<tr>
+<td><code>binned_sampling_tosa_spacing_error_histograms.png</code></td>
+<td>Two rows (4-bin, 10-bin), four columns each (same as above); table with 4-bin and 10-bin % TOSAs and wavelength error.</td>
+</tr>
+<tr>
+<td><code>bin_definition_histogram.py</code></td>
+<td>Plots 4-bin and 10-bin scheme definitions (deviation from target) with laser PDF.</td>
+</tr>
+<tr>
+<td><code>bin_definition_histogram.png</code></td>
+<td>Single figure: two panels showing bin edges and laser deviation PDF for 4-bin and 10-bin.</td>
+</tr>
+<tr>
+<td><code>laser_frequency_histograms.py</code></td>
+<td>Histograms of laser frequency deviation per channel (200 / 400 GHz classes).</td>
+</tr>
+<tr>
+<td><code>laser_wavelength_distributions.py</code></td>
+<td>Wavelength distribution visualization (reference).</td>
+</tr>
+<tr>
+<td><code>random_sampling_tosa_8ch.py</code></td>
+<td>Random TOSA assembly for 8-channel 200 GHz; outputs <code>random_sampling_tosa_8ch_adjacent_spacing_error_histograms.png</code>.</td>
+</tr>
+<tr>
+<td><code>random_sampling_tosa_8ch_adjacent_spacing_error_histograms.png</code></td>
+<td>8-channel random: signed |error|, max |error| PDF/CDF and table.</td>
+</tr>
+<tr>
+<td><code>binned_sampling_tosa_8ch.py</code></td>
+<td>Binned TOSA assembly for 8-channel 200 GHz; outputs <code>binned_sampling_tosa_8ch_spacing_error_histograms.png</code>.</td>
+</tr>
+<tr>
+<td><code>binned_sampling_tosa_8ch_spacing_error_histograms.png</code></td>
+<td>8-channel binned (4-bin and 10-bin) spacing error panels and table.</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="7-reproducibility">7. Reproducibility</h2>
+<ul>
+<li><strong>Random:</strong> <code>np.random.seed(42)</code> then <code>build_tosas_for_class(CHANNELS_200_GHZ, N_TOSAS_PER_CLASS)</code>.</li>
+<li><strong>Binned:</strong> <code>np.random.default_rng(42)</code> then <code>run_binned_sampling_200ghz(rng)</code>. Uses 10 M lasers per channel and full inventory (no per-bin cap).</li>
+<li>Run <code>python random_sampling_tosa.py</code>, <code>python binned_sampling_tosa.py</code>, and <code>python bin_definition_histogram.py</code> from <code>architecture_band_muxed</code> to regenerate 4-channel figures. For 8-channel: <code>python random_sampling_tosa_8ch.py</code>, <code>python binned_sampling_tosa_8ch.py</code>.</li>
+</ul>
+<hr>
+<h2 id="export-to-pdf-with-figures">Export to PDF (with figures)</h2>
+<p>To export this report to PDF with all figures embedded:</p>
+<ol>
+<li>
+<p><strong>Pandoc (command line)</strong><br>
+From the <strong>repository root</strong> (so image paths in the doc resolve correctly):</p>
+<pre class="hljs"><code><div>pandoc src/probable-potato-guide3-arch/architecture_band_muxed/TOSA_SPACING_YIELD_REPORT.md -o src/probable-potato-guide3-arch/architecture_band_muxed/TOSA_SPACING_YIELD_REPORT.pdf
+</div></code></pre>
+<p>Requires <a href="https://pandoc.org/">pandoc</a> and a LaTeX engine (e.g. MacTeX, TeX Live) or use <code>--pdf-engine=wkhtmltopdf</code> if installed.</p>
+</li>
+<li>
+<p><strong>Cursor / VS Code</strong><br>
+Install the <strong>Markdown PDF</strong> extension. Open this file, then run <strong>Markdown PDF: Export (pdf)</strong> from the Command Palette (<code>Cmd+Shift+P</code>). Export uses the same folder as the <code>.md</code> file; ensure image paths in the report match how the extension resolves paths (workspace root vs file-relative).</p>
+</li>
+<li>
+<p><strong>Jupyter notebook</strong><br>
+Use <code>TOSA_SPACING_YIELD_REPORT.ipynb</code>: run all cells to generate figures, then <strong>File → Print → Save as PDF</strong> or <code>jupyter nbconvert --to pdf TOSA_SPACING_YIELD_REPORT.ipynb</code> (requires LaTeX or <code>--to webpdf</code> with playwright).</p>
+</li>
+</ol>
+
+</body>
+</html>
